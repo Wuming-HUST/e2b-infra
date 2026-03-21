@@ -24,7 +24,7 @@ const (
 	// before an instance is marked as unhealthy.
 	maxSyncFailuresBeforeUnhealthy = 3
 
-	maxInstanceSyncCallTimeout = 1 * time.Second
+	maxInstanceSyncCallTimeout = 120 * time.Second
 )
 
 type Instance struct {

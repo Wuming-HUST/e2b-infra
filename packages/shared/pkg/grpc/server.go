@@ -31,6 +31,7 @@ func NewGRPCServer(tel *telemetry.Client) *grpc.Server {
 	)
 
 	return grpc.NewServer(
+		grpc.MaxConcurrentStreams(1000),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime:             5 * time.Second, // Minimum time between pings from client
 			PermitWithoutStream: true,            // Allow pings even when no active streams
@@ -38,6 +39,8 @@ func NewGRPCServer(tel *telemetry.Client) *grpc.Server {
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Time:    15 * time.Second, // Server sends keepalive pings every 15s
 			Timeout: 5 * time.Second,  // Wait 5s for response before considering dead
+                        MaxConnectionAge:  0, // 0 = 不强制关闭活跃连接
+                        MaxConnectionIdle: 0, // 0 = 不强制关闭空闲连接
 		}),
 		grpc.StatsHandler(
 			NewStatsWrapper(

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -166,13 +167,13 @@ func (p *Process) configure(
 	}
 	p.cmd.Stderr = io.MultiWriter(stderrWriters...)
 
-	// Set up cgroup FD for atomic placement via CLONE_INTO_CGROUP.
-	// The cgroup is created and owned by the caller (Sandbox); Process only
-	// uses the FD during clone.
-	if cgroupFD != cgroup.NoCgroupFD {
-		p.cmd.SysProcAttr.UseCgroupFD = true
-		p.cmd.SysProcAttr.CgroupFD = cgroupFD
-	}
+	//// Set up cgroup FD for atomic placement via CLONE_INTO_CGROUP.
+	//// The cgroup is created and owned by the caller (Sandbox); Process only
+	//// uses the FD during clone.
+	//if cgroupFD != cgroup.NoCgroupFD {
+	//	p.cmd.SysProcAttr.UseCgroupFD = true
+	//	p.cmd.SysProcAttr.CgroupFD = cgroupFD
+	//}
 
 	err := p.cmd.Start()
 	if err != nil {
@@ -271,19 +272,17 @@ func (p *Process) Create(
 		"ipv6.autoconf": "1",
 
 		// Wait 1 second before exiting FC after panic or reboot
-		"panic": "1",
-
-		"reboot":           "k",
-		"pci":              "off",
-		"i8042.nokbd":      "",
-		"i8042.noaux":      "",
-		"random.trust_cpu": "on",
+		"panic":                               "1",
+		"reboot":                              "k",
 	}
 
-	if options.KvmClock {
+	if runtime.GOARCH == "amd64" || runtime.GOARCH == "386" {
+		args["pci"] = "off"
+		args["i8042.nokbd"] = ""
+		args["i8042.noaux"] = ""
+		args["random.trust_cpu"] = "on"
 		args["clocksource"] = "kvm-clock"
 	}
-
 	if options.SystemdToKernelLogs {
 		args["systemd.journald.forward_to_console"] = ""
 	}
@@ -317,7 +316,7 @@ func (p *Process) Create(
 	if err != nil {
 		fcStopErr := p.Stop(ctx)
 
-		return errors.Join(fmt.Errorf("error symlinking rootfs: %w", err), fcStopErr)
+		return errors.Join(fmt.Errorf("error symlinking rootfs: %w", err), fcStopErr)
 	}
 	telemetry.ReportEvent(ctx, "symlinked rootfs")
 
@@ -374,6 +373,7 @@ func (p *Process) Resume(
 	uffdReady chan struct{},
 	accessToken *string,
 	cgroupFD int,
+	traceID string,
 ) error {
 	ctx, span := tracer.Start(ctx, "resume-fc")
 	defer span.End()
@@ -388,6 +388,7 @@ func (p *Process) Resume(
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
+		phaseStart := time.Now()
 		err := p.configure(
 			egCtx,
 			sbxMetadata,
@@ -398,6 +399,7 @@ func (p *Process) Resume(
 		if err != nil {
 			return fmt.Errorf("error starting fc process: %w", err)
 		}
+		zap.L().Sugar().Infof("[ResumeSandbox] configured fc cost: %.3f ms, traceID=%s", time.Since(phaseStart).Seconds()*1000, traceID)
 
 		telemetry.ReportEvent(egCtx, "configured fc")
 
@@ -405,17 +407,20 @@ func (p *Process) Resume(
 	})
 
 	eg.Go(func() error {
+		phaseStart := time.Now()
 		err := socket.Wait(egCtx, uffdSocketPath)
 		if err != nil {
 			return fmt.Errorf("error waiting for uffd socket: %w", err)
 		}
 
 		telemetry.ReportEvent(egCtx, "uffd socket ready")
+		zap.L().Sugar().Infof("[ResumeSandbox] get uffd sock path cost: %.3f ms, traceID=%s", time.Since(phaseStart).Seconds()*1000, traceID)
 
 		return nil
 	})
 
 	eg.Go(func() error {
+		phaseStart := time.Now()
 		rootfsPath, err := p.rootfsProvider.Path()
 		if err != nil {
 			return fmt.Errorf("error getting rootfs path: %w", err)
@@ -427,6 +432,7 @@ func (p *Process) Resume(
 		}
 
 		telemetry.ReportEvent(egCtx, "symlinked rootfs")
+		zap.L().Sugar().Infof("[ResumeSandbox] get rootfs path cost: %.3f ms, traceID=%s", time.Since(phaseStart).Seconds()*1000, traceID)
 
 		return nil
 	})
@@ -437,7 +443,7 @@ func (p *Process) Resume(
 
 		return errors.Join(fmt.Errorf("error waiting for uffd socket or symlinking rootfs: %w", err), fcStopErr)
 	}
-
+	phase5Start := time.Now()
 	err = p.client.loadSnapshot(
 		ctx,
 		uffdSocketPath,
@@ -449,6 +455,8 @@ func (p *Process) Resume(
 
 		return errors.Join(fmt.Errorf("error loading snapshot: %w", err), fcStopErr)
 	}
+	zap.L().Sugar().Infof("[ResumeSandbox] load snapshot cost: %.3f ms, traceID=%s", time.Since(phase5Start).Seconds()*1000, traceID)
+	phase6Start := time.Now()
 
 	err = p.client.resumeVM(ctx)
 	if err != nil {
@@ -456,6 +464,8 @@ func (p *Process) Resume(
 
 		return errors.Join(fmt.Errorf("error resuming vm: %w", err), fcStopErr)
 	}
+	zap.L().Sugar().Infof("[ResumeSandbox] post resume cost: %.3f ms, traceID=%s", time.Since(phase6Start).Seconds()*1000, traceID)
+	phase7Start := time.Now()
 
 	meta := &MmdsMetadata{
 		SandboxID:            sbxMetadata.SandboxID,
@@ -475,6 +485,7 @@ func (p *Process) Resume(
 
 		return errors.Join(fmt.Errorf("error setting mmds: %w", err), fcStopErr)
 	}
+	zap.L().Sugar().Infof("[ResumeSandbox] set mmds cost: %.3f ms, traceID=%s", time.Since(phase7Start).Seconds()*1000, traceID)
 
 	telemetry.SetAttributes(
 		ctx,

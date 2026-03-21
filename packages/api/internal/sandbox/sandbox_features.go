@@ -29,7 +29,11 @@ func NewVersionInfo(fcVersion string) (info VersionInfo, err error) {
 	}
 
 	info.lastReleaseVersion = *version
-	info.commitHash = parts[1]
+	if len(parts) > 1 {
+		info.commitHash = parts[1]
+	} else {
+		info.commitHash = ""
+	}
 
 	return info, nil
 }

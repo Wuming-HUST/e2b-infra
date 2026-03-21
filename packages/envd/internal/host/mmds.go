@@ -23,10 +23,14 @@ const (
 	mmdsAccessTokenRequestClientTimeout = 10 * time.Second
 )
 
+
 var mmdsAccessTokenClient = &http.Client{
 	Timeout: mmdsAccessTokenRequestClientTimeout,
 	Transport: &http.Transport{
-		DisableKeepAlives: true,
+		MaxIdleConns:        10,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		// 移除 DisableKeepAlives: true
 	},
 }
 

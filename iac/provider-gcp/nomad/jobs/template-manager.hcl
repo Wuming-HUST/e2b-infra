@@ -1,49 +1,14 @@
 job "template-manager" {
   type = "service"
-  node_pool  = "${node_pool}"
+  node_pool  = "${BUILD_NODE_POOL}"
   priority = 75
 
   group "template-manager" {
-    # Count is fetched from current Nomad state to preserve autoscaler-managed value
-    count = ${current_count}
-
     # Ensure one allocation per node (like a system job)
     constraint {
       operator = "distinct_hosts"
       value    = "true"
     }
-
-%{ if update_stanza }
-    # Scaling policy to match node count in the pool
-    # Uses the nomad-nodepool APM plugin
-    scaling {
-      enabled = true
-      min     = 2
-      max     = 10000  # Effectively unlimited
-
-      policy {
-        evaluation_interval = "10s"
-        cooldown            = "2m"
-
-        check "match_node_count" {
-          source = "nomad-nodepool-apm"
-          query  = "${node_pool}"
-
-          strategy "pass-through" {}
-        }
-      }
-    }
-
-    # Rolling update configuration for service jobs
-    # https://developer.hashicorp.com/nomad/docs/job-specification/update
-    update {
-      max_parallel      = 1
-      min_healthy_time  = "10s"
-      healthy_deadline  = "2m"
-      progress_deadline = "80m"  # Must be > healthy_deadline and > kill_timeout
-      auto_revert       = false
-    }
-%{ endif }
 
     // Try to restart the task indefinitely
     // Tries to restart every 5 seconds
@@ -58,13 +23,13 @@ job "template-manager" {
     // Also network allocation is used by Nomad service discovery on API and edge API to find jobs and register them.
     network {
       port "template-manager" {
-        static = "${port}"
+        static = "${TEMPLATE_MANAGER_PORT}"
       }
     }
 
     service {
       name     = "template-manager"
-      port     = "${port}"
+      port     = "${TEMPLATE_MANAGER_PORT}"
       provider = "nomad"
 
       check {
@@ -78,59 +43,44 @@ job "template-manager" {
 
     task "start" {
       driver = "raw_exec"
-
-%{ if update_stanza }
-      # https://developer.hashicorp.com/nomad/docs/configuration/client#max_kill_timeout
-      kill_timeout      = "70m"
-%{ else }
-      kill_timeout      = "1m"
-%{ endif }
       kill_signal  = "SIGTERM"
 
       resources {
-        memory     = 1024
-        cpu        = 256
+        memory     = 20480
+        cpu        = 20480
       }
 
       env {
         NODE_ID                       = "$${node.unique.name}"
-        CONSUL_TOKEN                  = "${consul_acl_token}"
-        GOOGLE_SERVICE_ACCOUNT_BASE64 = "${google_service_account_key}"
-        GCP_PROJECT_ID                = "${gcp_project}"
-        GCP_REGION                    = "${gcp_region}"
-        GCP_DOCKER_REPOSITORY_NAME    = "${docker_registry}"
-        API_SECRET                    = "${api_secret}"
-        ENVIRONMENT                   = "${environment}"
-        DOMAIN_NAME                   = "${domain_name}"
-        TEMPLATE_BUCKET_NAME          = "${template_bucket_name}"
-        BUILD_CACHE_BUCKET_NAME       = "${build_cache_bucket_name}"
-        OTEL_COLLECTOR_GRPC_ENDPOINT  = "${otel_collector_grpc_endpoint}"
-        LOGS_COLLECTOR_ADDRESS        = "${logs_collector_address}"
-        ORCHESTRATOR_SERVICES         = "${orchestrator_services}"
-        SHARED_CHUNK_CACHE_PATH       = "${shared_chunk_cache_path}"
-        CLICKHOUSE_CONNECTION_STRING  = "${clickhouse_connection_string}"
-        DOCKERHUB_REMOTE_REPOSITORY_URL  = "${dockerhub_remote_repository_url}"
-        GRPC_PORT                     = "${port}"
+        CONSUL_TOKEN                  = "${CONSUL_ACL_TOKEN}"
+        GCP_DOCKER_REPOSITORY_NAME    = "${HARBOR_HOST}"
+        API_SECRET                    = "${EDGE_API_SECRET}"
+        ENVIRONMENT                   = "${ENVIRONMENT}"
+        DOMAIN_NAME                   = "${DOMAIN_NAME}"
+        TEMPLATE_BUCKET_NAME          = "${TEMPLATE_BUCKET_NAME}"
+        BUILD_CACHE_BUCKET_NAME       = "${BUILD_CACHE_BUCKET_NAME}"
+        OTEL_COLLECTOR_GRPC_ENDPOINT  = "${OTEL_COLLECTOR_GRPC_ENDPOINT}"
+        LOGS_COLLECTOR_ADDRESS        = "${LOGS_COLLECTOR_ADDRESS}"
+        ORCHESTRATOR_SERVICES         = "template-manager"
+        ALLOW_SANDBOX_INTERNET        = "${ALLOW_SANDBOX_INTERNET}"
+        SHARED_CHUNK_CACHE_PATH       = "${SHARED_CHUNK_CACHE_PATH}"
+        CLICKHOUSE_CONNECTION_STRING  = "clickhouse://${CLICKHOUSE_USERNAME}:${CLICKHOUSE_PASSWORD}@127.0.0.1:${CLICKHOUSE_SERVER_PORT}/${CLICKHOUSE_DATABASE}"
+        DOCKERHUB_REMOTE_REPOSITORY_URL  = ""
+        GRPC_PORT                     = "${TEMPLATE_MANAGER_PORT}"
         GIN_MODE                      = "release"
-%{ if !update_stanza }
-        FORCE_STOP                    = "true"
-%{ endif }
-%{ if launch_darkly_api_key != "" }
-        LAUNCH_DARKLY_API_KEY         = "${launch_darkly_api_key}"
-%{ endif }
+        ARTIFACTS_REGISTRY_PROVIDER   = "Local"
+        STORAGE_PROVIDER = "${STORAGE_PROVIDER}"
+        MINIO_ENDPOINT = "${MINIO_ENDPOINT}"
+        MINIO_ACCESS_KEY = "${MINIO_ACCESS_KEY}"
+        MINIO_SECRET_KEY = "${MINIO_SECRET_KEY}"
+        MAX_STARTING_INSTANCES_PER_NODE = "30"
       }
 
       config {
         command = "/bin/bash"
-        args    = ["-c", " chmod +x local/template-manager && local/template-manager"]
-      }
-
-      artifact {
-        source      = "gcs::https://www.googleapis.com/storage/v1/${bucket_name}/template-manager"
-        options {
-            checksum    = "md5:${template_manager_checksum}"
-        }
+        args    = ["-c", " chmod +x /usr/bin/template-manager && /usr/bin/template-manager --port ${TEMPLATE_MANAGER_PORT}"]
       }
     }
   }
 }
+

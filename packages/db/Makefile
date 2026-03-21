@@ -1,15 +1,19 @@
 ENV := $(shell cat ../../.last_used_env || echo "not-set")
 -include ../../.env.${ENV}
-PREFIX := $(strip $(subst ",,$(PREFIX)))
 
-goose := GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(POSTGRES_CONNECTION_STRING) go tool goose -table "_migrations" -dir "migrations"
+UNAME_M   := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  PLATFORM := linux/amd64
+else ifeq ($(UNAME_M),aarch64)
+  PLATFORM := linux/arm64
+else
+  $(error Unsupported architecture: $(UNAME_M))
+endif
+
+goose := GOOSE_DBSTRING=$(POSTGRES_CONNECTION_STRING) go tool goose -table "_migrations" -dir "migrations" postgres
 goose-local := GOOSE_DBSTRING=postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable go tool goose -table "_migrations" -dir "migrations" postgres
 
-ifeq ($(PROVIDER),aws)
-	IMAGE_REGISTRY := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(PREFIX)core/db-migrator
-else
-	IMAGE_REGISTRY := $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT_ID)/$(PREFIX)core/db-migrator
-endif
+IMAGE := e2b-orchestration/db-migrator
 
 .PHONY: migrate
 migrate:
@@ -31,6 +35,10 @@ migrate/down:
 	@echo "Reverting Postgres migration *$(notdir $@)* for ${ENV}"
 	@$(goose) down
 	@echo "Done"
+
+.PHONY: build
+build:
+	go build -o ./bin/migrator ./scripts/migrator.go
 
 .PHONY: build-debug
 build-debug:
@@ -64,9 +72,10 @@ test: build-tools
 
 .PHONY: build-and-upload
 build-and-upload:
-	@docker build --platform linux/amd64 --tag $(IMAGE_REGISTRY) --push -f ./Dockerfile ..
+	@docker build --platform $(PLATFORM) --tag "$(REPOSITORY)/$(IMAGE)" --push .
 
 .PHONY: seed-db
 seed-db:
 	@echo "Seeding database..."
 	@POSTGRES_CONNECTION_STRING=$(POSTGRES_CONNECTION_STRING) go run ./scripts/seed/postgres/seed-db.go
+

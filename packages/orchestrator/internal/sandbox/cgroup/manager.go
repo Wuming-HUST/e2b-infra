@@ -169,13 +169,18 @@ type managerImpl struct{}
 // Returns error if cgroups v2 is not available on the system
 func NewManager() (Manager, error) {
 	if _, err := os.Stat(filepath.Join(cgroupV2MountPoint, "cgroup.controllers")); err != nil {
-		return nil, fmt.Errorf("cgroups v2 not available: %w", err)
+		return &managerImpl{}, nil
 	}
 
 	return &managerImpl{}, nil
 }
 
 func (m *managerImpl) Initialize(ctx context.Context) error {
+	if !m.isCgroupV2() {
+		logger.L().Info(ctx, "cgroup v1 detected, skipping initialization")
+		return nil
+	}
+
 	if err := os.MkdirAll(RootCgroupPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create root cgroup directory: %w", err)
 	}
@@ -188,6 +193,12 @@ func (m *managerImpl) Initialize(ctx context.Context) error {
 	logger.L().Info(ctx, "initialized root cgroup", zap.String("path", RootCgroupPath))
 
 	return nil
+}
+
+// isCgroupV2 检测系统是否使用 cgroup v2
+func (m *managerImpl) isCgroupV2() bool {
+	_, err := os.Stat(filepath.Join(cgroupV2MountPoint, "cgroup.controllers"))
+	return err == nil
 }
 
 func (m *managerImpl) Create(ctx context.Context, sandboxID string) (*CgroupHandle, error) {

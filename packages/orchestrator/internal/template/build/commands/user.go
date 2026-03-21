@@ -50,6 +50,29 @@ func (u *User) Execute(
 
 	// Only create user if it doesn't exist
 	if !userExists {
+		// 检测系统类型：Debian/Ubuntu 使用 adduser，RHEL/CentOS/openEuler 使用 useradd
+		var createUserCmd string
+
+		// 通过检查 /etc/debian_version 文件判断是否为 Debian 系
+		checkDebian := sandboxtools.RunCommand(
+			ctx,
+			proxy,
+			sandboxID,
+			"test -f /etc/debian_version",
+			metadata.Context{
+				User:    "root",
+				EnvVars: cmdMetadata.EnvVars,
+			},
+		)
+
+		if checkDebian == nil {
+			// Debian/Ubuntu: adduser 是 Perl 脚本，支持 --disabled-password 和 --gecos
+			createUserCmd = fmt.Sprintf("adduser --disabled-password --gecos \"\" %s", userArg)
+		} else {
+			// openEuler/RHEL/CentOS: 使用 useradd，-m 创建家目录，-s 指定 shell，-c 对应 gecos
+			createUserCmd = fmt.Sprintf("useradd -m -s /bin/bash -c \"\" %s", userArg)
+		}
+
 		err = sandboxtools.RunCommandWithLogger(
 			ctx,
 			proxy,
@@ -57,7 +80,7 @@ func (u *User) Execute(
 			lvl,
 			prefix,
 			sandboxID,
-			fmt.Sprintf("adduser --disabled-password --gecos \"\" %s", userArg),
+			createUserCmd,
 			metadata.Context{
 				User:    "root",
 				EnvVars: cmdMetadata.EnvVars,
@@ -88,7 +111,29 @@ func addToSudoers(
 	cmdMetadata metadata.Context,
 	userArg string,
 ) (metadata.Context, error) {
-	// Add user to sudo group
+	// 检测系统类型并选择对应的 sudo 组
+	var sudoGroup string
+
+	// 检查 wheel 组是否存在（openEuler/CentOS/RHEL）
+	checkErr := sandboxtools.RunCommand(
+		ctx,
+		proxy,
+		sandboxID,
+		"getent group wheel",
+		metadata.Context{
+			User:    "root",
+			EnvVars: cmdMetadata.EnvVars,
+		},
+	)
+
+	if checkErr == nil {
+		sudoGroup = "wheel"
+	} else {
+		// 默认使用 sudo 组（Ubuntu/Debian）
+		sudoGroup = "sudo"
+	}
+
+	// 添加用户到对应的 sudo 组
 	err := sandboxtools.RunCommandWithLogger(
 		ctx,
 		proxy,
@@ -96,14 +141,14 @@ func addToSudoers(
 		lvl,
 		prefix,
 		sandboxID,
-		fmt.Sprintf("usermod -aG sudo %s", userArg),
+		fmt.Sprintf("usermod -aG %s %s", sudoGroup, userArg),
 		metadata.Context{
 			User:    "root",
 			EnvVars: cmdMetadata.EnvVars,
 		},
 	)
 	if err != nil {
-		return metadata.Context{}, fmt.Errorf("failed to add user to sudo group: %w", err)
+		return metadata.Context{}, fmt.Errorf("failed to add user to %s group: %w", sudoGroup, err)
 	}
 
 	// Remove password

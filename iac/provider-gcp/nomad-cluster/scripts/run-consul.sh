@@ -3,21 +3,24 @@
 
 set -e
 
-# Enable command tracing
-set -x
+assert_not_empty(){
+  if [[ -z "$2" ]]; then
+    echo "ERROR: $1 must not be empty" >&2
+    exit 1
+  fi
+}
+log_info()  { echo "[INFO]  $*"; }
+log_warn()  { echo "[WARN]  $*"; }
+log_error() { echo "[ERROR] $*"; }
+assert_is_installed(){ command -v "$1" >/dev/null || { log_error "$1 is not installed"; exit 1; }; }
+get_owner_of_path()   { stat -c '%U' "$1" 2>/dev/null || stat -f '%Su' "$1" 2>/dev/null || echo "root"; }
+get_owner_home_dir(){ local h; h=~$1; [[ $h == "/" ]] && { log_error "no HOME for $1"; exit 1; }; echo "$h"; }
 
 # Import the appropriate bash commons libraries
-readonly BASH_COMMONS_DIR="/opt/gruntwork/bash-commons"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 readonly CONSUL_CONFIG_FILE="default.json"
 readonly SYSTEMD_CONFIG_PATH="/etc/systemd/system/consul.service"
-
-readonly COMPUTE_INSTANCE_METADATA_URL="http://metadata.google.internal/computeMetadata/v1"
-readonly GOOGLE_CLOUD_METADATA_REQUEST_HEADER="Metadata-Flavor: Google"
-readonly CLUSTER_SIZE_INSTANCE_METADATA_KEY_NAME="cluster-size"
-
-readonly DEFAULT_RAFT_PROTOCOL="3"
 
 readonly DEFAULT_AUTOPILOT_CLEANUP_DEAD_SERVERS="true"
 readonly DEFAULT_AUTOPILOT_LAST_CONTACT_THRESHOLD="200ms"
@@ -26,20 +29,15 @@ readonly DEFAULT_AUTOPILOT_SERVER_STABILIZATION_TIME="10s"
 readonly DEFAULT_AUTOPILOT_REDUNDANCY_ZONE_TAG="az"
 readonly DEFAULT_AUTOPILOT_DISABLE_UPGRADE_MIGRATION="false"
 
-if [[ ! -d "$BASH_COMMONS_DIR" ]]; then
-  echo "ERROR: this script requires that bash-commons is installed in $BASH_COMMONS_DIR. See https://github.com/gruntwork-io/bash-commons for more info."
-  exit 1
-fi
-
-source "$BASH_COMMONS_DIR/assert.sh"
-source "$BASH_COMMONS_DIR/log.sh"
-source "$BASH_COMMONS_DIR/os.sh"
+# The following two files are only used for one-time ACL switching, the script won't repeatedly depend on them
+readonly ACL_SWITCH_FILE="/tmp/consul-acl-bootstrap-done"
+readonly AGENT_TOKEN_FILE="/etc/consul.d/agent-token.json"
 
 function print_usage {
   echo
   echo "Usage: run-consul [OPTIONS]"
   echo
-  echho "This script is used to configure and run Consul on a Google Compute Instance."
+  echo "This script is used to configure and run Consul on a Google Compute Instance."
   echo
   echo "Options:"
   echo
@@ -82,58 +80,6 @@ function print_usage {
   echo "  run-consul.sh --server --cluster-tag-name consul-xyz --config-dir /custom/path/to/consul/config"
 }
 
-# Get the value at a specific Instance Metadata path.
-function get_instance_metadata_value {
-  local -r path="$1"
-
-  log_info "Looking up Metadata value at $COMPUTE_INSTANCE_METADATA_URL/$path"
-  curl --silent --show-error --location --header "$GOOGLE_CLOUD_METADATA_REQUEST_HEADER" "$COMPUTE_INSTANCE_METADATA_URL/$path"
-}
-
-# Get the value of the given Custom Metadata Key
-function get_instance_custom_metadata_value {
-  local -r key="$1"
-
-  log_info "Looking up Custom Instance Metadata value for key \"$key\""
-  get_instance_metadata_value "instance/attributes/$key"
-}
-
-# Get the ID of the Project in which this Compute Instance currently resides
-function get_instance_project_id {
-  log_info "Looking up Project ID"
-  get_instance_metadata_value "project/project-id"
-}
-
-# Get the GCE Region in which this Compute Instance currently resides
-function get_instance_region {
-  log_info "Looking up Region of the current Compute Instance"
-
-  # The value returned for zone will be of the form "projects/121238320500/zones/us-west1-a" so we need to split the string
-  # by "/" and return the 4th string.
-  # Then we split again by '-' and return the first two fields.
-  # from 'europe-west1-b' to 'europe-west1'
-  get_instance_metadata_value "instance/zone" | cut -d'/' -f4 | awk -F'-' '{ print $1"-"$2 }'
-}
-
-# Get the ID of the current Compute Instance
-function get_instance_name {
-  log_info "Looking up current Compute Instance name"
-  get_instance_metadata_value "instance/name"
-}
-
-# Get the IP Address of the current Compute Instance
-function get_instance_ip_address {
-  local network_interface_number="$1"
-
-  # If no network interface number was specified, default to the first one
-  if [[ -z "$network_interface_number" ]]; then
-    network_interface_number=0
-  fi
-
-  log_info "Looking up Compute Instance IP Address on Network Interface $network_interface_number"
-  get_instance_metadata_value "instance/network-interfaces/$network_interface_number/ip"
-}
-
 function split_by_lines {
   local prefix="$1"
   shift
@@ -165,6 +111,7 @@ function generate_consul_config {
   local -r redundancy_zone_tag="${19}"
   local -r disable_upgrade_migration="${20}"
   local -r upgrade_version_tag=${21}
+  local -r instance_ip_address=${22}
   local -r config_path="$config_dir/$CONSUL_CONFIG_FILE"
 
   shift 20
@@ -173,41 +120,22 @@ function generate_consul_config {
   local instance_id=""
   local instance_name=""
   local project_id=""
-  local instance_ip_address=""
   local instance_region=""
   local ui="false"
 
-  instance_ip_address=$(get_instance_ip_address)
-  instance_name=$(get_instance_name)
-  instance_region=$(get_instance_region)
-  project_id=$(get_instance_project_id)
+  instance_name=$(hostname)
 
   # Configure Cloud Auto Join. See https://www.consul.io/docs/install/cloud-auto-join#google-compute-engine for more info.
-  local retry_join_json=""
-  if [[ -z "$cluster_tag_name" ]]; then
-    log_warn "The --cluster-tag-name property is empty. Will not automatically try to form a cluster based on Cluster Tag Name."
-  else
-    retry_join_json=$(
-      cat <<EOF
-"retry_join": ["provider=gce project_name=$project_id tag_value=$cluster_tag_name"],
-EOF
-    )
+  if [[ -z "$server_ips" ]]; then
+    log_error "Missing --server-ips argument."
+    exit 1
   fi
-
-  local recursors_config=""
-  if [[ ${#recursors[@]} -ne 0 ]]; then
-    recursors_config="\"recursors\" : [ "
-    for recursor in "${recursors[@]}"; do
-      recursors_config="${recursors_config}\"${recursor}\", "
-    done
-    recursors_config=$(echo "${recursors_config}" | sed 's/, $//')" ],"
-  fi
+  retry_join_json=$(jq -n --arg ips "$server_ips" '$ips | split(" ")')
 
   local bootstrap_expect=""
   if [[ "$server" == "true" ]]; then
     local cluster_size=""
-
-    cluster_size=$(get_instance_custom_metadata_value "$cluster_size_instance_metadata_key_name")
+    cluster_size=$(echo "$server_ips" | tr -s ' ' '\n' | grep -c '.')
 
     bootstrap_expect="\"bootstrap_expect\": $cluster_size,"
     ui="true"
@@ -250,6 +178,15 @@ EOF
   fi
 
   log_info "Creating default Consul configuration"
+  local acl_policy='allow'
+  local agent_token=''
+  if [[ -f "$ACL_SWITCH_FILE" && -f "$AGENT_TOKEN_FILE" ]]; then
+    acl_policy='deny'
+    agent_token=$(jq -r '.acl.tokens.default' "$AGENT_TOKEN_FILE")
+  fi
+  if [[ "${client:-}" == "true" || "${skip_bootstrap}" == "true" ]]; then
+    agent_token="${CONSUL_ACL_TOKEN:-}"
+  fi
   local default_config_json
   default_config_json=$(
     cat <<EOF
@@ -259,10 +196,10 @@ EOF
   },
   "acl": {
     "enabled": true,
-    "default_policy": "deny",
+    "default_policy": "$acl_policy",
     "enable_token_persistence": true,
     "tokens": {
-      "default": "$consul_token"
+      "default": "$agent_token"
     }
   },
   "telemetry": {
@@ -280,8 +217,7 @@ EOF
   "node_name": "$instance_id",
   "leave_on_terminate": true,
   "skip_leave_on_interrupt": true,
-  $recursors_config
-  $retry_join_json
+  "retry_join": $retry_join_json,
   "server": $server,
   $gossip_encryption_configuration
   $rpc_encryption_configuration
@@ -364,81 +300,7 @@ function start_consul {
 
   sudo systemctl daemon-reload
   sudo systemctl enable consul.service
-  sudo systemctl restart consul.service
-}
-
-function bootstrap {
-  log_info "Waiting for Consul to start"
-  instance_ip_address=$(get_instance_ip_address)
-  log_info "Instance IP Address: $instance_ip_address"
-
-  while true; do
-    consul_leader_addr=$(curl http://localhost:8500/v1/status/leader 2>/dev/null || true)
-    log_info "Consul leader address: $consul_leader_addr"
-
-    if [[ "$consul_leader_addr" == "\"$instance_ip_address:8300\"" ]]; then
-      local consul_token="$1"
-      log_info "Bootstrapping Consul"
-      echo "${consul_token}" >/tmp/consul.token
-      consul acl bootstrap /tmp/consul.token
-      rm /tmp/consul.token
-
-      break
-    fi
-
-    # Consul leader address was already set, but it isn't the current instance
-    if [[ -n "$consul_leader_addr" && "$consul_leader_addr" != "\"\"" ]]; then
-      log_info "Consul is already bootstrapped"
-      break
-    fi
-
-    log_info "Waiting for Consul to start"
-    sleep 1
-  done
-}
-
-function setup_dns_resolving {
-  local consul_token="$1"
-  local dns_request_token="$2"
-
-  until consul info -token="${consul_token}" > /dev/null 2>&1;
-  do
-    log_info "Waiting for Consul to start"
-    sleep 1
-  done
-
-  if (($(consul acl policy read -name="dns-request-policy" -token="${consul_token}" -format=json | jq '.ID' | wc -l) > 0)); then
-    log_info "DNS Request Policy already exists"
-    return
-  else
-    # Based on https://developer.hashicorp.com/consul/tutorials/security/access-control-setup-production#token-for-dns
-    # Token is created on the leader node, so there's no problem with duplication
-    touch dns-request-policy.hcl
-    cat <<EOF >dns-request-policy.hcl
-node_prefix "" {
-  policy = "read"
-}
-service_prefix "" {
-  policy = "read"
-}
-EOF
-
-    touch register-service-policy.hcl
-    cat <<EOF >register-service-policy.hcl
-service_prefix "" {
-  policy = "write"
-}
-EOF
-      consul acl policy create -name "dns-request-policy" -rules @dns-request-policy.hcl -token="${consul_token}"
-      consul acl policy create -name "register-service-policy" -rules @register-service-policy.hcl -token="a59fafb6-6829-9e31-9787-6a07c8ea586d"
-      consul acl token create -secret "${dns_request_token}" -description "Client Token" -policy-name "dns-request-policy" -policy-name "register-service-policy" -token="${consul_token}"
-      rm dns-request-policy.hcl
-      rm register-service-policy.hcl
-  fi
-
-
-  consul acl set-agent-token -token="${consul_token}" default "${dns_request_token}"
-  log_info "Client token set"
+  sudo systemctl restart consul.service || true
 }
 
 # Based on: http://unix.stackexchange.com/a/7732/215969
@@ -469,6 +331,7 @@ function run {
   local systemd_stdout=""
   local systemd_stderr=""
   local bin_dir=""
+  local server_ips=""
   local user=""
   local cluster_tag_name=""
   local datacenter=""
@@ -499,6 +362,11 @@ function run {
       ;;
     --client)
       client="true"
+      ;;
+    --server-ips)
+      assert_not_empty "$key" "$2"
+      server_ips="$2"
+      shift
       ;;
     --consul-token)
       assert_not_empty "$key" "$2"
@@ -626,6 +494,11 @@ function run {
       recursors+=("$2")
       shift
       ;;
+    --instance-ip-address)
+      assert_not_empty "$key" "$2"
+      instance_ip_address="$2"
+      shift
+      ;;
     --help)
       print_usage
       exit
@@ -650,17 +523,19 @@ function run {
   assert_is_installed "jq"
 
   if [[ -z "$config_dir" ]]; then
-    config_dir=$(cd "$SCRIPT_DIR/../config" && pwd)
+    config_dir="/etc/consul.d"
   fi
+  mkdir -p "$config_dir"
 
   if [[ -z "$data_dir" ]]; then
-    data_dir=$(cd "$SCRIPT_DIR/../data" && pwd)
+    data_dir="/data/consul"
   fi
+  mkdir -p "$data_dir"
 
   # If $systemd_stdout and/or $systemd_stderr are empty, we leave them empty so that generate_systemd_config will use systemd's defaults (journal and inherit, respectively)
 
   if [[ -z "$bin_dir" ]]; then
-    bin_dir=$(cd "$SCRIPT_DIR/../bin" && pwd)
+    bin_dir="/usr/local/bin"
   fi
 
   if [[ -z "$user" ]]; then
@@ -668,8 +543,15 @@ function run {
   fi
 
   if [[ -z "$datacenter" ]]; then
-    datacenter=$(get_instance_region)
+    datacenter=dc1
   fi
+
+  for ip in $server_ips; do
+    if curl -sSf "http://$ip:8500/v1/status/leader" | grep -q '"'; then
+      skip_bootstrap=true
+      break
+    fi
+  done
 
   if [[ "$skip_consul_config" == "true" ]]; then
     log_info "The --skip-consul-config flag is set, so will not generate a default Consul config file."
@@ -704,19 +586,57 @@ function run {
       "$redundancy_zone_tag" \
       "$disable_upgrade_migration" \
       "$upgrade_version_tag" \
+      "$instance_ip_address" \
+      "$server_ips" \
       "${recursors[@]}"
   fi
 
   generate_systemd_config "$SYSTEMD_CONFIG_PATH" "$config_dir" "$data_dir" "$systemd_stdout" "$systemd_stderr" "$bin_dir" "$user" "${environment[@]}"
+
   start_consul
 
-  if [[ "$client" == "true" ]]; then
-    setup_dns_resolving "$consul_token" "$dns_request_token"
-  fi
-
   if [[ "$server" == "true" ]]; then
-    bootstrap "$consul_token"
+    if [[ "${skip_bootstrap:-false}" == "true" ]]; then
+      :
+    elif [[ ! -f "$ACL_SWITCH_FILE" ]]; then
+      log_info "Waiting for first start to be ready"
+      until curl -sSf http://localhost:8500/v1/status/leader >/dev/null 2>&1; do sleep 1; done
+      sleep 5
+      log_info "Bootstrapping ACL"
+      local root_token
+      root_token=$(consul acl bootstrap -format=json | jq -r '.SecretID')
+      echo '{"acl":{"tokens":{"default":"'"$root_token"'"}}}' > "$AGENT_TOKEN_FILE"
+      chmod 600 "$AGENT_TOKEN_FILE"
+      touch "$ACL_SWITCH_FILE"
+
+      log_info "Re-generate config with deny + token and restart"
+      generate_consul_config "$server" "$root_token" "$config_dir" "$user" \
+        "$cluster_tag_name" "$CLUSTER_SIZE_INSTANCE_METADATA_KEY_NAME" "$datacenter" \
+        "$enable_gossip_encryption" "$gossip_encryption_key" \
+        "$enable_rpc_encryption" "$verify_server_hostname" \
+        "$ca_path" "$cert_file_path" "$key_file_path" \
+        "$cleanup_dead_servers" "$last_contact_threshold" \
+        "$max_trailing_logs" "$server_stabilization_time" \
+        "$redundancy_zone_tag" "$disable_upgrade_migration" \
+        "$upgrade_version_tag" "$instance_ip_address" "$server_ips" "${recursors[@]}"
+
+      # Immediate second restart (within same script)
+      systemctl daemon-reload
+      systemctl restart consul.service || true
+      rm -rf $AGENT_TOKEN_FILE
+      rm -rf $ACL_SWITCH_FILE
+
+      if [[ -n "${root_token:-}" ]]; then
+          script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          env_file="$script_dir/.env"
+          # If CONSUL_ACL_TOKEN line exists in file, replace it; otherwise append it
+          if grep -q '^export CONSUL_ACL_TOKEN=' "$env_file" 2>/dev/null; then
+              sed -i "s|^export CONSUL_ACL_TOKEN=.*|export CONSUL_ACL_TOKEN=$root_token|" "$env_file"
+          fi
+      fi
+    fi
   fi
 }
 
 run "$@"
+

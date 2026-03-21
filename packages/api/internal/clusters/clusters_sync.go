@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	nomadapi "github.com/hashicorp/nomad/api"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/e2b-dev/infra/packages/api/internal/cfg"
 	clickhouse "github.com/e2b-dev/infra/packages/clickhouse/pkg"
@@ -47,6 +48,7 @@ func NewPool(
 	tel *telemetry.Client,
 	db *client.Client,
 	nomad *nomadapi.Client,
+	k8s kubernetes.Interface,
 	queryMetricsProvider clickhouse.Clickhouse,
 	queryLogsProvider *loki.LokiQueryProvider,
 	config cfg.Config,
@@ -69,6 +71,7 @@ func NewPool(
 				clusters:             clusters,
 				local:                localCluster,
 				nomad:                nomad,
+				k8s:                  k8s,
 				queryLogsProvider:    queryLogsProvider,
 				queryMetricsProvider: queryMetricsProvider,
 			},
@@ -112,6 +115,7 @@ type clustersSyncStore struct {
 	clusters             *smap.Map[*Cluster]
 	local                *queries.Cluster
 	nomad                *nomadapi.Client
+	k8s                  kubernetes.Interface
 	queryMetricsProvider clickhouse.Clickhouse
 	queryLogsProvider    *loki.LokiQueryProvider
 	config               cfg.Config
@@ -171,7 +175,7 @@ func (d clustersSyncStore) PoolInsert(ctx context.Context, cluster queries.Clust
 
 	// Local cluster
 	if cluster.ID == consts.LocalClusterID {
-		c = newLocalCluster(context.WithoutCancel(ctx), d.tel, d.nomad, d.queryMetricsProvider, d.queryLogsProvider, d.config)
+		c = newLocalCluster(context.WithoutCancel(ctx), d.tel, d.nomad, d.k8s, d.queryMetricsProvider, d.queryLogsProvider, d.config)
 		d.clusters.Insert(clusterID, c)
 		logger.L().Info(ctx, "Local cluster initialized successfully", logger.WithClusterID(cluster.ID))
 

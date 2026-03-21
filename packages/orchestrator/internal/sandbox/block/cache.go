@@ -263,18 +263,39 @@ func (c *Cache) setIsCached(off, length int64) {
 }
 
 // When using WriteAtWithoutLock you must ensure thread safety, ideally by only writing to the same block once and the exposing the slice.
-func (c *Cache) WriteAtWithoutLock(b []byte, off int64) (int, error) {
+func (c *Cache) WriteAtWithoutLock(b []byte, off int64) (n int, err error) {
+	// 捕获 SIGBUS/fault 等致命信号
+	defer func() {
+		if r := recover(); r != nil {
+			n = 0
+			err = fmt.Errorf("cache write panic at offset %d, len %d: %v (mmap may be invalid)",
+				off, len(b), r)
+		}
+	}()
+
 	if c.isClosed() {
 		return 0, NewErrCacheClosed(c.filePath)
 	}
 
+	// 检查 mmap 是否有效
 	if c.mmap == nil {
-		return 0, nil
+		return 0, fmt.Errorf("cache mmap is nil for %s", c.filePath)
+	}
+
+	// 检查偏移量范围
+	if off < 0 || off >= c.size {
+		return 0, fmt.Errorf("invalid offset %d (cache size %d)", off, c.size)
 	}
 
 	end := min(off+int64(len(b)), c.size)
 
-	n := copy((*c.mmap)[off:end], b)
+	// 确保写入长度有效
+	if end <= off {
+		return 0, nil
+	}
+
+	// 执行写入 - 如果 mmap 底层失效，这里可能触发 SIGBUS
+	n = copy((*c.mmap)[off:end], b)
 
 	c.setIsCached(off, end-off)
 

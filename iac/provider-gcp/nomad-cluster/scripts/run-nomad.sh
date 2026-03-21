@@ -3,14 +3,8 @@
 
 set -e
 
-# Enable command tracing
-set -x
-
 readonly NOMAD_CONFIG_FILE="default.hcl"
-readonly SUPERVISOR_CONFIG_PATH="/etc/supervisor/conf.d/run-nomad.conf"
-
-readonly COMPUTE_INSTANCE_METADATA_URL="http://metadata.google.internal/computeMetadata/v1"
-readonly GOOGLE_CLOUD_METADATA_REQUEST_HEADER="Metadata-Flavor: Google"
+readonly SYSTEMD_CONFIG_PATH="/etc/systemd/system/nomad.service"
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_NAME="$(basename "$0")"
@@ -36,7 +30,6 @@ function print_usage {
   echo -e "  --use-sudo\t\tIf set, run the Nomad agent with sudo. By default, sudo is only used if --client is set."
   echo -e "  --skip-nomad-config\tIf this flag is set, don't generate a Nomad configuration file. Optional. Default is false."
   echo -e "  --api\t\tIf set, run the Nomad agent dedicated to API. Optional. Default is false."
-  echo -e "  --orchestrator-job-version\tThe orchestrator job version to set as node metadata. Optional."
   echo
   echo "Example:"
   echo
@@ -83,73 +76,6 @@ function assert_not_empty {
   fi
 }
 
-# Get the value at a specific Instance Metadata path.
-function get_instance_metadata_value {
-  local -r path="$1"
-
-  log_info "Looking up Metadata value at $COMPUTE_INSTANCE_METADATA_URL/$path"
-  response=$(curl --silent --show-error --location \
-    --header "$GOOGLE_CLOUD_METADATA_REQUEST_HEADER" \
-    --write-out "%{http_code}" \
-    --output /tmp/metadata.out \
-    "$COMPUTE_INSTANCE_METADATA_URL/$path")
-
-  if [ "$response" -eq 200 ]; then
-    cat /tmp/metadata.out
-  else
-    echo ""
-  fi
-  rm  /tmp/metadata.out
-}
-
-# Get the value of the given Custom Metadata Key
-function get_instance_custom_metadata_value {
-  local -r key="$1"
-
-  log_info "Looking up Custom Instance Metadata value for key \"$key\""
-  get_instance_metadata_value "instance/attributes/$key"
-}
-
-# Get the ID of the Project in which this Compute Instance currently resides
-function get_instance_project_id {
-  log_info "Looking up Project ID"
-  get_instance_metadata_value "project/project-id"
-}
-
-# Get the GCE Zone in which this Compute Instance currently resides
-function get_instance_zone {
-  log_info "Looking up Zone of the current Compute Instance"
-
-  # The value returned for zone will be of the form "projects/121238320500/zones/us-west1-a" so we need to split the string
-  # by "/" and return the 4th string.
-  get_instance_metadata_value "instance/zone" | cut -d'/' -f4
-}
-
-function get_instance_region {
-  # Trim the last two characters of a zone (e.g. us-west1-a) to get the region (e.g. us-west1)
-  # Head command comes from https://unix.stackexchange.com/a/215156/129208
-  get_instance_zone | head -c -3
-}
-
-# Get the ID of the current Compute Instance
-function get_instance_name {
-  log_info "Looking up current Compute Instance name"
-  get_instance_metadata_value "instance/name"
-}
-
-# Get the IP Address of the current Compute Instance
-function get_instance_ip_address {
-  local network_interface_number="$1"
-
-  # If no network interface number was specified, default to the first one
-  if [[ -z "$network_interface_number" ]]; then
-    network_interface_number=0
-  fi
-
-  log_info "Looking up Compute Instance IP Address on Network Interface $network_interface_number"
-  get_instance_metadata_value "instance/network-interfaces/$network_interface_number/ip"
-}
-
 function assert_is_installed {
   local -r name="$1"
 
@@ -166,21 +92,15 @@ function generate_nomad_config {
   local -r config_dir="$4"
   local -r user="$5"
   local -r consul_token="$6"
-  local -r node_pool="$7"
-  local -r orchestrator_job_version="$8"
+  local -r node_pool_name="$7"
+  local -r instance_ip_address="$8"
   local -r config_path="$config_dir/$NOMAD_CONFIG_FILE"
 
   local instance_name=""
-  local instance_ip_address=""
   local instance_region=""
   local instance_zone=""
-  local job_constraint=""
 
-  instance_name=$(get_instance_name)
-  instance_ip_address=$(get_instance_ip_address)
-  instance_region=$(get_instance_region)
-  zone=$(get_instance_zone)
-  job_constraint=$(get_instance_custom_metadata_value "job-constraint" || true)
+  instance_name=$(hostname -s)
 
   local server_config=""
   if [[ "$server" == "true" ]]; then
@@ -201,19 +121,15 @@ EOF
       cat <<EOF
 client {
   enabled = true
-  node_pool = "$node_pool"
+  node_pool = "$node_pool_name"
   meta {
-    "node_pool" = "$node_pool"
-    ${job_constraint:+"\"job_constraint\"" = "\"$job_constraint\""}
-    ${orchestrator_job_version:+"\"orchestrator_job_version\"" = "\"$orchestrator_job_version\""}
+    node_pool = "$node_pool_name"
   }
-  max_kill_timeout = "24h"
 }
 
 plugin "raw_exec" {
   config {
     enabled = true
-    no_cgroups = true
   }
 }
 
@@ -223,9 +139,9 @@ EOF
 
   log_info "Creating default Nomad config file in $config_path"
   cat >"$config_path" <<EOF
-datacenter = "$zone"
+#datacenter = "$zone"
 name       = "$instance_name"
-region     = "$instance_region"
+#region     = "$instance_region"
 bind_addr  = "0.0.0.0"
 
 advertise {
@@ -270,52 +186,68 @@ acl {
 }
 
 limits {
-  http_max_conns_per_client = 80
-  rpc_max_conns_per_client = 80
+  http_max_conns_per_client = 1000
+  rpc_max_conns_per_client = 1000
 }
 
 consul {
   address = "127.0.0.1:8500"
   allow_unauthenticated = false
+  server_auto_join = true
+  auto_advertise = true
   token = "$consul_token"
 }
 EOF
   chown "$user:$user" "$config_path"
 }
 
-function generate_supervisor_config {
-  local -r supervisor_config_path="$1"
-  local -r nomad_config_dir="$2"
-  local -r nomad_data_dir="$3"
-  local -r nomad_bin_dir="$4"
-  local -r nomad_log_dir="$5"
-  local nomad_user="$6"
-  local -r use_sudo="$7"
+function generate_systemd_config {
+  local -r config_dir="$1"
+  local -r data_dir="$2"
+  local -r bin_dir="$3"
+  local -r log_dir="$4"
+  local -r user="$5"
+  local -r use_sudo="$6"
 
-  if [[ "$use_sudo" == "true" ]]; then
-    log_info "The --use-sudo flag is set, so running Nomad as the root user"
-    nomad_user="root"
-  fi
+  [[ "$use_sudo" == "true" ]] && exec_user="root" || exec_user="$user"
 
-  log_info "Creating Supervisor config file to run Nomad in $supervisor_config_path"
-  cat >"$supervisor_config_path" <<EOF
-[program:nomad]
-command=$nomad_bin_dir/nomad agent -config $nomad_config_dir -data-dir $nomad_data_dir
-stdout_logfile=$nomad_log_dir/nomad-stdout.log
-stderr_logfile=$nomad_log_dir/nomad-error.log
-numprocs=1
-autostart=true
-autorestart=true
-stopsignal=INT
-minfds=65536
-user=$nomad_user
+  log_info "Creating systemd unit file in $SYSTEMD_CONFIG_PATH"
+  sudo tee "$SYSTEMD_CONFIG_PATH" >/dev/null <<EOF
+[Unit]
+Description=Nomad
+Documentation=https://nomadproject.io/docs/
+Wants=network-online.target
+After=network-online.target
+
+# When using Nomad with Consul it is not necessary to start Consul first. These
+# lines start Consul before Nomad as an optimization to avoid Nomad logging
+# that Consul is unavailable at startup.
+#Wants=consul.service
+#After=consul.service
+
+[Service]
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStart=$bin_dir/nomad agent -config $config_dir -data-dir $data_dir
+KillMode=process
+KillSignal=SIGINT
+LimitNOFILE=infinity
+LimitNPROC=infinity
+Restart=on-failure
+RestartSec=2
+StartLimitBurst=3
+StartLimitIntervalSec=10
+TasksMax=infinity
+
+[Install]
+WantedBy=multi-user.target
 EOF
+  sudo systemctl daemon-reload
 }
 
 function start_nomad {
-  log_info "Reloading Supervisor config and starting Nomad"
-  supervisorctl reread
-  supervisorctl update
+  log_info "Starting Nomad"
+  sudo systemctl enable nomad.service
+  sudo systemctl start  nomad.service
 }
 
 function bootstrap {
@@ -326,11 +258,23 @@ function bootstrap {
   done
   log_info "Nomad server started."
 
-  local -r nomad_token="$1"
-  log_info "Bootstrapping Nomad"
-  echo "$nomad_token" >"/tmp/nomad.token"
-  nomad acl bootstrap /tmp/nomad.token
-  rm "/tmp/nomad.token"
+  log_info "Bootstrapping Nomad ACL"
+  # Capture nomad acl bootstrap raw output
+  local bootstrap_output
+  bootstrap_output=$(nomad acl bootstrap 2>&1) || {
+    log_error "ACL bootstrap failed: $bootstrap_output"
+    exit 1
+  }
+
+  local secret_id
+  secret_id=$(echo "$bootstrap_output" | grep -E '^Secret ID' | awk '{print $4}')
+  if [[ -z "$secret_id" ]]; then
+    log_error "Could not parse Secret ID from bootstrap output"
+    exit 1
+  fi
+
+  log_info "Successfully bootstrapped Nomad ACL"
+  echo "$secret_id"
 }
 
 function create_node_pools {
@@ -348,6 +292,7 @@ node_pool "build" {
 }
 EOF
   nomad node pool apply -token "$nomad_token" "$config_dir/build_node_pool.hcl"
+  rm -rf $config_dir/*_pool.hcl
 }
 
 # Based on: http://unix.stackexchange.com/a/7732/215969
@@ -360,7 +305,15 @@ function run {
   local server="false"
   local client="false"
   local num_servers=""
+  local config_dir=""
+  local data_dir=""
+  local bin_dir=""
+  local log_dir=""
+  local user=""
+  local skip_nomad_config="false"
+  local use_sudo=""
   local all_args=()
+  local node_pool_name="default"
 
   while [[ $# > 0 ]]; do
     local key="$1"
@@ -386,12 +339,34 @@ function run {
       consul_token="$2"
       shift
       ;;
-    --node-pool)
-      node_pool="$2"
+    --config-dir)
+      assert_not_empty "$key" "$2"
+      config_dir="$2"
       shift
       ;;
-    --orchestrator-job-version)
-      orchestrator_job_version="$2"
+    --data-dir)
+      assert_not_empty "$key" "$2"
+      data_dir="$2"
+      shift
+      ;;
+    --bin-dir)
+      assert_not_empty "$key" "$2"
+      bin_dir="$2"
+      shift
+      ;;
+    --log-dir)
+      assert_not_empty "$key" "$2"
+      log_dir="$2"
+      shift
+      ;;
+    --user)
+      assert_not_empty "$key" "$2"
+      user="$2"
+      shift
+      ;;
+    --cluster-tag-key)
+      assert_not_empty "$key" "$2"
+      cluster_tag_key="$2"
       shift
       ;;
     --cluster-tag-value)
@@ -399,8 +374,25 @@ function run {
       cluster_tag_value="$2"
       shift
       ;;
+    --skip-nomad-config)
+      skip_nomad_config="true"
+      ;;
     --use-sudo)
       use_sudo="true"
+      ;;
+    --node-pool-name)
+      assert_not_empty "$key" "$2"
+      node_pool_name="$2"
+      shift
+      ;;
+    --instance-ip-address)
+      assert_not_empty "$key" "$2"
+      instance_ip_address="$2"
+      shift
+      ;;
+    --help)
+      print_usage
+      exit
       ;;
     *)
       log_error "Unrecognized argument: $key"
@@ -429,27 +421,69 @@ function run {
     fi
   fi
 
-  assert_is_installed "supervisorctl"
+  assert_is_installed "systemctl"
   assert_is_installed "curl"
 
-  config_dir=$(cd "$SCRIPT_DIR/../config" && pwd)
+  if [[ -z "$config_dir" ]]; then
+    config_dir="/etc/nomad.d"
+  fi
+  mkdir -p "$config_dir"
 
-  data_dir=$(cd "$SCRIPT_DIR/../data" && pwd)
+  if [[ -z "$data_dir" ]]; then
+    data_dir="/data/nomad"
+  fi
+  mkdir -p "$data_dir"
 
-  bin_dir=$(cd "$SCRIPT_DIR/../bin" && pwd)
+  if [[ -z "$bin_dir" ]]; then
+    bin_dir="/usr/local/bin"
+  fi
 
-  log_dir=$(cd "$SCRIPT_DIR/../log" && pwd)
+  if [[ -z "$log_dir" ]]; then
+    log_dir="/log/nomad"
+  fi
+  mkdir -p $log_dir
 
-  user=$(get_owner_of_path "$config_dir")
+  if [[ -z "$user" ]]; then
+    user=$(get_owner_of_path "$config_dir")
+  fi
 
-  generate_nomad_config "$server" "$client" "$num_servers" "$config_dir" "$user" "$consul_token" "$node_pool" "$orchestrator_job_version"
-  generate_supervisor_config "$SUPERVISOR_CONFIG_PATH" "$config_dir" "$data_dir" "$bin_dir" "$log_dir" "$user" "$use_sudo"
+  if [[ "$skip_nomad_config" == "true" ]]; then
+    log_info "The --skip-nomad-config flag is set, so will not generate a default Nomad config file."
+  else
+    generate_nomad_config "$server" "$client" "$num_servers" "$config_dir" "$user" "$consul_token" "$node_pool_name" "$instance_ip_address"
+  fi
+
+  generate_systemd_config "$config_dir" "$data_dir" "$bin_dir" "$log_dir" "$user" "$use_sudo"
+
   start_nomad
 
   if [[ "$server" == "true" ]]; then
-    bootstrap "$nomad_token"
-    create_node_pools "$nomad_token"
+    # --- 远程探测是否已有 leader，避免重复 bootstrap ---
+    skip_bootstrap=false
+    if [[ -n "${SERVER_IPS:-}" ]]; then
+      for ip in $SERVER_IPS; do
+        if curl -m 2 -sf "http://${ip}:4646/v1/status/leader" | grep -q '[^"]'; then
+          log_info "Detected running Nomad server at $ip, skipping bootstrap."
+          skip_bootstrap=true
+          break
+        fi
+      done
+    fi
+
+    if [[ "$skip_bootstrap" == "true" ]]; then
+      log_info "Joining existing Nomad cluster."
+    else
+      bootstrap_token=$(bootstrap)
+      create_node_pools "$bootstrap_token"
+      if [[ -n "${bootstrap_token:-}" ]]; then
+        env_file="$SCRIPT_DIR/.env"
+        grep -q '^export NOMAD_ACL_TOKEN=' "$env_file" 2>/dev/null \
+          && sed -i "s|^export NOMAD_ACL_TOKEN=.*|export NOMAD_ACL_TOKEN=$bootstrap_token|" "$env_file" \
+          || echo "export NOMAD_ACL_TOKEN=$bootstrap_token" >> "$env_file"
+      fi
+    fi
   fi
 }
 
 run "$@"
+

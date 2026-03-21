@@ -4,6 +4,15 @@ PREFIX := $(strip $(subst ",,$(PREFIX)))
 HOSTNAME := $(shell hostname 2> /dev/null || hostnamectl hostname 2> /dev/null)
 $(if $(HOSTNAME),,$(error Failed to determine hostname: both 'hostname' and 'hostnamectl' failed))
 
+UNAME_M   := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  PLATFORM := linux/amd64
+else ifeq ($(UNAME_M),aarch64)
+  PLATFORM := linux/arm64
+else
+  $(error Unsupported architecture: $(UNAME_M))
+endif
+
 expectedMigration := $(shell ./../../scripts/get-latest-migration.sh)
 
 ifeq ($(PROVIDER),aws)
@@ -70,7 +79,7 @@ profiler:
 build-and-upload:
 	$(eval COMMIT_SHA := $(shell git rev-parse --short HEAD))
 	$(eval EXPECTED_MIGRATION_TIMESTAMP := $(expectedMigration))
-	@ docker buildx build --platform linux/amd64 --tag $(IMAGE_REGISTRY) --push --build-arg COMMIT_SHA="$(COMMIT_SHA)" --build-arg EXPECTED_MIGRATION_TIMESTAMP="$(EXPECTED_MIGRATION_TIMESTAMP)"  -f ./Dockerfile ..
+	@ docker build --platform $(PLATFORM) --tag "$(REPOSITORY)/$(IMAGE)" --push --build-arg COMMIT_SHA="$(COMMIT_SHA)" --build-arg EXPECTED_MIGRATION_TIMESTAMP="$(EXPECTED_MIGRATION_TIMESTAMP)" .
 
 .PHONY: test
 test:
@@ -79,3 +88,4 @@ test:
 .PHONY: lint
 lint:
 	golangci-lint run --fix ./...
+

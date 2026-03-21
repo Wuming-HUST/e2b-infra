@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/e2b-dev/infra/packages/shared/pkg/env"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
@@ -57,6 +58,11 @@ type ServiceConfig struct {
 }
 
 func New(ctx context.Context, cfg ServiceConfig) *Server {
+	maxStartingInstancesPerNodeCustom, err := env.GetEnvAsInt("MAX_STARTING_INSTANCES_PER_NODE", maxStartingInstancesPerNode)
+	if err != nil {
+		logger.L().Error(ctx, "Error getting MAX_STARTING_INSTANCES_PER_NODE", zap.Error(err))
+		maxStartingInstancesPerNodeCustom = maxStartingInstancesPerNode
+	}
 	server := &Server{
 		config:            cfg.Config,
 		sandboxFactory:    cfg.SandboxFactory,
@@ -69,11 +75,11 @@ func New(ctx context.Context, cfg ServiceConfig) *Server {
 		persistence:       cfg.Persistence,
 		featureFlags:      cfg.FeatureFlags,
 		sbxEventsService:  cfg.SbxEventsService,
-		startingSandboxes: semaphore.NewWeighted(maxStartingInstancesPerNode),
+		startingSandboxes: semaphore.NewWeighted(int64(maxStartingInstancesPerNodeCustom)),
 	}
 
 	meter := cfg.Tel.MeterProvider.Meter("orchestrator.sandbox")
-	_, err := telemetry.GetObservableUpDownCounter(meter, telemetry.OrchestratorSandboxCountMeterName, func(_ context.Context, observer metric.Int64Observer) error {
+	_, err = telemetry.GetObservableUpDownCounter(meter, telemetry.OrchestratorSandboxCountMeterName, func(_ context.Context, observer metric.Int64Observer) error {
 		observer.Observe(int64(server.sandboxes.Count()))
 
 		return nil

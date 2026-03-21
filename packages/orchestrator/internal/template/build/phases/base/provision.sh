@@ -9,13 +9,50 @@ echo "Starting provisioning script"
 echo "Making configuration immutable"
 $BUSYBOX chattr +i /etc/resolv.conf
 
+# Detect OS family
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS_ID="$ID"
+else
+    echo "Cannot detect OS. /etc/os-release not found."
+    exit 1
+fi
+
 # Helper function to check if a package is installed
 is_package_installed() {
-    dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "install ok installed"
+    local pkg="$1"
+    if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "debian" ]]; then
+        dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"
+    elif [[ "$OS_ID" == "openEuler" || "$OS_ID" == "rhel" || "$OS_ID" == "centos" || "$OS_ID" == "fedora" ]]; then
+        rpm -q "$pkg" &>/dev/null
+    else
+        echo "Unsupported OS: $OS_ID"
+        return 1
+    fi
+}
+
+# Helper: install missing packages
+install_packages() {
+    local missing="$1"
+    if [ -z "$missing" ]; then
+        return 0
+    fi
+
+    if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "debian" ]]; then
+        echo "Updating apt cache..."
+        apt-get -q update
+        DEBIAN_FRONTEND=noninteractive DEBCONF_NOWARNINGS=yes \
+            apt-get -qq -o=Dpkg::Use-Pty=0 install -y --no-install-recommends $missing
+    elif [[ "$OS_ID" == "openEuler" || "$OS_ID" == "rhel" || "$OS_ID" == "centos" || "$OS_ID" == "fedora" ]]; then
+        echo "Installing via dnf: $missing"
+        dnf install --nogpgcheck -y $missing
+    fi
 }
 
 # Install required packages if not already installed
-PACKAGES="systemd systemd-sysv openssh-server sudo chrony linuxptp socat curl ca-certificates fuse3 iptables git nfs-common"
+PACKAGES="systemd systemd-sysv openssh-server sudo chrony linuxptp socat curl ca-certificates"
+
+echo "OS detected: $OS_ID"
 echo "Checking presence of the following packages: $PACKAGES"
 
 MISSING=""
@@ -23,13 +60,14 @@ for pkg in $PACKAGES; do
     if ! is_package_installed "$pkg"; then
         echo "Package $pkg is missing, will install it."
         MISSING="$MISSING $pkg"
+    else
+        echo "Package $pkg is already installed."
     fi
 done
 
 if [ -n "$MISSING" ]; then
     echo "Missing packages detected, installing:$MISSING"
-    apt-get -q update
-    DEBIAN_FRONTEND=noninteractive DEBCONF_NOWARNINGS=yes apt-get -qq -o=Dpkg::Use-Pty=0 install -y --no-install-recommends $MISSING
+    install_packages "$MISSING"
 else
     echo "All required packages are already installed."
 fi

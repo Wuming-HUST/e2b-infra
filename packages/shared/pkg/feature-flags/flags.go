@@ -123,16 +123,16 @@ func newIntFlag(name string, fallback int) IntFlag {
 }
 
 var (
-	MaxSandboxesPerNode           = newIntFlag("max-sandboxes-per-node", 200)
+	MaxSandboxesPerNode           = newIntFlag("max-sandboxes-per-node", 10000)
 	GcloudConcurrentUploadLimit   = newIntFlag("gcloud-concurrent-upload-limit", 8)
 	GcloudMaxTasks                = newIntFlag("gcloud-max-tasks", 16)
 	ClickhouseBatcherMaxBatchSize = newIntFlag("clickhouse-batcher-max-batch-size", 100)
 	ClickhouseBatcherMaxDelay     = newIntFlag("clickhouse-batcher-max-delay", 1000) // 1s in milliseconds
 	ClickhouseBatcherQueueSize    = newIntFlag("clickhouse-batcher-queue-size", 1000)
 	BestOfKSampleSize             = newIntFlag("best-of-k-sample-size", 3)                   // Default K=3
-	BestOfKMaxOvercommit          = newIntFlag("best-of-k-max-overcommit", 400)              // Default R=4 (stored as percentage, max over-commit ratio)
+	BestOfKMaxOvercommit          = newIntFlag("best-of-k-max-overcommit", 1200)              // Default R=4 (stored as percentage, max over-commit ratio)
 	BestOfKAlpha                  = newIntFlag("best-of-k-alpha", 50)                        // Default Alpha=0.5 (stored as percentage for int flag, current usage weight)
-	EnvdInitTimeoutMilliseconds   = newIntFlag("envd-init-request-timeout-milliseconds", 50) // Timeout for envd init request in milliseconds
+	EnvdInitTimeoutMilliseconds   = newIntFlag("envd-init-request-timeout-milliseconds", 120000) // Timeout for envd init request in milliseconds
 	HostStatsSamplingInterval     = newIntFlag("host-stats-sampling-interval", 5000)         // Host stats sampling interval in milliseconds (default 5s)
 	MaxCacheWriterConcurrencyFlag = newIntFlag("max-cache-writer-concurrency", 10)
 
@@ -146,11 +146,11 @@ var (
 
 	// MemoryPrefetchMaxFetchWorkers is the maximum number of parallel fetch workers per sandbox for memory prefetching.
 	// Fetching is I/O bound so we can have more parallelism.
-	MemoryPrefetchMaxFetchWorkers = newIntFlag("memory-prefetch-max-fetch-workers", 16)
+	MemoryPrefetchMaxFetchWorkers = newIntFlag("memory-prefetch-max-fetch-workers", 32)
 
 	// MemoryPrefetchMaxCopyWorkers is the maximum number of parallel copy workers per sandbox for memory prefetching.
 	// Copy uses uffd syscalls, so we limit parallelism to avoid overwhelming the system.
-	MemoryPrefetchMaxCopyWorkers = newIntFlag("memory-prefetch-max-copy-workers", 8)
+	MemoryPrefetchMaxCopyWorkers = newIntFlag("memory-prefetch-max-copy-workers", 16)
 
 	// TCPFirewallMaxConnectionsPerSandbox is the maximum number of concurrent TCP firewall
 	// connections allowed per sandbox. Negative means no limit.
@@ -192,8 +192,8 @@ func newStringFlag(name string, fallback string) StringFlag {
 // The Firecracker version the last tag + the short SHA (so we can build our dev previews)
 // TODO: The short tag here has only 7 characters — the one from our build pipeline will likely have exactly 8 so this will break.
 const (
-	DefaultFirecackerV1_10Version = "v1.10.1_30cbb07"
-	DefaultFirecackerV1_12Version = "v1.12.1_a41d3fb"
+	DefaultFirecackerV1_10Version = "v1.13.1"
+	DefaultFirecackerV1_12Version = "v1.13.1"
 	DefaultFirecrackerVersion     = DefaultFirecackerV1_12Version
 )
 

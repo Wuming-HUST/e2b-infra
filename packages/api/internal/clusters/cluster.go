@@ -13,6 +13,7 @@ import (
 	nomadapi "github.com/hashicorp/nomad/api"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/e2b-dev/infra/packages/api/internal/cfg"
 	"github.com/e2b-dev/infra/packages/api/internal/clusters/discovery"
@@ -71,6 +72,7 @@ func newLocalCluster(
 	ctx context.Context,
 	tel *telemetry.Client,
 	nomad *nomadapi.Client,
+	k8s kubernetes.Interface,
 	clickhouse clickhouse.Clickhouse,
 	queryLogsProvider *loki.LokiQueryProvider,
 	config cfg.Config,
@@ -83,7 +85,7 @@ func newLocalCluster(
 		return newInstance(ctx, tel, nil, clusterID, item, fmt.Sprintf("%s:%d", item.LocalIPAddress, item.LocalInstanceApiPort), false)
 	}
 
-	storeDiscovery := discovery.NewLocalDiscovery(clusterID, nomad)
+	storeDiscovery := discovery.NewLocalDiscovery(clusterID, nomad, k8s)
 	store := instancesSyncStore{clusterID: clusterID, instances: instances, discovery: storeDiscovery, instanceCreation: instanceCreation}
 
 	c := NewCluster(

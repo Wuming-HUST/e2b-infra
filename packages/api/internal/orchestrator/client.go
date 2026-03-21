@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	nomadapi "github.com/hashicorp/nomad/api"
 	"go.uber.org/zap"
 
 	"github.com/e2b-dev/infra/packages/api/internal/clusters"
@@ -65,26 +64,7 @@ func (o *Orchestrator) scopedNodeID(clusterID uuid.UUID, nodeID string) string {
 func (o *Orchestrator) listNomadNodes(ctx context.Context) ([]nodemanager.NomadServiceDiscovery, error) {
 	_, listSpan := tracer.Start(ctx, "list-nomad-nodes")
 	defer listSpan.End()
-
-	options := &nomadapi.QueryOptions{
-		// TODO: Use variable for node pool name ("default")
-		Filter: "Status == \"ready\" and NodePool == \"default\"",
-	}
-	nomadNodes, _, err := o.nomadClient.Nodes().List(options.WithContext(ctx))
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]nodemanager.NomadServiceDiscovery, 0, len(nomadNodes))
-	for _, n := range nomadNodes {
-		result = append(result, nodemanager.NomadServiceDiscovery{
-			NomadNodeShortID:    n.ID[:consts.NodeIDLength],
-			OrchestratorAddress: fmt.Sprintf("%s:%d", n.Address, consts.OrchestratorAPIPort),
-			IPAddress:           n.Address,
-		})
-	}
-
-	return result, nil
+	return o.discovery.ListNodes(ctx)
 }
 
 func (o *Orchestrator) GetNode(clusterID uuid.UUID, nodeID string) *nodemanager.Node {

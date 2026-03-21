@@ -38,10 +38,10 @@ import (
 var tracer = otel.Tracer("github.com/e2b-dev/infra/packages/orchestrator/internal/server")
 
 const (
-	requestTimeout = 60 * time.Second
+	requestTimeout = 300 * time.Second
 	// acquireTimeout is the max time to wait for a semaphore for resuming sandboxes snapshot.
-	acquireTimeout              = 15 * time.Second
-	maxStartingInstancesPerNode = 3
+	acquireTimeout              = 300 * time.Second
+	maxStartingInstancesPerNode = 30
 
 	// executionEventDataKey is the key used in webhook event data for sandbox execution metrics.
 	executionEventDataKey = "execution"
@@ -94,8 +94,10 @@ func (s *Server) Create(ctx context.Context, req *orchestrator.SandboxCreateRequ
 			return nil, err
 		}
 	} else {
-		acquired := s.startingSandboxes.TryAcquire(1)
-		if !acquired {
+		ctx, cancel := context.WithTimeout(ctx, acquireTimeout)
+		defer cancel()
+		err := s.startingSandboxes.Acquire(ctx, 1)
+		if err != nil {
 			telemetry.ReportEvent(ctx, "too many starting sandboxes on node")
 
 			return nil, status.Errorf(codes.ResourceExhausted, "too many sandboxes starting on this node, please retry")

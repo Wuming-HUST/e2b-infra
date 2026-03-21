@@ -4,6 +4,15 @@ ENV := $(shell cat ../../.last_used_env || echo "not-set")
 BUILD := $(shell git rev-parse --short HEAD)
 LDFLAGS=-ldflags "-X=main.commitSHA=$(BUILD)"
 
+UNAME_M   := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  PLATFORM := amd64
+else ifeq ($(UNAME_M),aarch64)
+  PLATFORM := arm64
+else
+  $(error Unsupported architecture: $(UNAME_M))
+endif
+
 AWS_BUCKET_PREFIX ?= $(PREFIX)$(AWS_ACCOUNT_ID)-
 GCP_BUCKET_PREFIX ?= $(GCP_PROJECT_ID)-
 
@@ -20,14 +29,14 @@ else
 endif
 
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/envd ${LDFLAGS}
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(PLATFORM) go build -a -o bin/envd ${LDFLAGS}
 
 build-debug:
 	CGO_ENABLED=1 go build -race -gcflags=all="-N -l" -o bin/debug/envd ${LDFLAGS}
 
 start-docker:
 	make build
-	DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -t envd-debug . -f debug.Dockerfile
+	DOCKER_BUILDKIT=1 docker build --platform linux/$(PLATFORM) -t envd-debug . -f debug.Dockerfile
 	docker run \
 	--name envd \
 	--platform linux/amd64 \
@@ -51,3 +60,4 @@ generate:
 .PHONY: test
 test:
 	go test -race -v ./...
+

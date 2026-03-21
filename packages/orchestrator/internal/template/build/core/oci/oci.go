@@ -38,7 +38,7 @@ const (
 
 var DefaultPlatform = containerregistry.Platform{
 	OS:           "linux",
-	Architecture: "amd64",
+	Architecture: "arm64",
 }
 
 // wrapImagePullError converts technical Docker registry errors into user-friendly messages.

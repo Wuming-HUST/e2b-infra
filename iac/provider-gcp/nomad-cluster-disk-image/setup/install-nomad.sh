@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 readonly DEFAULT_INSTALL_PATH="/opt/nomad"
@@ -7,9 +6,6 @@ readonly DEFAULT_NOMAD_USER="nomad"
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SYSTEM_BIN_DIR="/usr/local/bin"
-
-readonly SUPERVISOR_DIR="/etc/supervisor"
-readonly SUPERVISOR_CONF_DIR="$SUPERVISOR_DIR/conf.d"
 
 readonly SCRIPT_NAME="$(basename "$0")"
 
@@ -63,18 +59,19 @@ function assert_not_empty {
   fi
 }
 
-# Install steps are based on: http://unix.stackexchange.com/a/291098/215969
-function install_supervisord_debian {
-  sudo apt-get install -y supervisor
-  sudo update-rc.d supervisor defaults
+function install_systemd_unit {
+  local -r unit_file_src="$SCRIPT_DIR/nomad.service"
+  local -r unit_file_dst="/etc/systemd/system/nomad.service"
 
-  create_supervisor_config
-  sudo systemctl enable supervisor
-}
+  if [[ ! -f "$unit_file_src" ]]; then
+    log_error "systemd unit file $unit_file_src not found!"
+    exit 1
+  fi
 
-function create_supervisor_config {
-  sudo mkdir -p "$SUPERVISOR_CONF_DIR"
-  sudo cp "$SCRIPT_DIR/supervisord.conf" "$SUPERVISOR_DIR/supervisord.conf"
+  sudo cp "$unit_file_src" "$unit_file_dst"
+  sudo systemctl daemon-reload
+  sudo systemctl enable nomad.service
+  log_info "Nomad systemd unit installed & enabled"
 }
 
 function has_yum {
@@ -89,9 +86,11 @@ function install_dependencies {
   log_info "Installing dependencies"
 
   if $(has_apt_get); then
-    sudo apt-get update -y
-    sudo apt-get install -y curl unzip jq
-    install_supervisord_debian
+    sudo apt-get install -y curl unzip jq tar docker rsync
+    install_systemd_unit
+  elif $(has_yum); then
+    sudo yum install -y curl unzip jq tar docker rsync
+    install_systemd_unit
   else
     log_error "Could not find apt-get. Cannot install dependencies on this OS."
     exit 1
@@ -133,15 +132,24 @@ function install_binaries {
   local -r version="$1"
   local -r path="$2"
   local -r username="$3"
+  local arch
+    case "$(uname -m)" in
+      x86_64|amd64) arch="amd64" ;;
+      aarch64|arm64) arch="arm64" ;;
+      *)
+        log_error "Unsupported architecture: $(uname -m)"
+        exit 1
+        ;;
+    esac
 
-  local -r url="https://releases.hashicorp.com/nomad/${version}/nomad_${version}_linux_amd64.zip"
-  local -r download_path="/tmp/nomad_${version}_linux_amd64.zip"
+  local -r url="https://releases.hashicorp.com/nomad/${version}/nomad_${version}_linux_${arch}.zip"
+  local -r download_path="/tmp/nomad_${version}_linux_${arch}.zip"
   local -r bin_dir="$path/bin"
   local -r nomad_dest_path="$bin_dir/nomad"
 
   log_info "Downloading Nomad $version from $url to $download_path"
   curl -o "$download_path" "$url"
-  unzip -d /tmp "$download_path"
+  unzip -d /tmp -o "$download_path"
 
   log_info "Moving Nomad binary to $nomad_dest_path"
   sudo mv "/tmp/nomad" "$nomad_dest_path"
@@ -199,6 +207,7 @@ function install {
   log_info "Starting Nomad install"
 
   install_dependencies
+  systemctl enable --now docker
   create_nomad_user "$user"
   create_nomad_install_paths "$path" "$user"
   install_binaries "$version" "$path" "$user"
@@ -207,3 +216,4 @@ function install {
 }
 
 install "$@"
+

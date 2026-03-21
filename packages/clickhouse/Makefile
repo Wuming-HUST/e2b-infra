@@ -4,10 +4,15 @@ PREFIX := $(strip $(subst ",,$(PREFIX)))
 
 CLICKHOUSE_HOST ?= clickhouse
 
-ifeq ($(PROVIDER),aws)
-	CLICKHOUSE_MIGRATOR_IMAGE ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(PREFIX)core/clickhouse-migrator
+CLICKHOUSE_MIGRATOR_IMAGE ?= e2b-orchestration/clickhouse-migrator
+
+UNAME_M   := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  PLATFORM := linux/amd64
+else ifeq ($(UNAME_M),aarch64)
+  PLATFORM := linux/arm64
 else
-	CLICKHOUSE_MIGRATOR_IMAGE ?= $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT_ID)/$(PREFIX)core/clickhouse-migrator
+  $(error Unsupported architecture: $(UNAME_M))
 endif
 
 .PHONY: migrate
@@ -33,7 +38,7 @@ migrate-local:
 
 .PHONY: build
 build:
-	@docker build --platform linux/amd64 --tag "$(CLICKHOUSE_MIGRATOR_IMAGE)" .
+	@docker build --platform linux/arm64 --tag "$(CLICKHOUSE_MIGRATOR_IMAGE)" .
 
 .PHONY: build-and-upload
 build-and-upload:build
@@ -77,3 +82,4 @@ run:
 				-v ./local/users.xml:/etc/clickhouse-server/users.d/users.xml \
 				-v ./local/config.xml:/etc/clickhouse-server/config.d/config.xml \
 				clickhouse/clickhouse-server:25.4.5.24
+

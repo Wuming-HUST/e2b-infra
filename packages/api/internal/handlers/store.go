@@ -8,11 +8,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/e2b-dev/infra/packages/shared/pkg/env"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	analyticscollector "github.com/e2b-dev/infra/packages/api/internal/analytics_collector"
 	"github.com/e2b-dev/infra/packages/api/internal/api"
@@ -106,6 +109,20 @@ func NewAPIStore(ctx context.Context, tel *telemetry.Client, config cfg.Config) 
 	if err != nil {
 		logger.L().Fatal(ctx, "Initializing Nomad client", zap.Error(err))
 	}
+
+	var kubeClient *kubernetes.Clientset
+
+	if env.GetEnv("ORCHESTRATOR_TYPE", "nomad") == "k8s" {
+		cfg, err := rest.InClusterConfig()
+		if err != nil {
+			zap.L().Fatal("error when initializing kube config", zap.Error(err))
+		}
+		kubeClient, err = kubernetes.NewForConfig(cfg)
+		if err != nil {
+			zap.L().Fatal("error when initializing kube client", zap.Error(err))
+		}
+	}
+
 	redisClient, err := factories.NewRedisClient(ctx, factories.RedisConfig{
 		RedisURL:         config.RedisURL,
 		RedisClusterURL:  config.RedisClusterURL,
@@ -120,7 +137,7 @@ func NewAPIStore(ctx context.Context, tel *telemetry.Client, config cfg.Config) 
 		logger.L().Fatal(ctx, "error when getting logs query provider", zap.Error(err))
 	}
 
-	clusters, err := clusters.NewPool(ctx, tel, sqlcDB, nomadClient, clickhouseStore, queryLogsProvider, config)
+	clusters, err := clusters.NewPool(ctx, tel, sqlcDB, nomadClient, kubeClient, clickhouseStore, queryLogsProvider, config)
 	if err != nil {
 		logger.L().Fatal(ctx, "initializing edge clusters pool failed", zap.Error(err))
 	}
@@ -135,7 +152,7 @@ func NewAPIStore(ctx context.Context, tel *telemetry.Client, config cfg.Config) 
 		logger.L().Fatal(ctx, "Initializing access token generator failed", zap.Error(err))
 	}
 
-	orch, err := orchestrator.New(ctx, config, tel, nomadClient, posthogClient, redisClient, sqlcDB, clusters, featureFlags, accessTokenGenerator)
+	orch, err := orchestrator.New(ctx, config, tel, nomadClient, kubeClient, posthogClient, redisClient, sqlcDB, clusters, featureFlags, accessTokenGenerator)
 	if err != nil {
 		logger.L().Fatal(ctx, "Initializing Orchestrator client", zap.Error(err))
 	}

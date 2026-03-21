@@ -10,12 +10,6 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 )
 
-type Allocation struct {
-	NodeID       string
-	AllocationID string
-	AllocationIP string
-}
-
 const (
 	templateManagersTaskGroup = "template-manager"
 	templateManagerJobPrefix  = "template-manager"
@@ -44,15 +38,30 @@ var FilterTemplateBuildersAndOrchestrators = NomadQueryFilter(
 	),
 )
 
-func ListOrchestratorAndTemplateBuilderAllocations(ctx context.Context, client *nomadapi.Client, filter NomadQueryFilter) ([]Allocation, error) {
+// NomadDiscovery Nomad服务发现实现
+type NomadDiscovery struct {
+	client *nomadapi.Client
+	filter NomadQueryFilter
+}
+
+// NewNomadDiscovery 创建Nomad发现客户端
+func NewNomadDiscovery(client *nomadapi.Client, filter NomadQueryFilter) ServiceDiscovery {
+	return &NomadDiscovery{
+		client: client,
+		filter: filter,
+	}
+}
+
+// ListOrchestratorAndTemplateBuilderAllocations 查询Template Builder和Orchestrator的Allocations
+func (n *NomadDiscovery) ListOrchestratorAndTemplateBuilderAllocations(ctx context.Context) ([]Allocation, error) {
 	options := &nomadapi.QueryOptions{
 		// https://developer.hashicorp.com/nomad/api-docs/allocations#resources
 		// Return allocation resources as part of the response
 		Params: map[string]string{"resources": "true"},
-		Filter: string(filter),
+		Filter: string(n.filter),
 	}
 
-	results, _, err := client.Allocations().List(options.WithContext(ctx))
+	results, _, err := n.client.Allocations().List(options.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Nomad allocations in service discovery: %w", err)
 	}

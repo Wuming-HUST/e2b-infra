@@ -11,6 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel/metric"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 
 	analyticscollector "github.com/e2b-dev/infra/packages/api/internal/analytics_collector"
 	"github.com/e2b-dev/infra/packages/api/internal/cfg"
@@ -40,6 +41,7 @@ var ErrNodeNotFound = errors.New("node not found")
 
 type Orchestrator struct {
 	httpClient              *http.Client
+	discovery               NodeDiscovery
 	nomadClient             *nomadapi.Client
 	sandboxStore            *sandbox.Store
 	nodes                   *smap.Map[*nodemanager.Node]
@@ -64,6 +66,7 @@ func New(
 	config cfg.Config,
 	tel *telemetry.Client,
 	nomadClient *nomadapi.Client,
+	kubeClient *kubernetes.Clientset,
 	posthogClient *analyticscollector.PosthogClient,
 	redisClient redis.UniversalClient,
 	sqlcDB *sqlcdb.Client,
@@ -130,6 +133,15 @@ func New(
 		createdCounter: createdCounter,
 	}
 
+	switch env.GetEnv("ORCHESTRATOR_TYPE", "nomad") {
+	case "k8s":
+		o.discovery = NewK8sDiscovery(kubeClient)
+	case "nomad":
+		fallthrough
+	default:
+		o.discovery = NewNomadDiscovery(nomadClient)
+	}
+
 	var reservationStorage sandbox.ReservationStorage
 	var sandboxStorage sandbox.Storage
 	redisStorage := redisbackend.NewStorage(redisClient)
@@ -172,7 +184,7 @@ func New(
 
 	// For local development and testing, we skip the Nomad sync
 	// Local cluster is used for single-node setups instead
-	skipNomadSync := env.IsLocal()
+	skipNomadSync := false
 	go o.keepInSync(ctx, o.sandboxStore, skipNomadSync)
 
 	if err := o.setupMetrics(tel.MeterProvider); err != nil {

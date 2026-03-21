@@ -4,17 +4,22 @@ PREFIX := $(strip $(subst ",,$(PREFIX)))
 HOSTNAME := $(shell hostname 2> /dev/null || hostnamectl hostname 2> /dev/null)
 $(if $(HOSTNAME),,$(error Failed to determine hostname: both 'hostname' and 'hostnamectl' failed))
 
-ifeq ($(PROVIDER),aws)
-	IMAGE_REGISTRY := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(PREFIX)core/client-proxy
+IMAGE := e2b-orchestration/client-proxy
+
+UNAME_M   := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  PLATFORM := amd64
+else ifeq ($(UNAME_M),aarch64)
+  PLATFORM := arm64
 else
-	IMAGE_REGISTRY := $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT_ID)/$(PREFIX)core/client-proxy
+  $(error Unsupported architecture: $(UNAME_M))
 endif
 
 .PHONY: build
 build:
 	# Allow for passing commit sha directly for docker builds
 	$(eval COMMIT_SHA ?= $(shell git rev-parse --short HEAD))
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/client-proxy -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" .
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(PLATFORM) go build -o bin/client-proxy -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" .
 
 .PHONY: build-debug
 build-debug:
@@ -24,8 +29,8 @@ build-debug:
 .PHONY: build-and-upload
 build-and-upload:
 	$(eval COMMIT_SHA := $(shell git rev-parse --short HEAD))
-	@docker buildx build --platform linux/amd64 --tag $(IMAGE_REGISTRY) --push --build-arg COMMIT_SHA="$(COMMIT_SHA)" -f ./Dockerfile ..
-
+	@docker build --platform linux/$(PLATFORM) --tag "$(REPOSITORY)/$(IMAGE)" --push --build-arg COMMIT_SHA="$(COMMIT_SHA)" .
+    	
 .PHONY: run
 run:
 	make build-debug
@@ -51,3 +56,4 @@ generate:
 .PHONY: test
 test:
 	go test -race -v ./...
+

@@ -19,10 +19,15 @@ sudo mkdir -p /orchestrator/build
 
 # Add swapfile
 SWAPFILE="/swapfile"
-sudo fallocate -l 1G $SWAPFILE
-sudo chmod 600 $SWAPFILE
-sudo mkswap $SWAPFILE
-sudo swapon $SWAPFILE
+if [ ! -e "$SWAPFILE" ]; then
+    SWAPFILE="/swapfile"
+    sudo fallocate -l 1G $SWAPFILE
+    sudo chmod 600 $SWAPFILE
+    sudo mkswap $SWAPFILE
+    sudo swapon $SWAPFILE
+else
+    echo "Swapfile $SWAPFILE already exists, skipping creation."
+fi
 
 # Make swapfile persistent
 echo "$SWAPFILE none swap sw 0 0" | sudo tee -a /etc/fstab
@@ -75,7 +80,7 @@ mkdir -p /fc-vm
 envd_dir="/fc-envd"
 mkdir -p $envd_dir
 
-cp packages/envd/bin/debug/envd "${envd_dir}/."
+cp ./bin/envd "${envd_dir}/."
 
 chmod -R 755 $envd_dir
 ls -lh $envd_dir
@@ -83,16 +88,20 @@ du -h "${envd_dir}/envd"
 
 # Download kernels
 kernels_dir="/fc-kernels"
-mkdir -p $kernels_dir
-gsutil -m cp -r gs://e2b-prod-public-builds/kernels/* "${kernels_dir}"
+mkdir -p ${kernels_dir}/vmlinux-6.1.158/
+mkdir -p ${kernels_dir}/vmlinux-6.6.0-132.0.0/
+cp ./bin/vmlinux.bin "${kernels_dir}/vmlinux-6.1.158/"
+cp ./bin/vmlinux.bin.openeuler "${kernels_dir}/vmlinux-6.6.0-132.0.0/"
 chmod -R 755 $kernels_dir
 ls -lh $kernels_dir
 
 # Download FC versions
 fc_versions_dir="/fc-versions"
 mkdir -p $fc_versions_dir
-gsutil -m cp -r gs://e2b-prod-public-builds/firecrackers/* "${fc_versions_dir}"
-chmod -R 755 $fc_versions_dir
+mkdir -p $fc_versions_dir/v${FIRECRACKER_VERSION}
+cp /opt/e2b-infra/bin/firecracker ${fc_versions_dir}/v${FIRECRACKER_VERSION}/firecracker
+chmod +x ${fc_versions_dir}/v${FIRECRACKER_VERSION}/firecracker
+chmod -R 755 $fc_versions_dir/v${FIRECRACKER_VERSION}
 ls -lh $fc_versions_dir
 
 # Set up huge pages
@@ -159,10 +168,10 @@ base_hugepages_percentage=20
 base_hugepages=$(($hugepages * $base_hugepages_percentage / 100))
 base_hugepages=$(remove_decimal $base_hugepages)
 echo "- Allocating $base_hugepages huge pages ($base_hugepages_percentage%) for base usage"
-echo $base_hugepages >/proc/sys/vm/nr_hugepages
+echo $base_hugepages >/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
 overcommitment_hugepages_percentage=$((100 - $base_hugepages_percentage))
 overcommitment_hugepages=$(($hugepages * $overcommitment_hugepages_percentage / 100))
 overcommitment_hugepages=$(remove_decimal $overcommitment_hugepages)
 echo "- Allocating $overcommitment_hugepages huge pages ($overcommitment_hugepages_percentage%) for overcommitment"
-echo $overcommitment_hugepages >/proc/sys/vm/nr_overcommit_hugepages
+echo $overcommitment_hugepages >/sys/kernel/mm/hugepages/hugepages-2048kB/nr_overcommit_hugepages

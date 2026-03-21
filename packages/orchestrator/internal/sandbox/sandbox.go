@@ -425,6 +425,13 @@ func (f *Factory) ResumeSandbox(
 	defer span.End()
 	defer handleSpanError(span, &e)
 
+	startTime := time.Now()
+	traceID := span.SpanContext().TraceID().String()
+	zap.L().Sugar().Infof("[ResumeSandbox] enter, traceID=%s", traceID)
+	defer func() {
+		zap.L().Sugar().Infof("[ResumeSandbox] total cost: %d ms, traceID=%s", time.Since(startTime).Milliseconds(), traceID)
+	}()
+
 	execCtx, execSpan := startExecutionSpan(ctx)
 
 	exit := utils.NewErrorOnce()
@@ -557,11 +564,13 @@ func (f *Factory) ResumeSandbox(
 		return struct{}{}, nil
 	})
 
+	t2 := time.Now()
 	// Wait for all resources to be initialized
 	ips, err := ipsPromise.Wait(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get network slot: %w", err)
 	}
+	zap.L().Sugar().Infof("[ResumeSandbox] wait network slot cost: %.3f ms, traceID=%s", time.Since(t2).Seconds()*1000, traceID)
 
 	telemetry.ReportEvent(ctx, "got network slot")
 
@@ -580,12 +589,13 @@ func (f *Factory) ResumeSandbox(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rootfs overlay: %w", err)
 	}
-
+	t3 := time.Now()
 	meta, err := t.Metadata()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get metadata: %w", err)
 	}
-
+	zap.L().Sugar().Infof("[ResumeSandbox] get template metadata cost: %.3f ms, traceID=%s", time.Since(t3).Seconds()*1000, traceID)
+	t4 := time.Now()
 	// Create cgroup for sandbox resource accounting
 	cgroupHandle, cgroupFD := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
 
@@ -607,7 +617,8 @@ func (f *Factory) ResumeSandbox(
 	if fcErr != nil {
 		return nil, fmt.Errorf("failed to create FC: %w", fcErr)
 	}
-
+	zap.L().Sugar().Infof("[ResumeSandbox] fc.NewProcess cost: %.3f ms, traceID=%s", time.Since(t4).Seconds()*1000, traceID)
+	phaseStart := time.Now()
 	telemetry.ReportEvent(ctx, "created FC process")
 
 	// todo: check if kernel, firecracker, and envd versions exist
@@ -642,6 +653,7 @@ func (f *Factory) ResumeSandbox(
 		fcUffd.Ready(),
 		config.Envd.AccessToken,
 		cgroupFD,
+		span.SpanContext().TraceID().String(),
 	)
 
 	// Release the cgroup directory FD — the kernel already used it during clone
@@ -656,6 +668,7 @@ func (f *Factory) ResumeSandbox(
 	if fcStartErr != nil {
 		return nil, fmt.Errorf("failed to start FC: %w", fcStartErr)
 	}
+	zap.L().Sugar().Infof("[ResumeSandbox] resume VM cost: %d ms, traceID=%s", time.Since(phaseStart).Milliseconds(), traceID)
 
 	telemetry.ReportEvent(ctx, "initialized FC")
 

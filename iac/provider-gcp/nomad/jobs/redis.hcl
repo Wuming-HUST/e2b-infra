@@ -1,6 +1,6 @@
 job "redis" {
-  datacenters = ["${gcp_zone}"]
-  node_pool = "${node_pool}"
+  datacenters = ["${GCP_ZONE}"]
+  node_pool = "${API_NODE_POOL}"
   type = "service"
   priority = 95
 
@@ -16,20 +16,20 @@ job "redis" {
 
     network {
       port "redis" {
-        static = "${port_number}"
+        static = "${REDIS_PORT}"
       }
     }
 
     service {
       name = "redis"
-      port = "${port_name}"
+      port = "${REDIS_PORT_NAME}"
 
       check {
         type     = "tcp"
         name     = "health"
         interval = "10s"
         timeout  = "2s"
-        port     = "${port_number}"
+        port     = "${REDIS_PORT}"
       }
     }
 
@@ -44,11 +44,12 @@ job "redis" {
 
       config {
         network_mode = "host"
-        image        = "redis:7.4.2-alpine"
-        ports        = ["${port_name}"]
-        args = [
-        ]
+        image        = "${REGISTRY_URL}/redis:${REDIS_VERSION}"
+        auth_soft_fail = true #TODO:合入时需删除
+        ports        = ["${REDIS_PORT_NAME}"]
+        args = ["redis-server", "--port", "${REDIS_PORT}"]
       }
     }
   }
 }
+

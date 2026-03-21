@@ -232,13 +232,11 @@ func (c *apiClient) setMachineConfig(
 	memoryMB int64,
 	hugePages bool,
 ) error {
-	smt := true
-	trackDirtyPages := false
+	smt := false
 	machineConfig := &models.MachineConfiguration{
-		VcpuCount:       &vCPUCount,
-		MemSizeMib:      &memoryMB,
-		Smt:             &smt,
-		TrackDirtyPages: &trackDirtyPages,
+		VcpuCount:  &vCPUCount,
+		MemSizeMib: &memoryMB,
+		Smt:        &smt,
 	}
 	if hugePages {
 		machineConfig.HugePages = models.MachineConfigurationHugePagesNr2M

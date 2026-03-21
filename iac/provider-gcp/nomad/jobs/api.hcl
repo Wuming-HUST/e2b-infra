@@ -1,11 +1,9 @@
 job "api" {
-  datacenters = ["${gcp_zone}"]
-  node_pool = "${node_pool}"
+  datacenters = ["${GCP_ZONE}"]
+  node_pool = "${API_NODE_POOL}"
   priority = 90
 
   group "api-service" {
-    count = ${count}
-
     // Try to restart the task indefinitely
     // Tries to restart every 5 seconds
     restart {
@@ -17,20 +15,12 @@ job "api" {
 
     network {
       port "api" {
-        static = "${port_number}"
+        static = "${API_PORT}"
       }
 
       port "grpc" {
-        static = "${api_grpc_port}"
+        static = "${API_GRPC_PORT}"
       }
-
-      %{ if prevent_colocation }
-      port "scheduling-block" {
-        // This port is used to block scheduling of jobs with the same block on the same node.
-        // We use this to block API and Loki from being scheduled on the same node.
-        static = 40234
-      }
-      %{ endif }
     }
 
     constraint {
@@ -40,7 +30,7 @@ job "api" {
 
     service {
       name = "api"
-      port = "${port_number}"
+      port = "${API_PORT}"
       task = "start"
 
       check {
@@ -49,7 +39,7 @@ job "api" {
         path     = "/health"
         interval = "3s"
         timeout  = "3s"
-        port     = "${port_number}"
+        port     = "${API_PORT}"
       }
     }
 
@@ -67,27 +57,6 @@ job "api" {
       }
     }
 
-%{ if update_stanza }
-    # An update stanza to enable rolling updates of the service
-    update {
-      # The number of extra instances to run during the update
-      max_parallel      = 1
-      # Allows to spawn new version of the service before killing the old one
-      canary            = 1
-      # Time to wait for the canary to be healthy
-      min_healthy_time  = "10s"
-      # Time to wait for the canary to be healthy, if not it will be marked as failed
-      healthy_deadline  = "10800s"
-      # Time to wait for the overall update to complete. Otherwise, the deployment is marked as failed and rolled back
-      # This is on purpose very tight, we want to fail immediately if the deployment is marked as unhealthy
-      progress_deadline = "10801s"
-      # Whether to promote the canary if the rest of the group is not healthy
-      auto_promote      = true
-      # Whether to automatically rollback if the update fails
-      auto_revert       = true
-    }
-%{ endif }
-
     task "start" {
       driver       = "docker"
       # If we need more than 30s we will need to update the max_kill_timeout in nomad
@@ -96,54 +65,50 @@ job "api" {
       kill_signal  = "SIGTERM"
 
       resources {
-        memory_max = ${memory_mb * 2}
-        memory     = ${memory_mb}
-        cpu        = ${cpu_count * 1000}
+        memory_max = 40960
+        memory     = 20480
+        cpu        = 20000
       }
 
       env {
-        ENVIRONMENT                    = "${environment}"
+        ENVIRONMENT                    = "dev"
         NODE_ID                        = "$${node.unique.id}"
-        NOMAD_TOKEN                    = "${nomad_acl_token}"
-        ORCHESTRATOR_PORT              = "${orchestrator_port}"
-        API_GRPC_PORT                  = "${api_grpc_port}"
-        ADMIN_TOKEN                    = "${admin_token}"
-        SANDBOX_ACCESS_TOKEN_HASH_SEED = "${sandbox_access_token_hash_seed}"
+        NOMAD_TOKEN                    = "${NOMAD_ACL_TOKEN}"
+        ORCHESTRATOR_PORT              = "${ORCHESTRATOR_PORT}"
+        API_GRPC_PORT                  = "${API_GRPC_PORT}"
+        ADMIN_TOKEN                    = "${API_ADMIN_TOKEN}"
+        SANDBOX_ACCESS_TOKEN_HASH_SEED = "${SANDBOX_ACCESS_TOKEN_HASH_SEED}"
 
-        POSTGRES_CONNECTION_STRING              = "${postgres_connection_string}"
-        AUTH_DB_CONNECTION_STRING               = "${postgres_connection_string}"
-        AUTH_DB_READ_REPLICA_CONNECTION_STRING  = "${postgres_read_replica_connection_string}"
-        SUPABASE_JWT_SECRETS                    = "${supabase_jwt_secrets}"
+        POSTGRES_CONNECTION_STRING              = "${POSTGRES_CONNECTION_STRING}"
+        AUTH_DB_CONNECTION_STRING               = "${POSTGRES_CONNECTION_STRING}"
+        SUPABASE_JWT_SECRETS                    = "${SUPABASE_JWT_SECRETS}"
 
-        LOKI_URL                      = "${loki_url}"
-        CLICKHOUSE_CONNECTION_STRING  = "${clickhouse_connection_string}"
+        LOKI_URL                      = "${LOKI_URL}"
+        CLICKHOUSE_CONNECTION_STRING  = "clickhouse://${CLICKHOUSE_USERNAME}:${CLICKHOUSE_PASSWORD}@127.0.0.1:${CLICKHOUSE_SERVER_PORT}/${CLICKHOUSE_DATABASE}"
 
-        POSTHOG_API_KEY                = "${posthog_api_key}"
-        ANALYTICS_COLLECTOR_HOST       = "${analytics_collector_host}"
-        ANALYTICS_COLLECTOR_API_TOKEN  = "${analytics_collector_api_token}"
-        LOGS_COLLECTOR_ADDRESS         = "${logs_collector_address}"
-        OTEL_COLLECTOR_GRPC_ENDPOINT   = "${otel_collector_grpc_endpoint}"
+        POSTHOG_API_KEY                = "${POSTHOG_API_KEY}"
+        ANALYTICS_COLLECTOR_HOST       = "${ANALYTICS_COLLECTOR_HOST}"
+        ANALYTICS_COLLECTOR_API_TOKEN  = "${ANALYTICS_COLLECTOR_API_TOKEN}"
+        LOGS_COLLECTOR_ADDRESS         = "${LOGS_COLLECTOR_ADDRESS}"
+        OTEL_COLLECTOR_GRPC_ENDPOINT   = "${OTEL_COLLECTOR_GRPC_ENDPOINT}"
 
-        REDIS_URL                      = "${redis_url}"
-        REDIS_CLUSTER_URL              = "${redis_cluster_url}"
-        REDIS_TLS_CA_BASE64            = "${redis_tls_ca_base64}"
+        REDIS_URL                      = "${REDIS_URL}:${REDIS_PORT}"
+        REDIS_CLUSTER_URL              = ""
+        REDIS_TLS_CA_BASE64            = ""
 
-        SANDBOX_STORAGE_BACKEND        = "${sandbox_storage_backend}"
-
-%{ if launch_darkly_api_key != "" }
-        LAUNCH_DARKLY_API_KEY         = "${launch_darkly_api_key}"
-%{ endif }
-
+        SANDBOX_STORAGE_BACKEND        = "${SANDBOX_STORAGE_BACKEND}"
         # This is here just because it is required in some part of our code which is transitively imported
         TEMPLATE_BUCKET_NAME          = "skip"
       }
 
       config {
         network_mode = "host"
-        image        = "${api_docker_image}"
-        ports        = ["${port_name}"]
+        dns_servers  = ["127.0.0.1"]
+        image        = "${REGISTRY_URL}/${API_DOCKER_IMAGE}"
+        auth_soft_fail = true #TODO:合入时需删除
+        ports        = ["${API_PORT_NAME}"]
         args         = [
-          "--port", "${port_number}",
+          "--port", "${API_PORT}",
         ]
       }
     }
@@ -152,11 +117,13 @@ job "api" {
       driver = "docker"
 
       env {
-        POSTGRES_CONNECTION_STRING="${postgres_connection_string}"
+        POSTGRES_CONNECTION_STRING="${POSTGRES_CONNECTION_STRING}"
       }
 
       config {
-        image = "${db_migrator_docker_image}"
+        network_mode = "host"
+        image = "${REGISTRY_URL}/${DB_MIGRATOR_DOCKER_IMAGE}"
+        auth_soft_fail = true #TODO:合入时需删除
       }
 
       resources {
@@ -171,3 +138,4 @@ job "api" {
     }
   }
 }
+

@@ -2,23 +2,38 @@
 
 set -e
 
+log_info () { echo "[INFO]  $*"; }
+log_warn () { echo "[WARN]  $*"; }
+log_error() { echo "[ERROR] $*" >&2; }
+
+assert_not_empty() {
+  local key=$1 val=$2
+  if [[ -z $val ]]; then
+    log_error "Argument '$key' cannot be empty"
+    exit 1
+  fi
+}
+
+assert_exactly_one_of() {
+  local name1=$1 val1=$2 name2=$3 val2=$4
+  if [[ -z $val1 && -z $val2 ]] || [[ -n $val1 && -n $val2 ]]; then
+    log_error "Exactly one of $name1 or $name2 must be specified"
+    exit 1
+  fi
+}
+
+os_user_exists() {
+  getent passwd "$1" &>/dev/null
+}
+
 # Import the appropriate bash commons libraries
-readonly BASH_COMMONS_DIR="/opt/gruntwork/bash-commons"
+#readonly BASH_COMMONS_DIR="/opt/gruntwork/bash-commons"
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 readonly DEFAULT_INSTALL_PATH="/opt/consul"
 readonly DEFAULT_CONSUL_USER="consul"
 readonly DOWNLOAD_PACKAGE_PATH="/tmp/consul.zip"
 readonly SYSTEM_BIN_DIR="/usr/local/bin"
-
-if [[ ! -d "$BASH_COMMONS_DIR" ]]; then
-  echo "ERROR: this script requires that bash-commons is installed in $BASH_COMMONS_DIR. See https://github.com/gruntwork-io/bash-commons for more info."
-  exit 1
-fi
-
-source "$BASH_COMMONS_DIR/assert.sh"
-source "$BASH_COMMONS_DIR/log.sh"
-source "$BASH_COMMONS_DIR/os.sh"
 
 function print_usage {
   echo
@@ -65,18 +80,6 @@ function retry {
   exit $exit_status
 }
 
-function install_dependencies {
-  log_info "Installing dependencies"
-
-  if os_is_ubuntu; then
-    sudo apt-get update -y
-    sudo apt-get install -y curl unzip jq
-  else
-    log_error "Could not find apt-get. Cannot install dependencies on this OS."
-    exit 1
-  fi
-}
-
 function create_consul_user {
   local -r username="$1"
 
@@ -107,13 +110,44 @@ function fetch_binary {
   local -r version="$1"
   local download_url="$2"
 
-  if [[ -z "$download_url" && -n "$version" ]];  then
-    download_url="https://releases.hashicorp.com/consul/${version}/consul_${version}_linux_amd64.zip"
-  fi
+  if [[ -z "$download_url" && -n "$version" ]]; then
+      local arch
+      case "$(uname -m)" in
+        x86_64|amd64) arch="amd64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *)
+          log_error "Unsupported architecture: $(uname -m)"
+          exit 1
+          ;;
+      esac
+
+      download_url="https://releases.hashicorp.com/consul/${version}/consul_${version}_linux_${arch}.zip"
+    fi
 
   retry \
     "curl -o '$DOWNLOAD_PACKAGE_PATH' '$download_url' --location --silent --fail --show-error" \
     "Downloading Consul to $DOWNLOAD_PACKAGE_PATH"
+}
+
+function has_yum {
+  [ -n "$(command -v yum)" ]
+}
+
+function has_apt_get {
+  [ -n "$(command -v apt-get)" ]
+}
+
+function install_dependencies {
+  log_info "Installing dependencies"
+
+  if $(has_apt_get); then
+    sudo apt-get install -y curl unzip jq tar dnsmasq
+  elif $(has_yum); then
+    sudo yum install -y curl unzip jq tar dnsmasq
+  else
+    log_error "Could not find apt-get or yum. Cannot install dependencies on this OS."
+    exit 1
+  fi
 }
 
 function install_binary {
@@ -123,7 +157,7 @@ function install_binary {
   local -r bin_dir="$install_path/bin"
   local -r consul_dest_path="$bin_dir/consul"
 
-  unzip -d /tmp "$DOWNLOAD_PACKAGE_PATH"
+  unzip -d /tmp -o "$DOWNLOAD_PACKAGE_PATH"
 
   log_info "Moving Consul binary to $consul_dest_path"
   sudo mv "/tmp/consul" "$consul_dest_path"
@@ -244,3 +278,4 @@ function install {
 }
 
 install "$@"
+

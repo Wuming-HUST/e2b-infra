@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	NewSlotsPoolSize    = 32
-	ReusedSlotsPoolSize = 100
+	NewSlotsPoolSize    = 300
+	ReusedSlotsPoolSize = 1000
 )
 
 var (
@@ -138,6 +138,11 @@ func (p *Pool) Populate(ctx context.Context) {
 
 			newSlotsAvailableCounter.Add(ctx, 1)
 			p.newSlots <- slot
+			logger.L().Info(ctx, "[Pool Status] newSlots: %d/%d, reusedSlots: %d/%d\n",
+				zap.Int("newSlots len", len(p.newSlots)),
+				zap.Int("newSlots cap", cap(p.newSlots)),
+				zap.Int("reusedSlots len", len(p.reusedSlots)),
+				zap.Int("reusedSlots cap", cap(p.reusedSlots)))
 		}
 	}
 }
