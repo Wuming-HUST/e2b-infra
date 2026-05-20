@@ -21,6 +21,7 @@ build:
 	$(eval COMMIT_SHA ?= $(shell git rev-parse --short HEAD))
 	CGO_ENABLED=1 GOOS=linux go build -o bin/orchestrator -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" .
 	CGO_ENABLED=1 GOOS=linux go build -o bin/clean-nfs-cache -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" ./cmd/clean-nfs-cache
+	CGO_ENABLED=0 GOOS=linux go build -o bin/fc-netns-exec ./cmd/fc-netns-exec
 
 .PHONY: build-local
 build-local:
@@ -28,6 +29,7 @@ build-local:
 	$(eval COMMIT_SHA ?= $(shell git rev-parse --short HEAD))
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o bin/orchestrator -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" .
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o bin/clean-nfs-cache -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" ./cmd/clean-nfs-cache
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/fc-netns-exec ./cmd/fc-netns-exec
 
 .PHONY: build-debug
 build-debug:
