@@ -311,6 +311,9 @@ func (f *Factory) CreateSandbox(
 		return nil, err
 	}
 
+	zap.L().Sugar().Errorf("[NUMA][CreateSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
+		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
+
 	fcHandle, err := fc.NewProcess(
 		ctx,
 		execCtx,
@@ -320,6 +323,7 @@ func (f *Factory) CreateSandbox(
 		config.FirecrackerConfig,
 		rootfsProvider,
 		fc.ConstantRootfsPaths,
+		fc.NumaNodeFromEnv(config.Envd.Vars),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init FC: %w", err)
@@ -599,6 +603,8 @@ func (f *Factory) ResumeSandbox(
 	// Create cgroup for sandbox resource accounting
 	cgroupHandle, cgroupFD := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
 
+	zap.L().Sugar().Errorf("[NUMA][ResumeSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
+		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
 	fcHandle, fcErr := fc.NewProcess(
 		ctx,
 		execCtx,
@@ -613,6 +619,7 @@ func (f *Factory) ResumeSandbox(
 			TemplateID:      config.BaseTemplateID,
 			BuildID:         rootfs.Header().Metadata.BaseBuildId.String(),
 		},
+		fc.NumaNodeFromEnv(config.Envd.Vars),
 	)
 	if fcErr != nil {
 		return nil, fmt.Errorf("failed to create FC: %w", fcErr)

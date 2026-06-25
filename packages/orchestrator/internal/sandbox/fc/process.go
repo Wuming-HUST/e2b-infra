@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -78,6 +79,31 @@ type Process struct {
 	client *apiClient
 }
 
+// NoNumaNode signals that the Firecracker process should not be bound to a
+// specific NUMA node (i.e. FC_BIND was not set or was invalid).
+const NoNumaNode = -1
+
+// NumaNodeFromEnv extracts the NUMA node to bind the Firecracker process to from
+// the sandbox env vars (the FC_BIND variable, e.g. "FC_BIND=2"). It returns
+// NoNumaNode when FC_BIND is unset, empty, or not a valid non-negative integer.
+func NumaNodeFromEnv(vars map[string]string) int {
+	raw, ok := vars[envVarFCBind]
+	if !ok {
+		return NoNumaNode
+	}
+
+	node, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || node < 0 {
+		return NoNumaNode
+	}
+
+	return node
+}
+
+// envVarFCBind is the sandbox env var used to pin the Firecracker process to a
+// NUMA node via `numactl --membind`.
+const envVarFCBind = "FC_BIND"
+
 func NewProcess(
 	ctx context.Context,
 	execCtx context.Context,
@@ -87,6 +113,7 @@ func NewProcess(
 	versions Config,
 	rootfsProvider rootfs.Provider,
 	rootfsPaths RootfsPaths,
+	numaNode int,
 ) (*Process, error) {
 	ctx, childSpan := tracer.Start(ctx, "initialize-fc", trace.WithAttributes(
 		attribute.Int("sandbox.slot.index", slot.Idx),
@@ -114,13 +141,30 @@ func NewProcess(
 		return nil, fmt.Errorf("error stating kernel file: %w", err)
 	}
 
+	// Optionally pin the Firecracker process (and its guest memory allocations)
+	// to a specific NUMA node via `numactl --membind`. The node is provided by
+	// the FC_BIND sandbox env var and threaded down as numaNode. We wrap the
+	// firecracker binary directly so the membind policy applies to the process
+	// that actually allocates the guest memory.
+	cmdValue := startScript.Value
+	if numaNode >= 0 {
+		cmdValue = strings.Replace(
+			cmdValue,
+			"/fc-versions/",
+			fmt.Sprintf("/usr/bin/numactl --membind=%d --cpunodebind=%d /fc-versions/", numaNode, numaNode),
+			1,
+		)
+	}
+	// print the command for debugging
+	zap.L().Sugar().Errorf("[NUMA] depending on env var: %d", numaNode)
+	zap.L().Sugar().Errorf("[NUMA] final command: %s", cmdValue)
 	cmd := exec.CommandContext(execCtx,
 		"unshare",
 		"-m",
 		"--",
 		"bash",
 		"-c",
-		startScript.Value,
+		cmdValue,
 	)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
