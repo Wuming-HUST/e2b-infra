@@ -253,7 +253,33 @@ func (c *apiClient) setMachineConfig(
 	return nil
 }
 
-// https://github.com/firecracker-microvm/firecracker/blob/main/docs/entropy.md#firecracker-implementation
+// setBalloon configures a virtio-balloon device with Free Page Reporting (FPR)
+// enabled. With FPR the guest continuously reports pages it no longer uses and
+// Firecracker releases the backing memory (MADV_DONTNEED), reducing the VM's RSS.
+// FPR can only be enabled at boot time, before the VM is started.
+func (c *apiClient) setBalloon(ctx context.Context) error {
+	// amount_mib = 0 so the balloon is not inflated: we only want the guest to
+	// report freed pages, not to forcibly reclaim memory from it.
+	amountMib := int64(0)
+	deflateOnOom := true
+
+	balloonConfig := operations.PutBalloonParams{
+		Context: ctx,
+		Body: &models.Balloon{
+			AmountMib:         &amountMib,
+			DeflateOnOom:      &deflateOnOom,
+			FreePageReporting: true,
+		},
+	}
+
+	_, err := c.client.Operations.PutBalloon(&balloonConfig)
+	if err != nil {
+		return fmt.Errorf("error setting fc balloon config: %w", err)
+	}
+
+	return nil
+}
+
 func (c *apiClient) setEntropyDevice(ctx context.Context) error {
 	entropyConfig := operations.PutEntropyDeviceParams{
 		Context: ctx,

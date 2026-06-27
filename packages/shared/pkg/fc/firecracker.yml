@@ -767,6 +767,9 @@ definitions:
       stats_polling_interval_s:
         type: integer
         description: Interval in seconds between refreshing statistics. A non-zero value will enable the statistics. Defaults to 0.
+      free_page_reporting:
+        type: boolean
+        description: Whether the balloon should enable free page reporting (FPR). Defaults to false. Can only be set at boot time.
 
   BalloonUpdate:
     type: object

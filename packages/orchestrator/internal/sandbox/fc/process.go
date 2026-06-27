@@ -397,6 +397,20 @@ func (p *Process) Create(
 	}
 	telemetry.ReportEvent(ctx, "set fc entropy config")
 
+	// Balloon device with Free Page Reporting (FPR) enabled. Gated by the
+	// BALLOON_FPR env var (deploy-time) so it can be toggled without changing the
+	// upper layers. Must be configured before the VM is started, since FPR is a
+	// boot-time-only feature.
+	if p.config.BalloonFPR {
+		err = p.client.setBalloon(ctx)
+		if err != nil {
+			fcStopErr := p.Stop(ctx)
+
+			return errors.Join(fmt.Errorf("error setting fc balloon config: %w", err), fcStopErr)
+		}
+		telemetry.ReportEvent(ctx, "set fc balloon config")
+	}
+
 	err = p.client.startVM(ctx)
 	if err != nil {
 		fcStopErr := p.Stop(ctx)

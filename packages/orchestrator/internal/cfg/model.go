@@ -14,6 +14,7 @@ import (
 
 type BuilderConfig struct {
 	AllowSandboxInternet       bool          `env:"ALLOW_SANDBOX_INTERNET"   envDefault:"true"`
+	BalloonFPR             	   bool          `env:"BALLOON_FPR"              envDefault:"true"`
 	DomainName                 string        `env:"DOMAIN_NAME"              envDefault:""`
 	EnvdTimeout                time.Duration `env:"ENVD_TIMEOUT"             envDefault:"10s"`
 	FirecrackerNetnsExecHelper string        `env:"E2B_FC_NETNS_EXEC_HELPER" envDefault:"/opt/e2b-infra/bin/fc-netns-exec"`

@@ -26,6 +26,9 @@ type Balloon struct {
 
 	// Interval in seconds between refreshing statistics. A non-zero value will enable the statistics. Defaults to 0.
 	StatsPollingIntervals int64 `json:"stats_polling_interval_s,omitempty"`
+
+	// Whether the balloon should enable free page reporting (FPR). Defaults to false. Can only be set at boot time.
+	FreePageReporting bool `json:"free_page_reporting,omitempty"`
 }
 
 // Validate validates this balloon

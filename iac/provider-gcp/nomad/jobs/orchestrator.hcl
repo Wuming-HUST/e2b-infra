@@ -61,6 +61,9 @@ job "orchestrator" {
         TEMPLATE_BUCKET_NAME         = "${TEMPLATE_BUCKET_NAME}"
         OTEL_COLLECTOR_GRPC_ENDPOINT = "${OTEL_COLLECTOR_GRPC_ENDPOINT}"
         ALLOW_SANDBOX_INTERNET       = "${ALLOW_SANDBOX_INTERNET}"
+        # Enable virtio-balloon Free Page Reporting (FPR) on freshly booted VMs
+        # (i.e. at template build time, baked into the snapshot). Set to "true" to enable.
+        BALLOON_FPR                  = "true"
         CLICKHOUSE_CONNECTION_STRING = "clickhouse://${CLICKHOUSE_USERNAME}:${CLICKHOUSE_PASSWORD}@127.0.0.1:${CLICKHOUSE_SERVER_PORT}/${CLICKHOUSE_DATABASE}"
         REDIS_URL                    = "${REDIS_URL}:${REDIS_PORT}"
         REDIS_CLUSTER_URL            = ""
