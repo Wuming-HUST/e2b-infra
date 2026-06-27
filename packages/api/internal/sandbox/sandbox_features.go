@@ -43,9 +43,8 @@ func (v *VersionInfo) Version() semver.Version {
 }
 
 func (v *VersionInfo) HasHugePages() bool {
-	if v.lastReleaseVersion.Major() >= 1 && v.lastReleaseVersion.Minor() >= 7 {
-		return true
-	}
-
+	// Globally disabled: VMs use 4KB pages instead of 2MB huge pages.
+	// Note: existing templates/snapshots built with 2MB huge pages cannot be
+	// resumed under 4KB and must be rebuilt.
 	return false
 }

@@ -102,9 +102,14 @@ func (b *File) Slice(ctx context.Context, off, _ int64) ([]byte, error) {
 		return nil, fmt.Errorf("failed to get mapping: %w", err)
 	}
 
-	// Pass empty huge page when the build id is nil.
+	// Pass an empty page sized to the build's block size when the build id is nil.
 	if *buildID == uuid.Nil {
-		return header.EmptyHugePage, nil
+		switch b.header.Metadata.BlockSize {
+		case header.HugepageSize:
+			return header.EmptyHugePage, nil
+		default:
+			return header.EmptyBlock, nil
+		}
 	}
 
 	build, err := b.getBuild(ctx, buildID)

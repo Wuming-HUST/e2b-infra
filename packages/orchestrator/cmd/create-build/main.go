@@ -59,7 +59,7 @@ func main() {
 	vcpu := flag.Int("vcpu", 2, "vCPUs")
 	memory := flag.Int("memory", 1024, "memory MB")
 	disk := flag.Int("disk", 1024, "disk MB")
-	hugePages := flag.Bool("hugepages", true, "use 2MB huge pages for memory (false = 4KB pages)")
+	hugePages := flag.Bool("hugepages", false, "use 2MB huge pages for memory (false = 4KB pages)")
 	startCmd := flag.String("start-cmd", "", "start command")
 	setupCmd := flag.String("setup-cmd", "", "setup command to run during build (e.g., install deps)")
 	readyCmd := flag.String("ready-cmd", "", "ready check command")
