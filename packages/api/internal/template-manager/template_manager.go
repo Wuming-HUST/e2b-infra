@@ -42,6 +42,8 @@ type TemplateManager struct {
 	sqlcDB        *sqlcdb.Client
 
 	featureFlags *featureflags.Client
+
+	hugePagesEnabled bool
 }
 
 type DeleteBuild struct {
@@ -62,6 +64,7 @@ func New(
 	buildCache *templatecache.TemplatesBuildCache,
 	templateCache *templatecache.TemplateCache,
 	featureFlags *featureflags.Client,
+	hugePagesEnabled bool,
 ) (*TemplateManager, error) {
 	tm := &TemplateManager{
 		sqlcDB:        sqlcDB,
@@ -69,6 +72,8 @@ func New(
 		templateCache: templateCache,
 		clusters:      clusters,
 		featureFlags:  featureFlags,
+
+		hugePagesEnabled: hugePagesEnabled,
 
 		lock:       sync.Mutex{},
 		processing: make(map[uuid.UUID]processingBuilds),

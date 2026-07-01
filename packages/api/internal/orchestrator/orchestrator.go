@@ -59,6 +59,7 @@ type Orchestrator struct {
 	accessTokenGenerator    *sandbox.AccessTokenGenerator
 	sandboxCounter          metric.Int64UpDownCounter
 	createdCounter          metric.Int64Counter
+	hugePagesEnabled        bool
 }
 
 func New(
@@ -131,6 +132,7 @@ func New(
 
 		sandboxCounter: sandboxCounter,
 		createdCounter: createdCounter,
+		hugePagesEnabled: config.HugePagesEnabled,
 	}
 
 	switch env.GetEnv("ORCHESTRATOR_TYPE", "nomad") {

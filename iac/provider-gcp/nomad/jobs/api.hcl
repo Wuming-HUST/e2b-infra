@@ -97,6 +97,10 @@ job "api" {
         REDIS_TLS_CA_BASE64            = ""
 
         SANDBOX_STORAGE_BACKEND        = "${SANDBOX_STORAGE_BACKEND}"
+        # Use 2MB huge pages instead of 4KB pages for VMs/templates (still gated on
+        # the Firecracker version supporting it). Configured via HUGE_PAGES_ENABLED
+        # in .env. Note: templates/snapshots built with a different page size must be rebuilt.
+        HUGE_PAGES_ENABLED             = "${HUGE_PAGES_ENABLED}"
         # This is here just because it is required in some part of our code which is transitively imported
         TEMPLATE_BUCKET_NAME          = "skip"
       }

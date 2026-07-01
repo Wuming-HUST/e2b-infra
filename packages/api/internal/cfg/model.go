@@ -60,6 +60,12 @@ type Config struct {
 	// SandboxStorageBackend selects the sandbox storage implementation.
 	// "redis" uses Redis directly; "populate_redis" uses in-memory with Redis shadow writes.
 	SandboxStorageBackend string `env:"SANDBOX_STORAGE_BACKEND" envDefault:"memory"`
+
+	// HugePagesEnabled controls whether VMs and templates use 2MB huge pages
+	// instead of 4KB pages. It is still gated on the Firecracker version supporting
+	// huge pages. Note: templates/snapshots built with a different page size cannot
+	// be resumed and must be rebuilt after toggling this.
+	HugePagesEnabled bool `env:"HUGE_PAGES_ENABLED" envDefault:"false"`
 }
 
 func Parse() (Config, error) {

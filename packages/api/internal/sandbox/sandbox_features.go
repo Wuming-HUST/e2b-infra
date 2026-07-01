@@ -42,9 +42,16 @@ func (v *VersionInfo) Version() semver.Version {
 	return v.lastReleaseVersion
 }
 
-func (v *VersionInfo) HasHugePages() bool {
-	// Globally disabled: VMs use 4KB pages instead of 2MB huge pages.
-	// Note: existing templates/snapshots built with 2MB huge pages cannot be
-	// resumed under 4KB and must be rebuilt.
-	return false
+// HasHugePages reports whether 2MB huge pages should be used. It is gated both on
+// the caller-provided config toggle (enabled) and on the Firecracker version
+// supporting huge pages. When disabled, VMs use 4KB pages instead.
+//
+// Note: templates/snapshots built with a different page size cannot be resumed
+// and must be rebuilt after toggling this.
+func (v *VersionInfo) HasHugePages(enabled bool) bool {
+	if !enabled {
+		return false
+	}
+
+	return v.lastReleaseVersion.Major() >= 1 && v.lastReleaseVersion.Minor() >= 7
 }

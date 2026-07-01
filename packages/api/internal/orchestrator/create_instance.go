@@ -179,7 +179,7 @@ func (o *Orchestrator) CreateSandbox(
 		}
 	}
 
-	hasHugePages := fcSemver.HasHugePages()
+	hasHugePages := fcSemver.HasHugePages(o.hugePagesEnabled)
 	firecrackerVersion := getFirecrackerVersion(ctx, o.featureFlagsClient, fcSemver.Version(), build.FirecrackerVersion)
 	telemetry.ReportEvent(ctx, "Got FC info")
 

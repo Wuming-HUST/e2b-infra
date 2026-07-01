@@ -118,7 +118,7 @@ func (tm *TemplateManager) CreateTemplate(
 		DiskSizeMB:         int32(diskSizeMB),
 		KernelVersion:      kernelVersion,
 		FirecrackerVersion: firecrackerVersion,
-		HugePages:          features.HasHugePages(),
+		HugePages:          features.HasHugePages(tm.hugePagesEnabled),
 		StartCommand:       startCmd,
 		ReadyCommand:       readyCmd,
 		Force:              force,

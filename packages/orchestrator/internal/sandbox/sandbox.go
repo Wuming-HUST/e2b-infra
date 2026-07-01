@@ -226,6 +226,19 @@ func NewFactory(
 	}
 }
 
+// checkHugePagesMatch verifies that the API-requested page size
+func checkHugePagesMatch(memfileBlockSize int64, requested bool) error {
+	actual := memfileBlockSize == header.HugepageSize
+	if actual != requested {
+		return fmt.Errorf(
+			"huge pages mismatch: template memfile uses huge_pages=%t (block size %d) but the sandbox was requested with huge_pages=%t; rebuild the template after changing HUGE_PAGES_ENABLED",
+			actual, memfileBlockSize, requested,
+		)
+	}
+
+	return nil
+}
+
 // CreateSandbox creates the sandbox.
 // IMPORTANT: You must Close() the sandbox after you are done with it.
 func (f *Factory) CreateSandbox(
@@ -303,6 +316,10 @@ func (f *Factory) CreateSandbox(
 	memfileSize, err := memfile.Size(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get memfile size: %w", err)
+	}
+
+	if err := checkHugePagesMatch(memfile.BlockSize(), config.HugePages); err != nil {
+		return nil, err
 	}
 
 	// / ==== END of resources initialization ====
@@ -454,6 +471,14 @@ func (f *Factory) ResumeSandbox(
 	cleanup.Add(ctx, cleanupFiles(f.config, sandboxFiles))
 
 	telemetry.ReportEvent(ctx, "created sandbox files")
+
+	resumeMemfile, err := t.Memfile(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get memfile: %w", err)
+	}
+	if err := checkHugePagesMatch(resumeMemfile.BlockSize(), config.HugePages); err != nil {
+		return nil, err
+	}
 
 	// Uffd initialization
 	fcUffdPath := sandboxFiles.SandboxUffdSocketPath()
