@@ -36,6 +36,14 @@ const (
 	UFFD_API             = C.UFFD_API
 	UFFD_EVENT_PAGEFAULT = C.UFFD_EVENT_PAGEFAULT
 
+	// Non-pagefault, informational events. They are delivered when the
+	// registered address space changes underneath us, e.g. the guest frees
+	// pages via virtio-balloon Free Page Reporting which makes Firecracker
+	// madvise(MADV_DONTNEED) the backing memory (-> REMOVE).
+	UFFD_EVENT_REMOVE = C.UFFD_EVENT_REMOVE
+	UFFD_EVENT_REMAP  = C.UFFD_EVENT_REMAP
+	UFFD_EVENT_UNMAP  = C.UFFD_EVENT_UNMAP
+
 	UFFDIO_REGISTER_MODE_MISSING = C.UFFDIO_REGISTER_MODE_MISSING
 	UFFDIO_REGISTER_MODE_WP      = C.UFFDIO_REGISTER_MODE_WP
 
@@ -50,6 +58,10 @@ const (
 
 	UFFD_FEATURE_MISSING_HUGETLBFS = C.UFFD_FEATURE_MISSING_HUGETLBFS
 	UFFD_FEATURE_WP_ASYNC          = C.UFFD_FEATURE_WP_ASYNC
+	// UFFD_FEATURE_EVENT_REMOVE makes the kernel deliver UFFD_EVENT_REMOVE when
+	// the registered range is madvise(MADV_DONTNEED)'d (Firecracker enables this
+	// together with virtio-balloon Free Page Reporting).
+	UFFD_FEATURE_EVENT_REMOVE = C.UFFD_FEATURE_EVENT_REMOVE
 )
 
 type (
@@ -108,6 +120,19 @@ func getMsgArg(msg *UffdMsg) [24]byte {
 
 func getPagefaultAddress(pagefault *UffdPagefault) uintptr {
 	return uintptr(pagefault.address)
+}
+
+// UffdRemoveRange mirrors the `remove`/`remap`/`unmap` arm of the uffd_msg arg
+// union, which carries the [start, end) host virtual address range affected.
+type UffdRemoveRange struct {
+	Start uint64
+	End   uint64
+}
+
+func getRemoveRange(msg *UffdMsg) UffdRemoveRange {
+	arg := getMsgArg(msg)
+
+	return *(*UffdRemoveRange)(unsafe.Pointer(&arg[0]))
 }
 
 // Fd is a helper type that wraps uffd fd.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"go.opentelemetry.io/otel"
@@ -25,7 +26,34 @@ var tracer = otel.Tracer("github.com/e2b-dev/infra/packages/orchestrator/interna
 
 const maxRequestsInProgress = 4096
 
+// UFFDIO_COPY returns EAGAIN while the kernel has mmap_changing set on the VMA,
+// i.e. a concurrent operation is modifying the address space. With virtio-balloon
+// Free Page Reporting the guest reports free pages and Firecracker calls
+// madvise(MADV_DONTNEED) on the backing memory, which transiently sets that flag.
+// The condition clears as soon as the madvise finishes, so we retry the copy with
+// a short, capped backoff instead of tearing down the whole UFFD handler.
+var (
+	maxCopyRetries       = 32
+	copyRetryBaseBackoff = 50 * time.Microsecond
+	copyRetryMaxShift    = 5 // caps backoff at copyRetryBaseBackoff << 5 (~1.6ms)
+)
+
 var ErrUnexpectedEventType = errors.New("unexpected event type")
+
+// copyWithEagainRetry runs the UFFDIO_COPY closure, retrying on EAGAIN (which is
+// transient under concurrent madvise, e.g. balloon Free Page Reporting). Any
+// other error - including success or EEXIST - is returned immediately.
+func copyWithEagainRetry(copy func() error) error {
+	var err error
+	for attempt := 0; ; attempt++ {
+		err = copy()
+		if !errors.Is(err, unix.EAGAIN) || attempt >= maxCopyRetries {
+			return err
+		}
+
+		time.Sleep(copyRetryBaseBackoff << min(attempt, copyRetryMaxShift))
+	}
+}
 
 // hasEvent checks if a specific poll event flag is set in revents.
 func hasEvent(revents, event int16) bool {
@@ -208,7 +236,31 @@ outerLoop:
 
 		msg := *(*UffdMsg)(unsafe.Pointer(&buf[0]))
 
-		if msgEvent := getMsgEvent(&msg); msgEvent != UFFD_EVENT_PAGEFAULT {
+		switch msgEvent := getMsgEvent(&msg); msgEvent {
+		case UFFD_EVENT_PAGEFAULT:
+			// Handled below.
+
+		case UFFD_EVENT_REMOVE, UFFD_EVENT_REMAP, UFFD_EVENT_UNMAP:
+			// Informational events emitted when the registered address space
+			// changes underneath us. With virtio-balloon Free Page Reporting
+			// (and 4KB pages) the guest reports free pages, Firecracker calls
+			// madvise(MADV_DONTNEED) on the backing memory, and the kernel
+			// delivers UFFD_EVENT_REMOVE for that range.
+			//
+			// These events need no acknowledgement. We don't untrack the range:
+			// faultPage never skips already-mapped pages, so any later access to
+			// a removed page faults again and is correctly re-copied from the
+			// source. Just drop the event and keep serving.
+			rng := getRemoveRange(&msg)
+			u.logger.Debug(ctx, "UFFD serve address-space change event",
+				zap.Any("event_type", msgEvent),
+				zap.Uint64("start", rng.Start),
+				zap.Uint64("end", rng.End),
+			)
+
+			continue
+
+		default:
 			u.logger.Error(ctx, "UFFD serve unexpected event type", zap.Any("event_type", msgEvent))
 
 			return ErrUnexpectedEventType
@@ -355,7 +407,9 @@ func (u *Userfaultfd) faultPage(
 	//	copyMode |= UFFDIO_COPY_MODE_WP
 	//}
 	
-	copyErr := u.fd.copy(addr, pagesize, b, copyMode)
+	copyErr := copyWithEagainRetry(func() error {
+		return u.fd.copy(addr, pagesize, b, copyMode)
+	})
 	if errors.Is(copyErr, unix.EEXIST) {
 		// Page is already mapped
 		span.SetAttributes(attribute.Bool("uffd.already_mapped", true))
