@@ -68,6 +68,20 @@
   },
   "go.useLanguageServer": true,
   "go.toolsManagement.autoUpdate": true,
+  // Keep gopls in sync with `make build` in packages/orchestrator: the
+  // Mooncake storage backend (packages/shared/pkg/storage/storage_mooncake.go)
+  // is behind the `mooncake` build tag and its Go binding is a cgo package
+  // without #cgo directives, so headers/libs must come from CGO env vars.
+  "gopls": {
+    "build.buildFlags": [
+      "-tags=mooncake"
+    ]
+  },
+  "go.toolsEnvVars": {
+    "CGO_ENABLED": "1",
+    "CGO_CFLAGS": "-I/usr/include -I/usr/include/mooncake -I/usr/include/ub/umdk/urma -I/usr/include/ub/umdk/urma/udma",
+    "CGO_LDFLAGS": "-L/usr/lib64/urma -L/usr/lib64 -lmooncake_store -lmooncake_common -lstdc++ -lnuma -lglog -lgflags -libverbs -ljsoncpp -lzstd -lcurl -luring"
+  },
   "go.testOnSave": false,
   "go.testTimeout": "20s",
   "go.inlayHints.assignVariableTypes": true,
