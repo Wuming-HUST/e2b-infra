@@ -30,6 +30,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/nomad/api v0.0.0-20251216171439-1dee0671280e
 	github.com/jellydator/ttlcache/v3 v3.4.0
+	github.com/kvcache-ai/Mooncake/mooncake-store/go v0.0.0-20260624092417-68bd6b84f0f2
 	github.com/launchdarkly/go-sdk-common/v3 v3.3.0
 	github.com/launchdarkly/go-server-sdk/v7 v7.13.0
 	github.com/minio/minio-go/v7 v7.0.95

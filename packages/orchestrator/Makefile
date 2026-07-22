@@ -7,6 +7,12 @@ GCP_BUCKET_PREFIX ?= $(GCP_PROJECT_ID)-
 HOSTNAME := $(shell hostname 2> /dev/null || hostnamectl hostname 2> /dev/null)
 $(if $(HOSTNAME),,$(error Failed to determine hostname: both 'hostname' and 'hostnamectl' failed))
 
+# Mooncake storage backend — linked into the orchestrator by default via
+# `make build`. Requires the Mooncake CGo libraries in /usr/lib64 and headers
+# in /usr/include/mooncake (see the mooncake build recipe).
+MOONCAKE_CGO_CFLAGS  := -I/usr/include -I/usr/include/mooncake -I/usr/include/ub/umdk/urma -I/usr/include/ub/umdk/urma/udma
+MOONCAKE_CGO_LDFLAGS := -L/usr/lib64/urma -L/usr/lib64 -lmooncake_store -lmooncake_common -lstdc++ -lnuma -lglog -lgflags -libverbs -ljsoncpp -lzstd -lcurl -luring
+
 .PHONY: init
 init:
 	brew install protobuf
@@ -17,7 +23,20 @@ generate:
 
 .PHONY: build
 build:
-	# Allow for passing commit sha directly for docker builds
+	# Build the orchestrator with the Mooncake storage backend linked in by
+	# default. clean-nfs-cache is a standalone tool and is built without it.
+	$(eval COMMIT_SHA ?= $(shell git rev-parse --short HEAD))
+	CGO_ENABLED=1 GOOS=linux \
+		CGO_CFLAGS="$(MOONCAKE_CGO_CFLAGS)" \
+		CGO_LDFLAGS="$(MOONCAKE_CGO_LDFLAGS)" \
+		go build -tags mooncake -o bin/orchestrator -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" .
+	CGO_ENABLED=1 GOOS=linux go build -o bin/clean-nfs-cache -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" ./cmd/clean-nfs-cache
+
+.PHONY: build-no-mooncake
+build-no-mooncake:
+	# Build the orchestrator WITHOUT the Mooncake backend — use this on hosts
+	# without the Mooncake CGo libraries. The binary then uses the stub storage
+	# provider (NewMooncakeStorageProvider returns an error at runtime).
 	$(eval COMMIT_SHA ?= $(shell git rev-parse --short HEAD))
 	CGO_ENABLED=1 GOOS=linux go build -o bin/orchestrator -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" .
 	CGO_ENABLED=1 GOOS=linux go build -o bin/clean-nfs-cache -ldflags "-X=main.commitSHA=$(COMMIT_SHA)" ./cmd/clean-nfs-cache

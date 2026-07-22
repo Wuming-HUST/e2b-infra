@@ -27,11 +27,12 @@ var ErrObjectNotExist = errors.New("object does not exist")
 type Provider string
 
 const (
-	GCPStorageProvider     Provider = "GCPBucket"
-	AWSStorageProvider     Provider = "AWSBucket"
-	LocalStorageProvider   Provider = "Local"
-	MINIOStorageProvider   Provider = "MinioBucket"
-	DefaultStorageProvider Provider = MINIOStorageProvider
+	GCPStorageProvider      Provider = "GCPBucket"
+	AWSStorageProvider      Provider = "AWSBucket"
+	LocalStorageProvider    Provider = "Local"
+	MINIOStorageProvider    Provider = "MinioBucket"
+	MooncakeStorageProvider Provider = "MooncakeBucket"
+	DefaultStorageProvider  Provider = MINIOStorageProvider
 
 	storageProviderEnv = "STORAGE_PROVIDER"
 
@@ -114,6 +115,8 @@ func GetTemplateStorageProvider(ctx context.Context, limiter *limit.Limiter) (St
 		return NewGCP(ctx, bucketName, limiter)
 	case MINIOStorageProvider:
 		return NewMinioBucketStorageProvider(ctx, bucketName)
+	case MooncakeStorageProvider:
+		return NewMooncakeStorageProvider(ctx, bucketName)
 	}
 
 	return nil, fmt.Errorf("unknown storage provider: %s", provider)
@@ -138,6 +141,8 @@ func GetBuildCacheStorageProvider(ctx context.Context, limiter *limit.Limiter) (
 		return NewGCP(ctx, bucketName, limiter)
 	case MINIOStorageProvider:
 		return NewMinioBucketStorageProvider(ctx, bucketName)
+	case MooncakeStorageProvider:
+		return NewMooncakeStorageProvider(ctx, bucketName)
 	}
 
 	return nil, fmt.Errorf("unknown storage provider: %s", provider)
