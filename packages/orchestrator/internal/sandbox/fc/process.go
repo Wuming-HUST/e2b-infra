@@ -422,9 +422,8 @@ func (p *Process) Create(
 func (p *Process) Resume(
 	ctx context.Context,
 	sbxMetadata sbxlogger.SandboxMetadata,
-	uffdSocketPath string,
+	memoryBackend SnapshotMemoryBackend,
 	snapfile template.File,
-	uffdReady chan struct{},
 	accessToken *string,
 	cgroupFD int,
 	traceID string,
@@ -460,18 +459,20 @@ func (p *Process) Resume(
 		return nil
 	})
 
-	eg.Go(func() error {
-		phaseStart := time.Now()
-		err := socket.Wait(egCtx, uffdSocketPath)
-		if err != nil {
-			return fmt.Errorf("error waiting for uffd socket: %w", err)
-		}
+	if memoryBackend.Type == SnapshotMemoryBackendUffd {
+		eg.Go(func() error {
+			phaseStart := time.Now()
+			err := socket.Wait(egCtx, memoryBackend.Path)
+			if err != nil {
+				return fmt.Errorf("error waiting for uffd socket: %w", err)
+			}
 
-		telemetry.ReportEvent(egCtx, "uffd socket ready")
-		zap.L().Sugar().Infof("[ResumeSandbox] get uffd sock path cost: %.3f ms, traceID=%s", time.Since(phaseStart).Seconds()*1000, traceID)
+			telemetry.ReportEvent(egCtx, "uffd socket ready")
+			zap.L().Sugar().Infof("[ResumeSandbox] get uffd sock path cost: %.3f ms, traceID=%s", time.Since(phaseStart).Seconds()*1000, traceID)
 
-		return nil
-	})
+			return nil
+		})
+	}
 
 	eg.Go(func() error {
 		phaseStart := time.Now()
@@ -500,8 +501,7 @@ func (p *Process) Resume(
 	phase5Start := time.Now()
 	err = p.client.loadSnapshot(
 		ctx,
-		uffdSocketPath,
-		uffdReady,
+		memoryBackend,
 		snapfile,
 	)
 	if err != nil {

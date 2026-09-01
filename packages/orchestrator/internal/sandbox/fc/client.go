@@ -35,16 +35,18 @@ func newApiClient(socketPath string) *apiClient {
 
 func (c *apiClient) loadSnapshot(
 	ctx context.Context,
-	uffdSocketPath string,
-	uffdReady chan struct{},
+	memoryBackend SnapshotMemoryBackend,
 	snapfile template.File,
 ) error {
 	ctx, span := tracer.Start(ctx, "load-snapshot")
 	defer span.End()
 
 	backendType := models.MemoryBackendBackendTypeUffd
+	if memoryBackend.Type == SnapshotMemoryBackendFile {
+		backendType = models.MemoryBackendBackendTypeFile
+	}
 	backend := &models.MemoryBackend{
-		BackendPath: &uffdSocketPath,
+		BackendPath: &memoryBackend.Path,
 		BackendType: &backendType,
 	}
 
@@ -69,14 +71,16 @@ func (c *apiClient) loadSnapshot(
 
 	telemetry.ReportEvent(ctx, "loaded snapshot")
 
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("context canceled while waiting for uffd ready: %w", ctx.Err())
-	case <-uffdReady:
-		// Wait for the uffd to be ready to serve requests
-	}
+	if memoryBackend.Type == SnapshotMemoryBackendUffd {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled while waiting for uffd ready: %w", ctx.Err())
+		case <-memoryBackend.Ready:
+			// Wait for UFFD to receive the guest memory mappings.
+		}
 
-	telemetry.ReportEvent(ctx, "uffd ready")
+		telemetry.ReportEvent(ctx, "uffd ready")
+	}
 
 	return nil
 }

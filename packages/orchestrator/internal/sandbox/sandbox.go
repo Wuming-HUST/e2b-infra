@@ -496,6 +496,25 @@ func (f *Factory) ResumeSandbox(
 		return nil, err
 	}
 
+	var fileMemoryBackendPath string
+	if f.config.FileMemoryBackendEnabled {
+		fileMemoryBackendPath, err = template.MaterializeMemoryImage(
+			ctx,
+			resumeMemfile,
+			f.config.FileMemoryBackendDir,
+			t.Files().BuildID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to materialize shared memory image: %w", err)
+		}
+		telemetry.ReportEvent(ctx, "materialized shared memory image")
+	}
+
+	resumeMemfileSize, err := resumeMemfile.Size(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get resume memfile size: %w", err)
+	}
+
 	// Uffd initialization
 	fcUffdPath := sandboxFiles.SandboxUffdSocketPath()
 	uffdPromise := utils.NewPromise(func() (*uffd.Uffd, error) {
@@ -511,6 +530,10 @@ func (f *Factory) ResumeSandbox(
 
 	// Prefetching
 	go func() {
+		if f.config.FileMemoryBackendEnabled {
+			return
+		}
+
 		memfile, err := t.Memfile(ctx)
 		if err != nil {
 			return
@@ -589,6 +612,10 @@ func (f *Factory) ResumeSandbox(
 
 	// Memory initialization
 	memoryPromise := utils.NewPromise(func() (struct{}, error) {
+		if f.config.FileMemoryBackendEnabled {
+			return struct{}{}, nil
+		}
+
 		fcUffd, err := uffdPromise.Wait(ctx)
 		if err != nil {
 			return struct{}{}, err
@@ -680,28 +707,38 @@ func (f *Factory) ResumeSandbox(
 
 	telemetry.ReportEvent(ctx, "got snapfile")
 
-	fcUffd, err := uffdPromise.Wait(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get uffd: %w", err)
+	memoryStartCtx := ctx
+	var sandboxMemory uffd.MemoryBackend
+	var snapshotMemoryBackend fc.SnapshotMemoryBackend
+	if f.config.FileMemoryBackendEnabled {
+		sandboxMemory = uffd.NewNoopMemory(resumeMemfileSize, resumeMemfile.BlockSize())
+		snapshotMemoryBackend = fc.NewFileSnapshotMemoryBackend(fileMemoryBackendPath)
+	} else {
+		fcUffd, uffdErr := uffdPromise.Wait(ctx)
+		if uffdErr != nil {
+			return nil, fmt.Errorf("failed to get uffd: %w", uffdErr)
+		}
+
+		uffdStartCtx, cancelUffdStartCtx := context.WithCancelCause(ctx)
+		defer cancelUffdStartCtx(fmt.Errorf("uffd finished starting"))
+		memoryStartCtx = uffdStartCtx
+		sandboxMemory = fcUffd
+		snapshotMemoryBackend = fc.NewUffdSnapshotMemoryBackend(fcUffdPath, fcUffd.Ready())
+		go func() {
+			uffdWaitErr := fcUffd.Exit().Wait()
+			cancelUffdStartCtx(fmt.Errorf("uffd process exited: %w", errors.Join(uffdWaitErr, context.Cause(uffdStartCtx))))
+		}()
 	}
 
-	uffdStartCtx, cancelUffdStartCtx := context.WithCancelCause(ctx)
-	defer cancelUffdStartCtx(fmt.Errorf("uffd finished starting"))
-	go func() {
-		uffdWaitErr := fcUffd.Exit().Wait()
-
-		cancelUffdStartCtx(fmt.Errorf("uffd process exited: %w", errors.Join(uffdWaitErr, context.Cause(uffdStartCtx))))
-	}()
 	fcStartErr := fcHandle.Resume(
-		uffdStartCtx,
+		memoryStartCtx,
 		sbxlogger.SandboxMetadata{
 			SandboxID:  runtime.SandboxID,
 			TemplateID: runtime.TemplateID,
 			TeamID:     runtime.TeamID,
 		},
-		fcUffdPath,
+		snapshotMemoryBackend,
 		snapfile,
-		fcUffd.Ready(),
 		config.Envd.AccessToken,
 		cgroupFD,
 		span.SpanContext().TraceID().String(),
@@ -726,7 +763,7 @@ func (f *Factory) ResumeSandbox(
 	resources := &Resources{
 		Slot:   ips,
 		rootfs: overlay,
-		memory: fcUffd,
+		memory: sandboxMemory,
 	}
 
 	metadata := &Metadata{
@@ -796,17 +833,17 @@ func (f *Factory) ResumeSandbox(
 		ctx, span := tracer.Start(execCtx, "sandbox-exit-wait")
 		defer span.End()
 
-		// Wait for either uffd or fc process to exit
+		// Wait for either the selected memory backend or Firecracker to exit.
 		select {
-		case <-fcUffd.Exit().Done():
+		case <-sandboxMemory.Exit().Done():
 		case <-fcHandle.Exit.Done():
 		}
 
 		err := sbx.Stop(ctx)
 
-		uffdWaitErr := fcUffd.Exit().Wait()
+		memoryWaitErr := sandboxMemory.Exit().Wait()
 		fcErr := fcHandle.Exit.Wait()
-		exit.SetError(errors.Join(err, fcErr, uffdWaitErr))
+		exit.SetError(errors.Join(err, fcErr, memoryWaitErr))
 	}()
 
 	return sbx, nil
