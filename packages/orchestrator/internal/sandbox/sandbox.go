@@ -496,18 +496,11 @@ func (f *Factory) ResumeSandbox(
 		return nil, err
 	}
 
-	var fileMemoryBackendPath string
-	if f.config.FileMemoryBackendEnabled {
-		fileMemoryBackendPath, err = template.MaterializeMemoryImage(
-			ctx,
-			resumeMemfile,
-			f.config.FileMemoryBackendDir,
-			t.Files().BuildID,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to materialize shared memory image: %w", err)
-		}
-		telemetry.ReportEvent(ctx, "materialized shared memory image")
+	fileMemoryBackendPath, useFileMemoryBackend := template.FileMemoryBackendPath(t)
+	if useFileMemoryBackend {
+		telemetry.ReportEvent(ctx, "selected shared file memory backend")
+	} else {
+		telemetry.ReportEvent(ctx, "selected uffd memory backend")
 	}
 
 	resumeMemfileSize, err := resumeMemfile.Size(ctx)
@@ -530,7 +523,7 @@ func (f *Factory) ResumeSandbox(
 
 	// Prefetching
 	go func() {
-		if f.config.FileMemoryBackendEnabled {
+		if useFileMemoryBackend {
 			return
 		}
 
@@ -612,7 +605,7 @@ func (f *Factory) ResumeSandbox(
 
 	// Memory initialization
 	memoryPromise := utils.NewPromise(func() (struct{}, error) {
-		if f.config.FileMemoryBackendEnabled {
+		if useFileMemoryBackend {
 			return struct{}{}, nil
 		}
 
@@ -710,7 +703,7 @@ func (f *Factory) ResumeSandbox(
 	memoryStartCtx := ctx
 	var sandboxMemory uffd.MemoryBackend
 	var snapshotMemoryBackend fc.SnapshotMemoryBackend
-	if f.config.FileMemoryBackendEnabled {
+	if useFileMemoryBackend {
 		sandboxMemory = uffd.NewNoopMemory(resumeMemfileSize, resumeMemfile.BlockSize())
 		snapshotMemoryBackend = fc.NewFileSnapshotMemoryBackend(fileMemoryBackendPath)
 	} else {

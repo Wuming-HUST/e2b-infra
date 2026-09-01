@@ -75,6 +75,8 @@ job "orchestrator" {
         CONSUL_TOKEN                 = "${CONSUL_ACL_TOKEN}"
         DOMAIN_NAME                  = "${DOMAIN_NAME}"
         SHARED_CHUNK_CACHE_PATH      = "${SHARED_CHUNK_CACHE_PATH}"
+        FILE_MEMORY_BACKEND_ENABLED  = "${FILE_MEMORY_BACKEND_ENABLED}"
+        FILE_MEMORY_BACKEND_DIR      = "${FILE_MEMORY_BACKEND_DIR}"
         ORCHESTRATOR_SERVICES        = "orchestrator"
         STORAGE_PROVIDER = "${STORAGE_PROVIDER}"
         ARTIFACTS_REGISTRY_PROVIDER = "${ARTIFACTS_REGISTRY_PROVIDER}"
@@ -91,4 +93,3 @@ job "orchestrator" {
     }
   }
 }
-

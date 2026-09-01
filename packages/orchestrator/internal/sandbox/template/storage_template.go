@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"sync"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -29,6 +31,9 @@ type storageTemplate struct {
 	rootfs   *utils.SetOnce[block.ReadonlyDevice]
 	snapfile *utils.SetOnce[File]
 	metafile *utils.SetOnce[File]
+
+	memoryImage     *utils.SetOnce[string]
+	memoryImageOnce sync.Once
 
 	memfileHeader *header.Header
 	rootfsHeader  *header.Header
@@ -68,7 +73,43 @@ func newTemplateFromStorage(
 		rootfs:        utils.NewSetOnce[block.ReadonlyDevice](),
 		snapfile:      utils.NewSetOnce[File](),
 		metafile:      utils.NewSetOnce[File](),
+		memoryImage:   utils.NewSetOnce[string](),
 	}, nil
+}
+
+func (t *storageTemplate) prepareMemoryImage(ctx context.Context, materialize func() (string, error)) {
+	t.memoryImageOnce.Do(func() {
+		go func() {
+			path, err := materialize()
+			if err != nil {
+				logger.L().Error(ctx, "failed to prepare shared memory image",
+					logger.WithBuildID(t.files.BuildID),
+					zap.Error(err),
+				)
+			}
+
+			if setErr := t.memoryImage.SetResult(path, err); setErr != nil {
+				logger.L().Error(ctx, "failed to publish shared memory image result",
+					logger.WithBuildID(t.files.BuildID),
+					zap.Error(setErr),
+				)
+			}
+		}()
+	})
+}
+
+func (t *storageTemplate) memoryImagePath() (string, bool) {
+	path, err := t.memoryImage.Result()
+	if err != nil || path == "" {
+		return "", false
+	}
+
+	info, err := os.Stat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0o222 != 0 {
+		return "", false
+	}
+
+	return path, true
 }
 
 func (t *storageTemplate) Fetch(ctx context.Context, buildStore *build.DiffStore) {

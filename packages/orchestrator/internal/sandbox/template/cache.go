@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/cfg"
 	blockmetrics "github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block/metrics"
@@ -50,6 +51,7 @@ type Cache struct {
 	buildStore    *build.DiffStore
 	blockMetrics  blockmetrics.Metrics
 	rootCachePath string
+	memoryImages  singleflight.Group
 }
 
 // NewCache initializes a template new cache.
@@ -89,6 +91,17 @@ func NewCache(
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create build store: %w", err)
+	}
+	if config.BuilderConfig.FileMemoryBackendEnabled {
+		if config.BuilderConfig.FileMemoryBackendDir == "" {
+			return nil, fmt.Errorf("file memory backend directory is empty")
+		}
+		if err := os.MkdirAll(config.BuilderConfig.FileMemoryBackendDir, 0o700); err != nil {
+			return nil, fmt.Errorf("create file memory backend directory: %w", err)
+		}
+		if err := os.Chmod(config.BuilderConfig.FileMemoryBackendDir, 0o700); err != nil {
+			return nil, fmt.Errorf("secure file memory backend directory: %w", err)
+		}
 	}
 
 	return &Cache{
@@ -166,7 +179,7 @@ func (c *Cache) GetTemplate(
 		return nil, fmt.Errorf("failed to create template cache from storage: %w", err)
 	}
 
-	return c.getTemplateWithFetch(ctx, storageTemplate), nil
+	return c.getTemplateWithFetch(ctx, storageTemplate, !isSnapshot && !isBuilding), nil
 }
 
 func (c *Cache) AddSnapshot(
@@ -205,7 +218,7 @@ func (c *Cache) AddSnapshot(
 		return fmt.Errorf("failed to create template cache from storage: %w", err)
 	}
 
-	c.getTemplateWithFetch(ctx, storageTemplate)
+	c.getTemplateWithFetch(ctx, storageTemplate, false)
 
 	return nil
 }
@@ -252,7 +265,7 @@ func cleanDir(path string) error {
 	return nil
 }
 
-func (c *Cache) getTemplateWithFetch(ctx context.Context, storageTemplate *storageTemplate) Template {
+func (c *Cache) getTemplateWithFetch(ctx context.Context, storageTemplate *storageTemplate, fileBackendEligible bool) Template {
 	t, found := c.cache.GetOrSet(
 		storageTemplate.Files().CacheKey(),
 		storageTemplate,
@@ -268,5 +281,38 @@ func (c *Cache) getTemplateWithFetch(ctx context.Context, storageTemplate *stora
 		hitsMetric.Add(ctx, 1)
 	}
 
-	return t.Value()
+	cachedTemplate := t.Value()
+	allowFileBackend := c.config.FileMemoryBackendEnabled && fileBackendEligible
+	if allowFileBackend {
+		if source, ok := cachedTemplate.(*storageTemplate); ok {
+			backgroundCtx := context.WithoutCancel(ctx)
+			source.prepareMemoryImage(backgroundCtx, func() (string, error) {
+				value, err, _ := c.memoryImages.Do(source.Files().BuildID, func() (any, error) {
+					memfile, err := source.Memfile(backgroundCtx)
+					if err != nil {
+						return "", fmt.Errorf("get memory source: %w", err)
+					}
+
+					return MaterializeMemoryImage(
+						backgroundCtx,
+						memfile,
+						c.config.FileMemoryBackendDir,
+						source.Files().BuildID,
+					)
+				})
+				if err != nil {
+					return "", err
+				}
+
+				path, ok := value.(string)
+				if !ok {
+					return "", fmt.Errorf("unexpected memory image result type %T", value)
+				}
+
+				return path, nil
+			})
+		}
+	}
+
+	return withRestoreMemoryPolicy(cachedTemplate, allowFileBackend)
 }
