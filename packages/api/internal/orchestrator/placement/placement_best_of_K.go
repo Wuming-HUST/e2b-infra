@@ -69,6 +69,22 @@ func pendingMemoryBytes(node *nodemanager.Node) uint64 {
 	return pending
 }
 
+func memoryScores(metrics nodemanager.Metrics, pendingBytes, requestBytes uint64, overcommitRatio float64) (resident, committed float64) {
+	residentBytes := saturatingAddUint64(metrics.MemoryUsedBytes, pendingBytes)
+	residentBytes = saturatingAddUint64(residentBytes, requestBytes)
+	resident = float64(residentBytes) / float64(metrics.MemoryTotalBytes)
+
+	if overcommitRatio <= 0 || math.IsNaN(overcommitRatio) {
+		return resident, math.MaxFloat64
+	}
+
+	committedBytes := saturatingAddUint64(metrics.MemoryAllocatedBytes, pendingBytes)
+	committedBytes = saturatingAddUint64(committedBytes, requestBytes)
+	committed = float64(committedBytes) / (float64(metrics.MemoryTotalBytes) * overcommitRatio)
+
+	return resident, committed
+}
+
 // Score calculates the placement score for this node
 func (b *BestOfK) Score(node *nodemanager.Node, resources nodemanager.SandboxResources, config BestOfKConfig) float64 {
 	metrics := node.Metrics()
@@ -89,9 +105,13 @@ func (b *BestOfK) Score(node *nodemanager.Node, resources nodemanager.SandboxRes
 		return cpuScore
 	}
 
-	memoryDemand := saturatingAddUint64(metrics.MemoryUsedBytes, pendingMemoryBytes(node))
-	memoryDemand = saturatingAddUint64(memoryDemand, memoryRequestBytes(resources.MiBMemory))
-	memoryScore := float64(memoryDemand) / float64(metrics.MemoryTotalBytes)
+	residentScore, commitmentScore := memoryScores(
+		metrics,
+		pendingMemoryBytes(node),
+		memoryRequestBytes(resources.MiBMemory),
+		config.R,
+	)
+	memoryScore := math.Max(residentScore, commitmentScore)
 
 	return math.Max(cpuScore, memoryScore)
 }
@@ -114,10 +134,11 @@ func (b *BestOfK) CanFit(node *nodemanager.Node, sandboxResources nodemanager.Sa
 		return true
 	}
 
-	memoryDemand := saturatingAddUint64(metrics.MemoryUsedBytes, pendingMemoryBytes(node))
-	memoryDemand = saturatingAddUint64(memoryDemand, memoryRequestBytes(sandboxResources.MiBMemory))
+	pendingBytes := pendingMemoryBytes(node)
+	requestBytes := memoryRequestBytes(sandboxResources.MiBMemory)
+	residentScore, commitmentScore := memoryScores(metrics, pendingBytes, requestBytes, config.R)
 
-	return memoryDemand <= metrics.MemoryTotalBytes
+	return residentScore <= 1 && commitmentScore <= 1
 }
 
 // BestOfK implements the fit-score-place algorithm

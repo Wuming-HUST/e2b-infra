@@ -329,7 +329,10 @@ func (f *Factory) CreateSandbox(
 	}
 	// Create the cgroup before Firecracker so CLONE_INTO_CGROUP can place the
 	// process atomically during clone.
-	cgroupHandle, cgroupFD := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
+	cgroupHandle, cgroupFD, err := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
+	if err != nil {
+		return nil, err
+	}
 
 	zap.L().Sugar().Errorf("[NUMA][CreateSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
@@ -639,7 +642,10 @@ func (f *Factory) ResumeSandbox(
 	zap.L().Sugar().Infof("[ResumeSandbox] get template metadata cost: %.3f ms, traceID=%s", time.Since(t3).Seconds()*1000, traceID)
 	t4 := time.Now()
 	// Create cgroup for sandbox resource accounting
-	cgroupHandle, cgroupFD := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
+	cgroupHandle, cgroupFD, err := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
+	if err != nil {
+		return nil, err
+	}
 
 	zap.L().Sugar().Errorf("[NUMA][ResumeSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
@@ -1131,34 +1137,28 @@ func pauseProcessRootfs(
 // accounting is enabled (cgroupManager is non-nil). It registers cleanup with
 // the provided Cleanup so the cgroup is removed on error paths.
 //
-// Returns the CgroupHandle and the cgroup directory FD to pass to the
-// Firecracker process. If cgroup accounting is disabled, returns (nil, cgroup.NoCgroupFD).
-func createCgroup(ctx context.Context, cgroupManager cgroup.Manager, sandboxID string, cleanup *Cleanup) (*cgroup.CgroupHandle, int) {
+// Returns the CgroupHandle and directory FD to pass to Firecracker. A nil
+// manager explicitly disables accounting; a configured manager fails closed.
+func createCgroup(ctx context.Context, cgroupManager cgroup.Manager, sandboxID string, cleanup *Cleanup) (*cgroup.CgroupHandle, int, error) {
 	ctx, span := tracer.Start(ctx, "sandbox-create-cgroup", trace.WithAttributes(
 		telemetry.WithSandboxID(sandboxID),
 	))
 	defer span.End()
 
 	if cgroupManager == nil {
-		return nil, cgroup.NoCgroupFD
+		return nil, cgroup.NoCgroupFD, nil
 	}
 
 	handle, err := cgroupManager.Create(ctx, sandboxID)
 	if err != nil {
-		logger.L().Warn(ctx, "failed to create cgroup, continuing without cgroup accounting",
-			logger.WithSandboxID(sandboxID),
-			zap.Error(err))
-
-		telemetry.ReportEvent(ctx, "cgroup creation failed, continuing without accounting")
-
-		return nil, cgroup.NoCgroupFD
+		return nil, cgroup.NoCgroupFD, fmt.Errorf("create sandbox cgroup %q: %w", sandboxID, err)
 	}
 
 	cleanup.Add(ctx, func(ctx context.Context) error {
 		return handle.Remove(ctx)
 	})
 
-	return handle, handle.GetFD()
+	return handle, handle.GetFD(), nil
 }
 
 func getNetworkSlot(

@@ -22,6 +22,7 @@ locals {
     USE_FILESTORE_CACHE               = var.filestore_cache_enabled
     NODE_POOL                         = var.node_pool
     BASE_HUGEPAGES_PERCENTAGE         = var.base_hugepages_percentage
+    HUGE_PAGES_ENABLED                = var.base_hugepages_percentage > 0 ? "true" : "false"
     CACHE_DISK_COUNT                  = var.cache_disks.count
     LOCAL_SSD                         = local.has_local_ssd ? "true" : "false"
     SET_ORCHESTRATOR_VERSION_METADATA = var.set_orchestrator_version_metadata ? "true" : "false"

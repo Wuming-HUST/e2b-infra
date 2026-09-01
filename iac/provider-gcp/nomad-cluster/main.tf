@@ -1,8 +1,10 @@
 # Server cluster instances are not currently automatically updated when you create a new
 # orchestrator image with Packer.
 locals {
-  build_base_hugepages_percentage  = 60
-  client_base_hugepages_percentage = 80
+  # Memory-overcommit experiments use swappable 4 KiB pages. A cluster can
+  # still opt in by setting hugepages_percentage explicitly for a node pool.
+  build_base_hugepages_percentage  = 0
+  client_base_hugepages_percentage = 0
 
   nfs_mount_path   = "/orchestrator/shared-store"
   nfs_mount_subdir = "chunks-cache"

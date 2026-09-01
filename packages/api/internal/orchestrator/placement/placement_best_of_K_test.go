@@ -118,6 +118,32 @@ func TestBestOfK_ScorePrefersNodeWithMemoryHeadroom(t *testing.T) {
 	assert.Less(t, algo.Score(lowPressure, resources, config), algo.Score(highPressure, resources, config))
 }
 
+func TestBestOfK_ScoreAccountsForCommittedMemory(t *testing.T) {
+	t.Parallel()
+
+	config := DefaultBestOfKConfig()
+	algo := NewBestOfK(config).(*BestOfK)
+	const gib = uint64(1024 * 1024 * 1024)
+	resources := nodemanager.SandboxResources{CPUs: 1, MiBMemory: 1024}
+
+	lowCommitment := nodemanager.NewTestNode(
+		"low-commitment",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(4*gib, 2*gib, 16*gib),
+	)
+	highCommitment := nodemanager.NewTestNode(
+		"high-commitment",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(48*gib, 2*gib, 16*gib),
+	)
+
+	assert.Less(t, algo.Score(lowCommitment, resources, config), algo.Score(highCommitment, resources, config))
+}
+
 func TestBestOfK_CanFitRejectsMemoryExhaustion(t *testing.T) {
 	t.Parallel()
 
@@ -143,6 +169,24 @@ func TestBestOfK_CanFitRejectsMemoryExhaustion(t *testing.T) {
 
 	assert.True(t, algo.CanFit(hasHeadroom, resources, config))
 	assert.False(t, algo.CanFit(exhausted, resources, config))
+}
+
+func TestBestOfK_CanFitRejectsCommitmentBeyondOvercommitRatio(t *testing.T) {
+	t.Parallel()
+
+	config := DefaultBestOfKConfig()
+	algo := NewBestOfK(config).(*BestOfK)
+	const gib = uint64(1024 * 1024 * 1024)
+	resources := nodemanager.SandboxResources{CPUs: 1, MiBMemory: 2048}
+	node := nodemanager.NewTestNode(
+		"commitment-exhausted",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(63*gib, 4*gib, 16*gib),
+	)
+
+	assert.False(t, algo.CanFit(node, resources, config))
 }
 
 func TestBestOfK_ChooseNode(t *testing.T) {

@@ -107,14 +107,14 @@ metadata-cache:
 cache-dir: $fuse_cache
 EOF
 
-# Set up huge pages
-# We are not enabling Transparent Huge Pages for now, as they are not swappable and may result in slowdowns + we are not using swap right now.
-# The THP are by default set to madvise
-# We are allocating the hugepages at the start when the memory is not fragmented yet
-echo "[Setting up huge pages]"
-mkdir -p /mnt/hugepages
-mount -t hugetlbfs none /mnt/hugepages
-# Increase proactive compaction to reduce memory fragmentation for using overcomitted huge pages
+if [[ "${HUGE_PAGES_ENABLED}" == "true" ]]; then
+    # Reserve HugeTLB pages before memory becomes fragmented. Transparent Huge
+    # Pages remain controlled independently by the kernel.
+    echo "[Setting up huge pages]"
+    mkdir -p /mnt/hugepages
+    if ! mountpoint -q /mnt/hugepages; then
+        mount -t hugetlbfs none /mnt/hugepages
+    fi
 
 available_ram=$(grep MemTotal /proc/meminfo | awk '{print $2}') # in KiB
 available_ram=$(($available_ram / 1024))                        # in MiB
@@ -167,7 +167,7 @@ echo "- Huge page size: $hugepage_size_in_mib MiB"
 hugepages=$(($hugepages_ram / $hugepage_size_in_mib))
 
 # This percentage will be permanently allocated for huge pages and in monitoring it will be shown as used.
-base_hugepages_percentage=20
+base_hugepages_percentage=${BASE_HUGEPAGES_PERCENTAGE}
 base_hugepages=$(($hugepages * $base_hugepages_percentage / 100))
 base_hugepages=$(remove_decimal $base_hugepages)
 echo "- Allocating $base_hugepages huge pages ($base_hugepages_percentage%) for base usage"
@@ -178,6 +178,14 @@ overcommitment_hugepages=$(($hugepages * $overcommitment_hugepages_percentage / 
 overcommitment_hugepages=$(remove_decimal $overcommitment_hugepages)
 echo "- Allocating $overcommitment_hugepages huge pages ($overcommitment_hugepages_percentage%) for overcommitment"
 echo $overcommitment_hugepages >/proc/sys/vm/nr_overcommit_hugepages
+else
+    echo "[Disabling huge pages for 4 KiB memory-overcommit experiments]"
+    echo 0 >/proc/sys/vm/nr_overcommit_hugepages
+    echo 0 >/proc/sys/vm/nr_hugepages
+    if mountpoint -q /mnt/hugepages; then
+        umount /mnt/hugepages
+    fi
+fi
 
 ./install-consul.sh --version ${CONSUL_VERSION}
 ./install-nomad.sh --version ${NOMAD_VERSION}
@@ -199,4 +207,3 @@ echo '_sbx_ssh() {
 }
 
 alias sbx-ssh=_sbx_ssh' >>/etc/profile
-
