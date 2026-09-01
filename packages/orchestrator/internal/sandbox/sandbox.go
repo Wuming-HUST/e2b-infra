@@ -327,6 +327,9 @@ func (f *Factory) CreateSandbox(
 	if err != nil {
 		return nil, err
 	}
+	// Create the cgroup before Firecracker so CLONE_INTO_CGROUP can place the
+	// process atomically during clone.
+	cgroupHandle, cgroupFD := createCgroup(ctx, f.cgroupManager, runtime.SandboxID, cleanup)
 
 	zap.L().Sugar().Errorf("[NUMA][CreateSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
@@ -359,7 +362,17 @@ func (f *Factory) CreateSandbox(
 		config.RamMB,
 		config.HugePages,
 		processOptions,
+		cgroupFD,
 	)
+	// The kernel has consumed the cgroup directory FD during clone. The
+	// cgroup itself remains until sandbox cleanup.
+	if cgroupHandle != nil {
+		if releaseErr := cgroupHandle.ReleaseCgroupFD(); releaseErr != nil {
+			logger.L().Warn(ctx, "failed to release cgroup directory FD",
+				logger.WithSandboxID(runtime.SandboxID),
+				zap.Error(releaseErr))
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create FC: %w", err)
 	}

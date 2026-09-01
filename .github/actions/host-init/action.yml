@@ -1,5 +1,11 @@
 name: "Host Initialization"
 description: "Sets up the host environment, including authentication and dependencies."
+inputs:
+  huge-pages-enabled:
+    description: "Reserve 2 MiB HugeTLB pages during host initialization."
+    required: false
+    default: "false"
+
 
 runs:
   using: "composite"
@@ -14,6 +20,7 @@ runs:
 
     - name: Initialize Host
       env:
+        HUGE_PAGES_ENABLED: ${{ inputs.huge-pages-enabled }}
         INIT_SCRIPT_PATH: "./.github/actions/host-init/init-client.sh"
       run: |
         chmod +x "${INIT_SCRIPT_PATH}"

@@ -104,6 +104,8 @@ chmod +x ${fc_versions_dir}/v${FIRECRACKER_VERSION}/firecracker
 chmod -R 755 $fc_versions_dir/v${FIRECRACKER_VERSION}
 ls -lh $fc_versions_dir
 
+if [[ "${HUGE_PAGES_ENABLED:-false}" == "true" ]]; then
+
 # Set up huge pages
 # We are not enabling Transparent Huge Pages for now, as they are not swappable and may result in slowdowns + we are not using swap right now.
 # The THP are by default set to madvise
@@ -175,3 +177,13 @@ overcommitment_hugepages=$(($hugepages * $overcommitment_hugepages_percentage / 
 overcommitment_hugepages=$(remove_decimal $overcommitment_hugepages)
 echo "- Allocating $overcommitment_hugepages huge pages ($overcommitment_hugepages_percentage%) for overcommitment"
 echo $overcommitment_hugepages >/sys/kernel/mm/hugepages/hugepages-2048kB/nr_overcommit_hugepages
+else
+    echo "[Skipping huge pages: HUGE_PAGES_ENABLED=${HUGE_PAGES_ENABLED:-false}]"
+    # Host initialization runs before workloads. Clear stale reservations so
+    # 4 KiB guests can use the memory for normal pages and page cache.
+    echo 0 >/sys/kernel/mm/hugepages/hugepages-2048kB/nr_overcommit_hugepages
+    echo 0 >/sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+    if mountpoint -q /mnt/hugepages; then
+        umount /mnt/hugepages
+    fi
+fi

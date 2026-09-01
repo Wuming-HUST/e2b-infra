@@ -92,6 +92,59 @@ func TestBestOfK_CanFit(t *testing.T) {
 	assert.False(t, canFitLarge) // Very large request should not fit
 }
 
+func TestBestOfK_ScorePrefersNodeWithMemoryHeadroom(t *testing.T) {
+	t.Parallel()
+
+	config := DefaultBestOfKConfig()
+	algo := NewBestOfK(config).(*BestOfK)
+	const gib = uint64(1024 * 1024 * 1024)
+
+	lowPressure := nodemanager.NewTestNode(
+		"low-pressure",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(2*gib, 2*gib, 16*gib),
+	)
+	highPressure := nodemanager.NewTestNode(
+		"high-pressure",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(12*gib, 12*gib, 16*gib),
+	)
+	resources := nodemanager.SandboxResources{CPUs: 1, MiBMemory: 1024}
+
+	assert.Less(t, algo.Score(lowPressure, resources, config), algo.Score(highPressure, resources, config))
+}
+
+func TestBestOfK_CanFitRejectsMemoryExhaustion(t *testing.T) {
+	t.Parallel()
+
+	config := DefaultBestOfKConfig()
+	algo := NewBestOfK(config).(*BestOfK)
+	const gib = uint64(1024 * 1024 * 1024)
+	resources := nodemanager.SandboxResources{CPUs: 1, MiBMemory: 2048}
+
+	hasHeadroom := nodemanager.NewTestNode(
+		"has-headroom",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(4*gib, 4*gib, 8*gib),
+	)
+	exhausted := nodemanager.NewTestNode(
+		"exhausted",
+		api.NodeStatusReady,
+		2,
+		8,
+		nodemanager.WithMemoryMetrics(7*gib, 7*gib, 8*gib),
+	)
+
+	assert.True(t, algo.CanFit(hasHeadroom, resources, config))
+	assert.False(t, algo.CanFit(exhausted, resources, config))
+}
+
 func TestBestOfK_ChooseNode(t *testing.T) {
 	t.Parallel()
 	ctx := t.Context()

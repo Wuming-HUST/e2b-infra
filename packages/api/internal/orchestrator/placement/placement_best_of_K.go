@@ -35,42 +35,89 @@ func DefaultBestOfKConfig() BestOfKConfig {
 	}
 }
 
+const bytesPerMiB = uint64(1024 * 1024)
+
+func saturatingAddUint64(left, right uint64) uint64 {
+	maxUint64 := ^uint64(0)
+	if maxUint64-left < right {
+		return maxUint64
+	}
+
+	return left + right
+}
+
+func memoryRequestBytes(memoryMiB int64) uint64 {
+	if memoryMiB <= 0 {
+		return 0
+	}
+
+	requestMiB := uint64(memoryMiB)
+	maxUint64 := ^uint64(0)
+	if requestMiB > maxUint64/bytesPerMiB {
+		return maxUint64
+	}
+
+	return requestMiB * bytesPerMiB
+}
+
+func pendingMemoryBytes(node *nodemanager.Node) uint64 {
+	var pending uint64
+	for _, resources := range node.PlacementMetrics.InProgress() {
+		pending = saturatingAddUint64(pending, memoryRequestBytes(resources.MiBMemory))
+	}
+
+	return pending
+}
+
 // Score calculates the placement score for this node
 func (b *BestOfK) Score(node *nodemanager.Node, resources nodemanager.SandboxResources, config BestOfKConfig) float64 {
 	metrics := node.Metrics()
-	reserved := metrics.CpuAllocated
 
-	// 1 CPU used = 100% CPU percept
+	// 1 CPU used = 100% CPU.
 	usageAvg := float64(metrics.CpuPercent) / 100
-
-	// to avoid division by zero
 	cpuCount := float64(metrics.CpuCount)
 	if cpuCount == 0 {
 		return math.MaxFloat64
 	}
 
-	totalCapacity := config.R * cpuCount
+	totalCPUCapacity := config.R * cpuCount
+	cpuScore := (float64(resources.CPUs) + float64(metrics.CpuAllocated) + config.Alpha*usageAvg) / totalCPUCapacity
 
-	cpuRequested := float64(resources.CPUs)
+	// Nodes that have not reported memory capacity retain the previous
+	// CPU-only behavior.
+	if metrics.MemoryTotalBytes == 0 {
+		return cpuScore
+	}
 
-	return (cpuRequested + float64(reserved) + config.Alpha*usageAvg) / totalCapacity
+	memoryDemand := saturatingAddUint64(metrics.MemoryUsedBytes, pendingMemoryBytes(node))
+	memoryDemand = saturatingAddUint64(memoryDemand, memoryRequestBytes(resources.MiBMemory))
+	memoryScore := float64(memoryDemand) / float64(metrics.MemoryTotalBytes)
+
+	return math.Max(cpuScore, memoryScore)
 }
 
 // CanFit checks if the node can fit a new VM with the given quota
 func (b *BestOfK) CanFit(node *nodemanager.Node, sandboxResources nodemanager.SandboxResources, config BestOfKConfig) bool {
 	metrics := node.Metrics()
 
-	reserved := metrics.CpuAllocated
-
-	// If the node has no CPUs, there's probably a problem
 	cpuCount := float64(metrics.CpuCount)
 	if cpuCount == 0 {
 		return false
 	}
 
-	totalCapacity := config.R * cpuCount
+	totalCPUCapacity := config.R * cpuCount
+	if float64(metrics.CpuAllocated+uint32(sandboxResources.CPUs)) > totalCPUCapacity {
+		return false
+	}
 
-	return float64(reserved+uint32(sandboxResources.CPUs)) <= totalCapacity
+	if metrics.MemoryTotalBytes == 0 {
+		return true
+	}
+
+	memoryDemand := saturatingAddUint64(metrics.MemoryUsedBytes, pendingMemoryBytes(node))
+	memoryDemand = saturatingAddUint64(memoryDemand, memoryRequestBytes(sandboxResources.MiBMemory))
+
+	return memoryDemand <= metrics.MemoryTotalBytes
 }
 
 // BestOfK implements the fit-score-place algorithm

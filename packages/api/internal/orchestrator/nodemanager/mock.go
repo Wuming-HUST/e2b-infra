@@ -88,6 +88,14 @@ func WithCPUInfo(cpuArch, cpuFamily, cpuModel string) TestOptions {
 	}
 }
 
+func WithMemoryMetrics(allocated, used, total uint64) TestOptions {
+	return func(node *TestNode) {
+		node.metrics.MemoryAllocatedBytes = allocated
+		node.metrics.MemoryUsedBytes = used
+		node.metrics.MemoryTotalBytes = total
+	}
+}
+
 // mockSandboxClientWithError implements orchestrator.SandboxServiceClient that returns an error
 type mockSandboxClientWithError struct {
 	orchestrator.SandboxServiceClient
