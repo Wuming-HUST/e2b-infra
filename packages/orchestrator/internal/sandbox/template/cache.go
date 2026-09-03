@@ -265,10 +265,10 @@ func cleanDir(path string) error {
 	return nil
 }
 
-func (c *Cache) getTemplateWithFetch(ctx context.Context, storageTemplate *storageTemplate, fileBackendEligible bool) Template {
+func (c *Cache) getTemplateWithFetch(ctx context.Context, templateToCache *storageTemplate, fileBackendEligible bool) Template {
 	t, found := c.cache.GetOrSet(
-		storageTemplate.Files().CacheKey(),
-		storageTemplate,
+		templateToCache.Files().CacheKey(),
+		templateToCache,
 		ttlcache.WithTTL[string, Template](templateExpiration),
 	)
 
@@ -276,7 +276,7 @@ func (c *Cache) getTemplateWithFetch(ctx context.Context, storageTemplate *stora
 		missesMetric.Add(ctx, 1)
 		// We don't want to cancel the request if the request was canceled, because it can be used by other templates
 		// It's a little bit problematic, because shutdown won't cancel the fetch
-		go storageTemplate.Fetch(context.WithoutCancel(ctx), c.buildStore)
+		go templateToCache.Fetch(context.WithoutCancel(ctx), c.buildStore)
 	} else {
 		hitsMetric.Add(ctx, 1)
 	}
