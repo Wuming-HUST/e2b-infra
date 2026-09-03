@@ -137,8 +137,9 @@ Consequences for validation:
   zero, KSM is already enabled, PSI is hidden, and the OS image differs from the
   declared control.
 - Re-run the complete one-time preflight on fresh openEuler 24.04 experiment
-  nodes. Require KSM off in the untouched control for the KSM A/B test, in
-  addition to the existing MGLRU and zswap no-op checks.
+  nodes. Require KSM and zswap off in their untouched controls. For MGLRU,
+  require fresh explicit control/treatment nodes with equal recorded
+  `initial_mask` values.
 - Live cgroup-at-birth placement, Firecracker restore/FPR, same-inode CoW/PSS,
   guest services, kernel treatment counters, object-store behavior, density,
   and p99 SLO validation remain for the full deployment servers.
@@ -159,6 +160,11 @@ directory. Logs are retained in
 | ETMem `0bd30ae17` | script syntax | Pass | All module/tool, process, cgroup, swap, detach, and SLO behavior; ETMem is unavailable on agent03 |
 | Guest zram `f1663083c` | cfg/metadata/rootfs tests; full Orchestrator build; proxy/canonical/preflight syntax; read-only host exclusion; fake status through the proxy | Pass | Guest module/service, compression, FPR host reduction, snapshot effect |
 | Snapshot compression `741a6e8dd` | shared header/storage tests; block/build/sandbox/copy-build tests; full Orchestrator build | Pass | Deployed local/GCS/Mooncake behavior, corruption injection, cold/warm resume and SLO |
+
+The nine `Pass` rows above are the authoritative completed pre-validation
+record. They may be reused without rerunning the same user-space commands when
+the exact commit, toolchain, build inputs, and promoted artifacts are unchanged.
+They do not close any item in the full-host column.
 
 The original zswap tip `054c50246` failed remote Terraform formatting. The
 alignment-only follow-ups ending at `8d3031d6f` fix that review finding; the
@@ -446,6 +452,35 @@ recreate nodes between stateful treatments.
   ARM Linux.
 - [ ] Compare distinct raw/LZ4 build IDs on deployed storage and live resumes.
 - [ ] Validate local, deployed object store, and Mooncake behavior separately.
+
+## Prioritized Remaining TODO
+
+Priority meanings:
+
+- `P0`: prerequisite for any scientifically valid density result.
+- `P1`: highest expected return and should be evaluated as an isolated treatment.
+- `P2`: conditional on workload, security isolation, or platform support.
+- `P3`: run only after the relevant isolated treatments pass their gates.
+
+| Order | Priority | TODO | Completion gate |
+|---:|---|---|---|
+| 1 | P0 | [ ] Freeze the real target definition and complete host/IaC preflight. Resolve the declared openEuler 24.04 versus available 24.03 image explicitly; verify Linux 6.6, ARM64, cgroup v2, 4 KiB mode with zero HugeTLB reservations, equal regular swap, kernel features, and full `terraform validate`. | Control and treatment host manifests are saved and differ only in the declared treatment; unsupported branches are marked `ineligible`. |
+| 2 | P0 | [ ] Predeclare the numeric runtime and resume p99 SLO, error/OOM budget, workload mix, warmup, run duration, concurrency ramp, three-run repetition policy, and metrics collection. | A versioned experiment manifest and an empty result table exist before load begins. |
+| 3 | P0 | [ ] Deploy baseline `2425bbcfd` and validate fresh-create plus resume process placement from birth, fail-closed cgroup behavior, zero HugeTLB reservations, and deployed BestOfK `CanFit=true`. | Baseline completes three runs without OOM or unbounded PSI/fault growth and meets both p99 SLOs. |
+| 4 | P1 | [ ] Run shared file pages `270bf8fc8` first. Validate same backing device/inode, immutable checksum after guest writes, MAP_PRIVATE CoW isolation, sublinear aggregate PSS, `Shared_Clean`, FPR, pause/resume, and UFFD fallback for personalized snapshots. | Three independent runs improve SLO-valid density over baseline with no backing-file mutation or lifecycle regression. |
+| 5 | P1 | [ ] Classify the representative workload as file-cache-heavy, compressible-anonymous-heavy, cold-anonymous-heavy, or latency-sensitive using baseline counters. | The next treatment choice and its exact knobs are justified by measured memory composition rather than a global default. |
+| 6 | P1 | [ ] For compressible anonymous workloads, evaluate guest zram `f1663083c` and host zswap `8d3031d6f` as separate A/B experiments; never enable both in this matrix. | Guest zram proves FPR-backed host PSS reduction beyond its pool/metadata cost, or zswap proves net bytes saved after charging `pool_total_size`, while p99/PSI gates hold. |
+| 7 | P1 | [ ] For file-cache-heavy workloads, evaluate guest DAMON + FPR `c6043943c` with a uniquely rebuilt template. | Boot parameters and service gate match; DAMON and FPR counters move; host PSS falls; p99/PSI gates hold. |
+| 8 | P1 | [ ] Evaluate MGLRU `85e319821` on two fresh same-image nodes using explicit `control` and `treatment` modes. | Both arms record the same non-missing `initial_mask`, retain their configured arm/mask without drift, and treatment improves SLO-valid density or is rejected. |
+| 9 | P1 | [ ] Run snapshot compression `741a6e8dd` as a separate artifact/resume track using distinct raw and LZ4 build IDs. Exercise local and deployed GCS/Mooncake paths, create-only publication, corruption/truncation, failure/timeout, cold materialization, and warm resume. | Actual manifests prove `raw` versus `lz4-chunks-v1`; storage/transfer savings and resume p99 are reported without claiming unmeasured steady-state RAM gain. |
+| 10 | P2 | [ ] Evaluate KSM `cda231986` only after scheduler and network policy attest a single trust domain and the drain/unmerge/restart transition is exercised. | Live prctl inheritance and positive kernel `general_profit` pass, then saved bytes remain positive after ksmd CPU, throughput, and runtime/resume p99 costs. |
+| 11 | P2 | [ ] Evaluate ETMem `0bd30ae17` only on an openEuler host with `etmem`, `etmemd`, `etmem_scan`, and `etmem_swap`. | PID identity, cgroup swap bound/restore, attach/detach after exit, cold-page movement, refault/swap cost, PSI, and p99 all pass. |
+| 12 | P3 | [ ] Promote accepted mechanisms behind rollout flags, then design a separate factorial experiment for combinations. Start with file-page sharing plus template-aware admission/PSI protection; do not stack guest zram, host zswap, and compressed swap by default. | Each component has an accepted isolated result, rollback path, observability, and a combination result that beats the best single treatment at the same SLO. |
+
+When an item completes, attach the exact commit, image/kernel identity, command
+log, result artifact, and failed/passed gate. Update both this table and the
+mechanism checklist; do not mark a live item complete from unit or fake-sysfs
+evidence.
 
 ## Target-Host Validation Runbook
 
