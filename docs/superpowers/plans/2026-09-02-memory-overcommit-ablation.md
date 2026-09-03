@@ -1,6 +1,6 @@
 # Memory Overcommit Ablation Plan and Implementation Review
 
-**Review date:** 2026-09-02
+**Review date:** 2026-09-03
 
 **Target:** ARM64, openEuler 24.04, Linux 6.6, cgroup v2
 
@@ -9,9 +9,10 @@ then measure the maximum sustainable sandbox density at an unchanged runtime and
 resume p99 SLO.
 
 This document is both the implementation record and the remaining target-host
-runbook. Local tests, builds, shell syntax checks, Terraform validation, and
-linters were intentionally not run during this review. Tests present in the
-branches are authored but unexecuted until the ARM/openEuler validation.
+runbook. No tests, builds, shell execution, Terraform commands, or linters were
+run on the local macOS workstation. User-space validation that does not mutate
+the host kernel was run in the ARM/openEuler container described below; live VM,
+kernel-treatment, storage-provider, density, and latency claims remain pending.
 
 ## Non-Negotiable Controls
 
@@ -37,28 +38,28 @@ branches are authored but unexecuted until the ARM/openEuler validation.
 
 | Branch | Final treatment commit | Implementation status | Target-host gate |
 |---|---|---|---|
-| `mem-overcommit-baseline` | `2425bbcfd` | Implemented and statically reviewed | Build/tests, cgroup placement, memory admission, HugeTLB-off |
-| `mem-overcommit-exp-file-page-cache` | `fa6cce8d6` | Implemented and statically reviewed | Same inode, MAP_PRIVATE isolation, PSS sharing, pause/resume |
-| `mem-overcommit-exp-host-mglru` | `ba6cebced` | Implemented; eligibility conditional | Untouched baseline mask must differ from requested mask |
-| `mem-overcommit-exp-host-zswap` | `054c50246` | Implemented and statically reviewed | Baseline zswap off, backing swap equal, counters move |
-| `mem-overcommit-exp-guest-damon-fpr` | `c6043943c` | Implemented and statically reviewed | Guest boot parameters, service gate, FPR RSS reduction |
-| `mem-overcommit-exp-ksm` | `cda231986` | Implemented and statically reviewed | Trust isolation, prctl inheritance, positive net profit |
-| `mem-overcommit-exp-host-etmem` | `0bd30ae17` | Implemented and statically reviewed | ETMem modules/tools, PID identity, bounded swap |
-| `mem-overcommit-exp-guest-zram` | `cfa4cdb93` | Implemented and statically reviewed | Host exclusion, guest service, zram and FPR counters |
-| `mem-overcommit-exp-snapshot-compression` | `f4992438d` | Implemented with same-code raw control | Round trip, cold/warm resume, actual LZ4 format, SLO |
+| `mem-overcommit-baseline` | `2425bbcfd` | Implemented; ARM unit/build pre-validated | Live cgroup placement, memory admission, HugeTLB-off |
+| `mem-overcommit-exp-file-page-cache` | `270bf8fc8` | Implemented; ARM unit/build pre-validated | Same inode, MAP_PRIVATE isolation, PSS sharing, pause/resume |
+| `mem-overcommit-exp-host-mglru` | `85e319821` | Explicit same-code A/B implemented; ARM fake-sysfs pre-validated | Fresh nodes, equal `initial_mask`, distinct verified arm state |
+| `mem-overcommit-exp-host-zswap` | `8d3031d6f` | Implemented; ARM syntax/status/fmt pre-validated | Baseline zswap off, backing swap equal, counters move |
+| `mem-overcommit-exp-guest-damon-fpr` | `c6043943c` | Implemented; ARM unit/build pre-validated | Guest boot parameters, service gate, FPR RSS reduction |
+| `mem-overcommit-exp-ksm` | `cda231986` | Mechanism and fake-sysfs tests pre-validated; net decision external | Trust isolation, prctl inheritance, positive measured net profit |
+| `mem-overcommit-exp-host-etmem` | `0bd30ae17` | Implemented; ARM syntax pre-validated | ETMem modules/tools, PID identity, bounded swap |
+| `mem-overcommit-exp-guest-zram` | `f1663083c` | Implemented without duplicate logic; ARM unit/build pre-validated | Host exclusion, guest service, zram and FPR counters |
+| `mem-overcommit-exp-snapshot-compression` | `741a6e8dd` | Same-code raw/LZ4 implementation; ARM unit/build pre-validated | Round trip, cold/warm resume, actual LZ4 format, SLO |
 
 Full immutable commit IDs:
 
 ```text
 baseline             2425bbcfdcf7e6056bfe599c568070a425b5626c
-file page cache      fa6cce8d6ee9877ea5aa8d6b028dcdc2ba80c6f8
-host MGLRU           ba6cebced758938a5aa3c2720a07d94ed553ed94
-host zswap           054c502463f138828911fc2ed1a9871ff287cba8
+file page cache      270bf8fc8fdbc9f6f8a1b60e4941db02faa50257
+host MGLRU           85e319821841d5c43d52be1911b6f25b990b1fc7
+host zswap           8d3031d6fd3ffd56472e562003692fe7f0707ae8
 guest DAMON + FPR    c6043943c1d38ce60bdd04442b7283a4650c110c
 isolated KSM         cda2319869a8c3baf560dd0d4ab5792b6217cf93
 host ETMem           0bd30ae17bd5cf6411ed33dafad5932c5f9c9461
-guest zram           cfa4cdb93b9c6550294aba22eca5228f93682158
-snapshot compression f4992438d1639e3002673f68a84ba1e2c8c02686
+guest zram           f1663083c95db30a71ce5a0bc68bcaa566cf331b
+snapshot compression 741a6e8dd6b5ac3cf18d94a281b827c7cbdc92a4
 ```
 
 Static history inspection found the merge-base of every treatment against the
@@ -86,17 +87,127 @@ script command; Terraform/HCL validation; lint; deployment; VM launch; or
 performance workload. All behavioral claims remain gated by the target-host
 runbook below.
 
+## ARM Container Pre-Validation Record (2026-09-03)
+
+`coder ssh agent03/agent03` provides an ARM64 Docker workspace that can be used
+for native compilation, focused Go tests, shell syntax checks, and fake-sysfs
+tests. It is not a valid density or live-kernel treatment host because it lacks
+a complete E2B deployment, does not expose all host interfaces, and already has
+state that differs from the experiment control.
+
+All remote files for this review are confined to
+`/home/coder/projects/yangshengxin/e2b`, with separate `src`, `artifacts`,
+`toolchains`, and `logs` directories. An independently installed official Go
+1.25.4 Linux/ARM64 toolchain is available under `toolchains/go1.25.4`; its
+archive matched the Go download metadata SHA-256
+`a68e86d4b72c2c2fecf7dfed667680b6c2a071221bbdb6913cf83ce3f80d9ff0`.
+Terraform 1.5.7 Linux/ARM64 is installed under `toolchains/terraform-1.5.7`;
+its archive passed the publisher's SHA256SUMS check.
+
+Observed preflight state:
+
+```text
+OS                 openEuler 24.03 LTS-SP2 (not the planned 24.04 image)
+kernel / arch      6.6.0-95.0.0.99.oe2403sp2.aarch64 / aarch64
+cgroup             cgroup v2
+kernel config      CGROUPS, MEMCG, USERFAULTFD, SWAP, KSM, ZSWAP,
+                   ZSMALLOC, LRU_GEN, DAMON, DAMON_RECLAIM, PSI enabled;
+                   ZRAM and VIRTIO_BALLOON built as modules
+MGLRU mask         0x0000
+zswap              disabled
+KSM                run=1 (already enabled, so not a clean KSM control)
+regular swap       about 5 GiB total and already materially used
+HugeTLB 2 MiB      nr_hugepages=4096, nr_overcommit_hugepages=0
+PSI                CONFIG_PSI=y, but /proc/pressure/memory is not exposed
+DAMON              module is present, parameter reads are permission-denied
+zram               no /sys/block/zram0; modprobe is unavailable in container
+ETMem               etmem, etmemd, and module tooling are unavailable
+build tools        Go 1.25.4 linux/arm64, GCC 12.3.1, pkg-config 1.9.5
+network            goproxy.cn and GitHub reachable; proxy.golang.org times out
+```
+
+Consequences for validation:
+
+- Use agent03 to run the focused Go tests and native ARM builds below with
+  `GOPROXY=https://goproxy.cn,direct`, plus shell syntax and fake-sysfs tests.
+- Do not enable/disable MGLRU, zswap, KSM, DAMON, zram, HugeTLB, or swap on this
+  shared Docker host. Even where `sudo -n` succeeds, those operations can alter
+  global host state outside the workspace.
+- Do not report agent03 measurements as an experiment result. HugeTLB is not
+  zero, KSM is already enabled, PSI is hidden, and the OS image differs from the
+  declared control.
+- Re-run the complete one-time preflight on fresh openEuler 24.04 experiment
+  nodes. Require KSM off in the untouched control for the KSM A/B test, in
+  addition to the existing MGLRU and zswap no-op checks.
+- Live cgroup-at-birth placement, Firecracker restore/FPR, same-inode CoW/PSS,
+  guest services, kernel treatment counters, object-store behavior, density,
+  and p99 SLO validation remain for the full deployment servers.
+
+All commands below ran from clean detached commits with `GOTOOLCHAIN=local`,
+`GOPROXY=https://goproxy.cn,direct`, and Go caches under the same `e2b`
+directory. Logs are retained in
+`/home/coder/projects/yangshengxin/e2b/logs/2026-09-03-arm-prevalidation`.
+
+| Scope and tested commit | ARM container validation completed | Result | Still required on a full target host |
+|---|---|---|---|
+| Baseline `2425bbcfd` | API placement/nodemanager tests; cgroup/fc/sandbox tests; full API and Orchestrator `go build ./...`; host-init Bash syntax | Pass | Process-at-birth cgroup placement, HugeTLB-off, deployed `CanFit` flag, load/SLO |
+| File pages `270bf8fc8` | template/fc/sandbox tests; full Orchestrator build | Pass | Same inode, immutable CoW backing, PSS sharing, FPR, pause/resume |
+| MGLRU `85e319821` | script and startup syntax; root-only fake-sysfs state machine; real read-only status; Terraform `fmt -check -recursive` | Pass; agent03 reported `enabled_mask=0x0000` and was not changed | Fresh control/treatment nodes, equal recorded `initial_mask`, reclaim and p99 deltas |
+| zswap `8d3031d6f` | script/startup syntax; real read-only status; Terraform `fmt -check -recursive` | Pass; agent03 reported `enabled=N` and was not changed | Equal backing swap, live enable, pool/swap movement, CPU/PSI/p99 |
+| Guest DAMON `c6043943c` | cfg/fc/metadata/rootfs tests; full Orchestrator build; deploy-script syntax | Pass | Guest kernel parameters/service, DAMON counters, FPR and host PSS effect |
+| KSM `cda231986` | wrapper test; full Orchestrator build; script syntax; fake-sysfs unmerge/timeout test | Pass | Trust isolation, live prctl inheritance, saved bytes minus CPU/p99 cost |
+| ETMem `0bd30ae17` | script syntax | Pass | All module/tool, process, cgroup, swap, detach, and SLO behavior; ETMem is unavailable on agent03 |
+| Guest zram `f1663083c` | cfg/metadata/rootfs tests; full Orchestrator build; proxy/canonical/preflight syntax; read-only host exclusion; fake status through the proxy | Pass | Guest module/service, compression, FPR host reduction, snapshot effect |
+| Snapshot compression `741a6e8dd` | shared header/storage tests; block/build/sandbox/copy-build tests; full Orchestrator build | Pass | Deployed local/GCS/Mooncake behavior, corruption injection, cold/warm resume and SLO |
+
+The original zswap tip `054c50246` failed remote Terraform formatting. The
+alignment-only follow-ups ending at `8d3031d6f` fix that review finding; the
+final SHA passed syntax, read-only status, and `fmt -check`. Full
+`terraform validate` is not credited: provider initialization stalled while
+downloading the Cloudflare provider, so this remains a target or connected-CI
+check rather than a product-test failure.
+
+Each `coder ssh` connection also reported a client/server version mismatch and
+a failed workspace startup script. The repository, pinned toolchains, tests,
+and builds remained usable. No pre-validation command enabled or disabled
+MGLRU, zswap, KSM, DAMON, zram, HugeTLB, regular swap, or ETMem on the shared
+container host. Therefore no command in this section passes a live target-host
+gate by itself.
+
 ## Engineering Assessment
+
+For `N` concurrently running sandboxes, reason about host memory approximately
+as:
+
+```text
+M_host(N) = M_control_plane + M_shared_templates
+          + N * (M_vmm + M_page_tables + M_private_resident
+                 + M_compressed_pool_resident)
+          + M_other_host_cache
+```
+
+File-backed sharing and KSM reduce the physical terms in this equation. DAMON,
+ETMem, zswap, ballooning, and guest zram reduce resident bytes only by adding
+CPU, I/O, compressed-pool, or refault costs. Snapshot compression changes
+artifact storage and transfer, not this steady-state equation. Report the
+effective overcommit ratio only at the SLO-valid density knee as
+`N * configured_guest_memory / usable_host_memory`, where usable memory excludes
+the predeclared control-plane reserve.
+
+For MGLRU control semantics, Linux v6.6
+`Documentation/admin-guide/mm/multigen_lru.rst` defines `0x0001` as the main
+switch and `0x0002`/`0x0004` as accessed-bit optimizations. Therefore
+`enabled=0x0000` is a real MGLRU-off control rather than merely a tuning change.
 
 | Mechanism | What it can improve | Review conclusion and limits |
 |---|---|---|
 | Baseline cgroup placement | Correct accounting and containment | `CLONE_INTO_CGROUP` closes the pre-placement accounting race. A configured cgroup manager now fails closed. This is a prerequisite, not an overcommit gain. |
 | Baseline memory placement | Avoids selecting an already pressured node | The score uses resident and committed memory and includes pending placements. The hard rejection is active only when the existing BestOfK `CanFit` feature flag is enabled. It conservatively assumes the full new guest allocation may become resident during startup. CPU and memory currently share one `R` ratio; production tuning should separate them. |
 | Shared immutable file pages | Directly shares untouched template pages across VMs | This is the strongest low-latency density candidate for cloned templates. The content-addressed sparse file, hard-link publication, read-only mode, and Firecracker File/MAP_PRIVATE backend are coherent. First restores may still use UFFD while materialization runs. Validate cache lifecycle, backing-file immutability, CoW behavior, FPR, and pause/resume remotely. |
-| Host MGLRU | Better reclaim decisions under mixed hot/cold pressure | Technically sound tooling, but Linux 6.6 commonly already reports `0x0007`. The script correctly refuses an enable operation with no baseline delta. If the untouched host is already `0x0007`, this experiment is invalid and should be skipped or rerun with both node pools booted from an explicit MGLRU-off control image. |
+| Host MGLRU | Better reclaim decisions under mixed hot/cold pressure | Linux 6.6 documents bit `0x0001` as the MGLRU main switch, so verified `0x0000` is an explicit disabled control and a nonzero mask is treatment. The final branch provisions `control` and `treatment` through the same code, persists the initial mask and arm, and rejects same-node arm switches or mask drift. The experiment is valid only on two fresh nodes with the same recorded `initial_mask`; an initial `0x0007` is acceptable because the control is explicitly changed to `0x0000`. MGLRU improves reclaim policy rather than creating free memory, so it still must prove a density/p99 gain under pressure. |
 | Host zswap | Compresses swapped anonymous pages and reduces backing-swap I/O | Useful only under anonymous pressure with active backing swap. It consumes RAM and CPU, so stored pages are not free memory. Require baseline zswap to be disabled before the run; an already-enabled matching configuration is idempotently accepted by the script but is not a valid treatment delta. Do not combine with guest zram in this ablation. |
 | Guest DAMON_RECLAIM + FPR | Drops cold guest file cache and returns freed GPAs to the host | `skip_anon=Y` is a cautious choice and suits file-cache-heavy sandboxes, but it cannot reclaim anonymous heaps. All boot parameters, enabled state, `skip_anon=Y`, and balloon FPR are bound into template compatibility, so stale snapshots fail closed. The guest kernel and FPR effect still require target validation. |
-| Isolated KSM | Deduplicates identical anonymous pages after guests diverge | Process-wide `PR_SET_MEMORY_MERGE` in the Firecracker wrapper is the right scope and avoids marking the orchestrator. It has CPU cost and a cross-VM side channel, so trust-domain isolation is mandatory. `run=2` now waits for global unmerge, but existing mergeable Firecracker processes retain their prctl policy; drain them before a trust-domain transition. |
+| Isolated KSM | Deduplicates identical anonymous pages after guests diverge | Process-wide `PR_SET_MEMORY_MERGE` in the Firecracker wrapper is the right scope and avoids marking the orchestrator. It has CPU cost and a cross-VM side channel, so trust-domain isolation is mandatory. `run=2` now waits for global unmerge, but existing mergeable Firecracker processes retain their prctl policy; drain them before a trust-domain transition. The script's `verify` command is only a mechanism gate (`general_profit > 0` plus prctl inheritance); CPU cost and p99 impact must be evaluated by the experiment result analysis. |
 | Host ETMem | Moves cold Firecracker pages to regular swap | Appropriate to evaluate on openEuler because it uses the platform ETMem modules. PID plus process start time protects against PID reuse, and `memory.swap.max` bounds each target. It remains operationally expensive per PID and must prove that scan/swap CPU and refault latency do not erase density gains. |
 | Guest zram + FPR | Compresses cold anonymous guest data in guest RAM, freeing other GPAs | Plausible when the compression ratio exceeds zram metadata and pool cost. Configuration is template-bound and the guest service blocks `envd` on failure. Host zswap and host zram are excluded. Validate that guest swap activity actually reduces host PSS/RSS through FPR and does not merely move bytes inside the guest. |
 | Snapshot compression | Reduces stored/transferred snapshot bytes | The versioned 4 MiB LZ4 chunks, per-chunk SHA-256, raw-chunk fallback, external manifest, and raw reader compatibility are reasonable. It does not by itself improve steady-state RAM density. The current reader materializes the whole raw image before serving UFFD, so cold-resume latency and local disk amplification are the main risks. |
@@ -227,7 +338,8 @@ recreate nodes between stateful treatments.
 - [x] Gate HugeTLB host initialization and clear stale reservations in 4 KiB
   mode.
 - [x] Add focused unit tests.
-- [ ] Execute the baseline tests/build and live placement checks on ARM Linux.
+- [x] Execute focused tests and full API/Orchestrator builds on ARM Linux.
+- [ ] Execute live process-at-birth placement and HugeTLB checks.
 - [ ] Confirm the BestOfK `CanFit` feature flag is enabled for any run claiming
   hard memory admission.
 
@@ -239,16 +351,23 @@ recreate nodes between stateful treatments.
 - [x] Select Firecracker File/MAP_PRIVATE only for eligible template restores.
 - [x] Retain UFFD for cache misses, builds, and individualized snapshots.
 - [x] Add concurrency, corruption, and restore-policy tests.
-- [ ] Execute tests and same-inode/CoW/FPR/pause-resume validation on ARM Linux.
+- [x] Execute focused tests and a full Orchestrator build on ARM Linux.
+- [ ] Execute same-inode/CoW/FPR/pause-resume validation.
 
 ### Host MGLRU
 
 - [x] Add fail-closed `enable`, `disable`, `status`, and `metrics` operations.
 - [x] Record and restore the original mask; leave `min_ttl_ms` unchanged.
-- [x] Reject a treatment whose requested mask already equals the recorded
-  baseline.
-- [ ] Check the untouched target mask before spending time on a load run.
-- [ ] If needed, provision both arms from an explicit MGLRU-off boot image.
+- [x] Add explicit `control` (`0x0000`) and nonzero `treatment` provisioning
+  modes through the same startup code.
+- [x] Persist `initial_mask` and configured arm; reject same-node arm switching
+  and mask drift.
+- [x] Require every client cluster to declare `host_mglru_mode` as `control` or
+  `treatment`; leave build workers `unchanged`.
+- [x] Execute syntax, fake-sysfs state-machine, read-only status, and Terraform
+  formatting checks on ARM Linux.
+- [ ] Provision two fresh arms and require equal recorded `initial_mask` before
+  spending time on a load run.
 
 ### Host zswap
 
@@ -256,8 +375,10 @@ recreate nodes between stateful treatments.
 - [x] Configure compressor, zpool, and bounded pool before enabling.
 - [x] Expose zswap, swap, major-fault, and memory-PSI counters.
 - [x] Wire the treatment into worker startup.
+- [x] Execute syntax, read-only status, and Terraform formatting checks on ARM
+  Linux.
 - [ ] Confirm the untouched control has zswap disabled and equal regular swap.
-- [ ] Execute syntax, live configuration, pressure, and SLO validation.
+- [ ] Execute live configuration, pressure, and SLO validation.
 
 ### Guest DAMON + FPR
 
@@ -266,7 +387,8 @@ recreate nodes between stateful treatments.
 - [x] Fail closed when DAMON is requested without balloon FPR.
 - [x] Bind all DAMON/FPR state into template and snapshot compatibility.
 - [x] Block `envd` startup when the guest kernel reports a mismatch.
-- [ ] Execute tests, rebuild unique templates, and validate reclaim plus FPR.
+- [x] Execute focused tests and a full Orchestrator build on ARM Linux.
+- [ ] Rebuild unique templates and validate guest reclaim plus host FPR effect.
 
 ### Isolated KSM
 
@@ -276,7 +398,12 @@ recreate nodes between stateful treatments.
 - [x] Set `merge_across_nodes=0` and expose benefit plus ksmd CPU metrics.
 - [x] Disable with `run=2` and wait until shared/sharing counters reach zero.
 - [x] Add wrapper and fake-sysfs tests.
-- [ ] Validate `/proc/<pid>/ksm_stat` inheritance and positive net profit.
+- [x] Execute wrapper/fake-sysfs tests, syntax checks, and a full Orchestrator
+  build on ARM Linux.
+- [ ] Validate `/proc/<pid>/ksm_stat` inheritance and positive kernel
+  `general_profit` as a mechanism gate.
+- [ ] Treat `host-ksm.sh verify` only as a mechanism preflight; combine deltas
+  in saved bytes, ksmd CPU, throughput, and p99 before accepting the treatment.
 - [ ] Document and exercise the drain/unmerge/restart trust-domain transition.
 
 ### Host ETMem
@@ -286,6 +413,7 @@ recreate nodes between stateful treatments.
 - [x] Generate one project per process identity and tolerate exited targets.
 - [x] Bound swap with the target cgroup's `memory.swap.max` and restore it only
   when the cgroup identity and applied value still match.
+- [x] Execute script syntax checking on ARM Linux.
 - [ ] Validate tools/modules, attach/detach, pressure behavior, and SLO remotely.
 
 ### Guest zram
@@ -295,8 +423,11 @@ recreate nodes between stateful treatments.
 - [x] Fail closed before `envd` if guest zram cannot be configured.
 - [x] Add host preflight excluding host zswap and host zram.
 - [x] Add unit tests and guest operational tooling.
-- [ ] Execute tests and validate guest compression, host FPR reduction, and
-  snapshot impact.
+- [x] Remove the duplicated operator implementation; keep a thin proxy to the
+  rootfs canonical script.
+- [x] Execute focused tests, full Orchestrator build, syntax, host exclusion,
+  and fake proxy status on ARM Linux.
+- [ ] Validate guest compression, host FPR reduction, and snapshot impact.
 
 ### Snapshot Compression
 
@@ -311,13 +442,18 @@ recreate nodes between stateful treatments.
   and a same-code manifested-raw control when false.
 - [x] Add round-trip, corruption, cache, publication-order, and disabled-mode
   tests.
-- [ ] Execute the target test matrix and compare distinct raw/LZ4 build IDs.
+- [x] Execute shared/orchestrator focused tests and a full Orchestrator build on
+  ARM Linux.
+- [ ] Compare distinct raw/LZ4 build IDs on deployed storage and live resumes.
 - [ ] Validate local, deployed object store, and Mooncake behavior separately.
 
 ## Target-Host Validation Runbook
 
 Run this section only on the ARM/openEuler server. Start from a clean worktree.
 The commands intentionally use detached immutable commits.
+The pure user-space tests and builds recorded above need not be repeated if the
+same validated artifacts and commits are promoted; retain the commands for
+reproduction or rerun them when the toolchain, image, or source changes.
 
 ### 1. One-Time Host Preflight
 
@@ -354,8 +490,8 @@ git switch --detach 2425bbcfdcf7e6056bfe599c568070a425b5626c
 
 (cd packages/api && go test ./internal/orchestrator/placement ./internal/orchestrator/nodemanager)
 (cd packages/orchestrator && go test ./internal/sandbox/cgroup ./internal/sandbox/fc ./internal/sandbox)
-(cd packages/orchestrator && CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build .)
-(cd packages/api && CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build .)
+(cd packages/orchestrator && CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build ./...)
+(cd packages/api && CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build ./...)
 bash -n .github/actions/host-init/init-client.sh
 ```
 
@@ -367,7 +503,7 @@ has BestOfK `CanFit=true` before treating memory rejection as active.
 ### 3. Shared File Page Cache
 
 ```bash
-git switch --detach fa6cce8d6ee9877ea5aa8d6b028dcdc2ba80c6f8
+git switch --detach 270bf8fc8fdbc9f6f8a1b60e4941db02faa50257
 (cd packages/orchestrator && go test ./internal/sandbox/template ./internal/sandbox/fc ./internal/sandbox)
 ```
 
@@ -394,27 +530,44 @@ resume. Separately confirm a personalized paused snapshot selects UFFD.
 ### 4. Host MGLRU
 
 ```bash
-git switch --detach ba6cebced758938a5aa3c2720a07d94ed553ed94
+git switch --detach 85e319821841d5c43d52be1911b6f25b990b1fc7
 bash -n scripts/memory-experiments/host-mglru.sh
+sudo -E bash scripts/memory-experiments/host-mglru_test.sh
 sudo scripts/memory-experiments/host-mglru.sh status
 ```
 
-Read the untouched mask before enable. If it is already `0x0007` and the
-requested mask is `0x0007`, stop: there is no treatment. For a valid off-to-on
-pair, both node pools must boot with the same explicit off state, after which
-only the treatment runs:
+Provision two fresh client clusters from the same host image and this same
+commit. Set `host_mglru_mode = "control"` on one and
+`host_mglru_mode = "treatment"` on the other; the branch intentionally rejects
+an omitted or `unchanged` mode for client clusters. Build workers remain
+`unchanged`. Startup writes `0x0000` on the control and the configured nonzero
+mask on the treatment.
+
+Save `status` from every node. Require `configured_arm=control` and
+`enabled_mask=0x0000` in the control pool, and
+`configured_arm=treatment` with the requested nonzero mask in the treatment
+pool. Most importantly, require the recorded `initial_mask` to be equal across
+both pools. If it differs or is unrecorded, discard the run.
+
+For a standalone node outside the Terraform path, configure each fresh node
+exactly once:
 
 ```bash
+# Control node only
+sudo scripts/memory-experiments/host-mglru.sh disable
+
+# Treatment node only
 sudo env HOST_MGLRU_MASK=0x0007 scripts/memory-experiments/host-mglru.sh enable
 sudo scripts/memory-experiments/host-mglru.sh metrics
 ```
 
-Do not set `min_ttl_ms`. Capture refault, scan/steal, PSI, and p99 deltas.
+Do not switch arms on one node, use `restore` to manufacture another arm, or set
+`min_ttl_ms`. Capture refault, scan/steal, PSI, and p99 deltas.
 
 ### 5. Host zswap
 
 ```bash
-git switch --detach 054c502463f138828911fc2ed1a9871ff287cba8
+git switch --detach 8d3031d6fd3ffd56472e562003692fe7f0707ae8
 bash -n scripts/memory-experiments/host-zswap.sh
 cat /proc/swaps
 cat /sys/module/zswap/parameters/enabled
@@ -478,7 +631,9 @@ sudo -E env KSM_ISOLATION_ATTESTED=true KSM_TRUST_DOMAIN=<domain> \
 ```
 
 Require `/proc/<pid>/ksm_stat` to report the Firecracker process mergeable and
-`general_profit` to be positive after subtracting ksmd CPU and latency cost.
+the script's kernel `general_profit` gate to be positive. This only passes the
+mechanism preflight. Separately compare saved bytes, ksmd CPU deltas, throughput,
+and runtime/resume p99 against control before calling the treatment profitable.
 
 Trust-domain transition sequence:
 
@@ -518,9 +673,10 @@ swap-in/refault/p99 cost. Validate detach once after the target has exited.
 ### 9. Guest zram
 
 ```bash
-git switch --detach cfa4cdb93b9c6550294aba22eca5228f93682158
+git switch --detach f1663083c95db30a71ce5a0bc68bcaa566cf331b
 (cd packages/orchestrator && go test ./internal/cfg ./internal/template/metadata ./internal/template/build/core/rootfs)
 bash -n scripts/memory-experiments/guest-zram.sh
+bash -n packages/orchestrator/internal/template/build/core/rootfs/files/guest-zram.sh
 bash -n scripts/memory-experiments/host-guest-zram-preflight.sh
 scripts/memory-experiments/host-guest-zram-preflight.sh
 ```
@@ -542,10 +698,10 @@ guest memory state.
 ### 10. Snapshot Compression
 
 ```bash
-git switch --detach f4992438d1639e3002673f68a84ba1e2c8c02686
+git switch --detach 741a6e8dd6b5ac3cf18d94a281b827c7cbdc92a4
 (cd packages/shared && go test ./pkg/storage/header ./pkg/storage)
 (cd packages/orchestrator && go test ./internal/sandbox/block ./internal/sandbox/build ./internal/sandbox ./cmd/copy-build)
-(cd packages/orchestrator && CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build .)
+(cd packages/orchestrator && CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build ./...)
 ```
 
 Roll out the branch to all readers with
@@ -585,9 +741,9 @@ supports it.
 To minimize target time:
 
 1. Run the one-time host preflight and baseline focused tests once.
-2. Reject unsupported/no-op branches before load: MGLRU with equal mask, zswap
-   already enabled, missing ETMem, missing guest DAMON/zram, or unverified KSM
-   isolation.
+2. Reject unsupported or invalid branches before load: MGLRU arms with unequal
+   or unrecorded initial masks, zswap already enabled, missing ETMem, missing
+   guest DAMON/zram, or unverified KSM isolation.
 3. Test shared file pages first because they offer direct sharing without
    pressure-induced latency.
 4. Test guest zram or host zswap next according to whether the workload is
@@ -597,7 +753,8 @@ To minimize target time:
 6. Test KSM only in the isolated pool.
 7. Run snapshot compression as a separate storage/resume experiment using its
    same-code raw control.
-8. Run MGLRU last and only if a real mask delta can be established.
+8. Run MGLRU last and only with fresh explicit control/treatment nodes and equal
+   recorded initial masks.
 
 ## Further Density Roadmap
 
@@ -610,7 +767,9 @@ implementation cost.
 | P0 | Template-aware admission and placement | Learn p95/p99 resident working set by template, lifecycle phase, and workload class. Use PSS plus startup burst estimates rather than charging every request as fully resident forever. Add separate CPU and memory overcommit ratios, freshness bounds on node metrics, NUMA-local headroom, PSI/refault feedback, and a reserved control-plane margin. |
 | P0 | cgroup v2 closed-loop protection | Protect orchestrator/network/storage services with `memory.low`. Use per-sandbox `memory.high` for reclaim/throttling, `memory.max` only as a final containment limit, and `memory.swap.max` for bounded spill. A PSI controller can stop admission and invoke `memory.reclaim` before host OOM. Validate fairness and tail latency. |
 | P0 | Reduce the guest/application working set | Remove unused services and packages from templates, lazy-start tools, bound language-runtime heaps/caches, reduce allocator arenas, and return unused pages with `madvise`. Measure per-template PSS after boot and representative idle periods. This often yields density without kernel reclaim complexity. |
+| P0 | Idle-sandbox hibernation tier | Snapshot and terminate sandboxes that exceed an evidence-based idle threshold, while keeping hot sandboxes and popular template bases resident. This removes VMM, page-table, and private-resident costs rather than compressing them. Account for snapshot I/O, lost in-guest caches, and cold-resume p99; do not count hibernated instances as immediately runnable capacity. |
 | P1 | Proactive balloon control with FPR | FPR is passive: it returns pages only after the guest frees them. Use existing Firecracker balloon updates/stats to reclaim from idle sandboxes with hysteresis, a minimum guest reserve, and rapid deflation on activity. Drive targets from host PSI plus per-template working-set predictions. No Firecracker change is expected unless current metrics prove insufficient. |
+| P1 | Shared immutable rootfs/block bases | Ensure sandboxes from one template read the same immutable base image or lower layer and keep writes in bounded per-sandbox CoW layers. Verify same backing identity, page-cache sharing, discard/trim, write isolation, and snapshot compatibility. This complements shared memory snapshots by removing duplicate host page-cache and block-cache residency. |
 | P1 | Guest zram plus bounded NVMe swap hierarchy | Let guest zram absorb compressible anonymous cold data, then allow a small, per-cgroup host NVMe swap budget for overflow. Explicitly avoid host zswap double compression. Tune priorities and limits from compression ratio and refault SLO, then test failure behavior when both tiers fill. |
 | P1 | Host DAMON-based reclaim | Attach DAMON to selected Firecracker address ranges/cgroups and use a bounded pageout scheme for cold host mappings. This can cover anonymous-heavy guests that `skip_anon=Y` guest DAMON cannot. Compare independently with ETMem; use quotas, PSI stop conditions, and major-fault limits. |
 | P1 | Indexed lazy decompression for UFFD | Add a v2 artifact index or sidecar mapping logical chunks to stored offsets. On UFFD faults, fetch and verify only required chunks, singleflight decompression into a bounded content-addressed node cache, and prefetch from recorded fault traces. This removes whole-image materialization from cold resume and can share decompressed chunks across sandboxes without changing Firecracker. |
