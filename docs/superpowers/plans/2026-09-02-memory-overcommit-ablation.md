@@ -2,7 +2,15 @@
 
 **Review date:** 2026-09-03
 
-**Target:** ARM64, openEuler 24.04, Linux 6.6, cgroup v2
+**Original target:** ARM64, openEuler 24.04, Linux 6.6, cgroup v2
+
+**2026-09-08 compatibility update:** The existing intranet deployment uses
+cgroup v1/hybrid. Keep that layout and its historical experiment records.
+Apply the common compatibility fix to both baseline and treatments; use the
+[v1/hybrid compatibility runbook](2026-09-08-cgroup-v1-hybrid-compatibility.md)
+for current rollout, accounting limits, completed checks and prioritized TODOs.
+The frozen commits and v2-only commands below remain the original validation
+record, not instructions to migrate/reboot the existing intranet servers.
 
 **Goal:** Establish one correctness control and eight isolated treatment branches,
 then measure the maximum sustainable sandbox density at an unchanged runtime and
@@ -16,6 +24,10 @@ kernel-treatment, storage-provider, density, and latency claims remain pending.
 
 ## Non-Negotiable Controls
 
+- For the existing v1/hybrid environment, record the patched branch SHA and
+  apply the same compatibility patch to every arm. Skip ETMem, whose current
+  swap bound requires v2. Do not mix unavailable v2 accounting fields with
+  process metrics or compare v1 and v2 runs as if only the treatment changed.
 - The experiment control is commit `2425bbcfdcf7e6056bfe599c568070a425b5626c`,
   not the moving tip of a documentation branch.
 - Every treatment branch starts at that exact commit and contains only one
@@ -35,6 +47,26 @@ kernel-treatment, storage-provider, density, and latency claims remain pending.
   a production node back to a clean baseline.
 
 ## Branch Ledger
+
+The following 2026-09-08 commits add the same v1/hybrid compatibility fix and
+its validation/runbook document. All seven code/test files and that document
+were compared across the nine branches and are byte-identical. The ARM
+pre-validation applies to the common files, not new live treatment results.
+Use these patched control/treatment revisions for the existing intranet host:
+
+| Branch | Compatibility commit |
+|---|---|
+| `mem-overcommit-baseline` | `eae4ba17e454dee4a9429ceb10657b6f8defb3ac` |
+| `mem-overcommit-exp-file-page-cache` | `4020e63d9fcac943cfed2ed1ba2ca0d2cdc4fd36` |
+| `mem-overcommit-exp-host-mglru` | `560b3778b9aea9542ba9af4a1a3b3552d14e3dfa` |
+| `mem-overcommit-exp-host-zswap` | `bb950c0d45702298716ce2ce2da7b8d4f6b96c9b` |
+| `mem-overcommit-exp-guest-damon-fpr` | `9e866cc2c4fb2eba20827c5239bef08cbb450350` |
+| `mem-overcommit-exp-ksm` | `abe3099d198f04610eb99c9591cda7314b833eb9` |
+| `mem-overcommit-exp-host-etmem` | `dad8e700f7e797e2622018cfb9cc2a372c51a348` (ETMem treatment ineligible on v1) |
+| `mem-overcommit-exp-guest-zram` | `4f2259d00901ce8c436efce71faa1bf12f7dd51b` |
+| `mem-overcommit-exp-snapshot-compression` | `cf8c9f3974c36ed5a9efca9100d7130080cb05ce` |
+
+Original 2026-09-03 treatment ledger (preserved as historical evidence):
 
 | Branch | Final treatment commit | Implementation status | Target-host gate |
 |---|---|---|---|
@@ -455,6 +487,12 @@ recreate nodes between stateful treatments.
 
 ## Prioritized Remaining TODO
 
+For the current v1/hybrid deployment, first complete the P0 compatibility
+rollout in the linked 2026-09-08 runbook. The original v2 preflight and
+process-at-birth placement gates below apply to a separate v2 environment;
+they do not require migrating the existing intranet host. The immutable SHAs
+below predate the compatibility patch; use patched SHAs for new runs.
+
 Priority meanings:
 
 - `P0`: prerequisite for any scientifically valid density result.
@@ -491,6 +529,9 @@ same validated artifacts and commits are promoted; retain the commands for
 reproduction or rerun them when the toolchain, image, or source changes.
 
 ### 1. One-Time Host Preflight
+
+The following is the original **v2-only** preflight. On existing v1/hybrid
+hosts, use the 2026-09-08 runbook instead of requiring or changing cgroup2.
 
 ```bash
 export E2B_REPO=/path/to/e2b-infra-nashzhou
