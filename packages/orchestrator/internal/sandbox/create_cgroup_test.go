@@ -37,3 +37,12 @@ func TestCreateCgroupFailsClosed(t *testing.T) {
 	require.Equal(t, cgroup.NoCgroupFD, fd)
 	require.ErrorIs(t, err, wantErr)
 }
+
+func TestCreateCgroupDisabled(t *testing.T) {
+	t.Parallel()
+
+	handle, fd, err := createCgroup(t.Context(), nil, "sandbox-id", NewCleanup())
+	require.NoError(t, err)
+	require.Nil(t, handle)
+	require.Equal(t, cgroup.NoCgroupFD, fd)
+}
