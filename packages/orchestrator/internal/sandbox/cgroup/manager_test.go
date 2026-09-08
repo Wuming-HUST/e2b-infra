@@ -18,13 +18,11 @@ import (
 func TestNewManager(t *testing.T) {
 	t.Parallel()
 
-	if os.Geteuid() != 0 {
-		t.Skip("test requires root privileges")
-	}
-
 	mgr, err := NewManager()
 	require.NoError(t, err)
-	require.NotNil(t, mgr)
+	if mgr != nil {
+		require.IsType(t, &managerImpl{}, mgr)
+	}
 }
 
 func TestManagerInitialize(t *testing.T) {
@@ -36,9 +34,13 @@ func TestManagerInitialize(t *testing.T) {
 
 	ctx := context.Background()
 
-	mgr := &managerImpl{}
+	mgr, err := NewManager()
+	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
-	err := mgr.Initialize(ctx)
+	err = mgr.Initialize(ctx)
 	require.NoError(t, err)
 
 	info, err := os.Stat(RootCgroupPath)
@@ -64,6 +66,9 @@ func TestCgroupHandleLifecycle(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	err = mgr.Initialize(ctx)
 	require.NoError(t, err)
@@ -102,6 +107,9 @@ func TestCgroupHandleWithProcessCreation(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	err = mgr.Initialize(ctx)
 	require.NoError(t, err)
@@ -157,6 +165,9 @@ func TestCgroupHandleNoRaceOnQuickExit(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	err = mgr.Initialize(ctx)
 	require.NoError(t, err)
@@ -194,6 +205,9 @@ func TestCgroupHandleGetStats(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	err = mgr.Initialize(ctx)
 	require.NoError(t, err)
@@ -243,6 +257,9 @@ func TestCgroupHandleGetStatsNonExistent(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	testSandboxID := "test-nonexistent"
 
@@ -271,6 +288,9 @@ func TestCgroupHandleRemoveNonExistent(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	testSandboxID := "test-remove-nonexistent"
 
@@ -335,6 +355,9 @@ func TestCgroupHandleLifetimePeak(t *testing.T) {
 	ctx := context.Background()
 	mgr, err := NewManager()
 	require.NoError(t, err)
+	if mgr == nil {
+		t.Skip("test requires a unified cgroup v2 hierarchy")
+	}
 
 	err = mgr.Initialize(ctx)
 	require.NoError(t, err)

@@ -352,11 +352,15 @@ func run(config cfg.Config) (success bool) {
 		logger.L().Fatal(ctx, "failed to initialize cgroup manager", zap.Error(err))
 	}
 
-	if err := cgroupManager.Initialize(ctx); err != nil {
-		logger.L().Fatal(ctx, "failed to initialize root cgroup", zap.Error(err))
-	}
+	if cgroupManager == nil {
+		logger.L().Warn(ctx, "per-sandbox cgroup v2 accounting disabled on v1/hybrid host; inheriting parent cgroups, process CPU/RSS metrics remain available")
+	} else {
+		if err := cgroupManager.Initialize(ctx); err != nil {
+			logger.L().Fatal(ctx, "failed to initialize root cgroup", zap.Error(err))
+		}
 
-	logger.L().Info(ctx, "cgroup accounting enabled", zap.String("root", cgroup.RootCgroupPath))
+		logger.L().Info(ctx, "cgroup accounting enabled", zap.String("root", cgroup.RootCgroupPath))
+	}
 
 	// redis
 	redisClient, err := sharedFactories.NewRedisClient(ctx, sharedFactories.RedisConfig{
