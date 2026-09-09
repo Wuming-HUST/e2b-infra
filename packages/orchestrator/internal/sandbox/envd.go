@@ -18,6 +18,7 @@ import (
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/envd"
 	"github.com/e2b-dev/infra/packages/shared/pkg/consts"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	"github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -53,7 +54,7 @@ func (s *Sandbox) doRequestWithInfiniteRetries(
 		}
 
 		requestCount++
-		reqCtx, cancel := context.WithTimeout(ctx, s.internalConfig.EnvdInitRequestTimeout)
+		reqCtx, cancel := stresstest.WithTimeout(ctx, s.internalConfig.EnvdInitRequestTimeout)
 		request, err := http.NewRequestWithContext(reqCtx, method, address, bytes.NewReader(body))
 		if err != nil {
 			cancel()

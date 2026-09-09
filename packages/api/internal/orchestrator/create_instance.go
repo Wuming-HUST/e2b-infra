@@ -27,6 +27,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/grpc/orchestrator"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 	sandbox_network "github.com/e2b-dev/infra/packages/shared/pkg/sandbox-network"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	ut "github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -111,7 +112,7 @@ func (o *Orchestrator) CreateSandbox(
 	totalConcurrentInstances := team.Limits.SandboxConcurrency
 
 	// Check if team has reached max instances
-	finishStart, waitForStart, err := o.sandboxStore.Reserve(ctx, team.Team.ID, sandboxID, int(totalConcurrentInstances))
+	finishStart, waitForStart, err := o.sandboxStore.Reserve(ctx, team.Team.ID, sandboxID, stresstest.Limit(int(totalConcurrentInstances)))
 	if err != nil {
 		var limitErr *sandbox.LimitExceededError
 
@@ -236,7 +237,7 @@ func (o *Orchestrator) CreateSandbox(
 			Metadata:            metadata,
 			EnvVars:             envVars,
 			EnvdAccessToken:     envdAuthToken,
-			MaxSandboxLength:    team.Limits.MaxLengthHours,
+			MaxSandboxLength:    stresstest.LifetimeHours(team.Limits.MaxLengthHours),
 			HugePages:           hasHugePages,
 			RamMb:               build.RamMb,
 			Vcpu:                build.Vcpu,
@@ -259,7 +260,7 @@ func (o *Orchestrator) CreateSandbox(
 
 		clusterID := clusters.WithClusterFallback(team.ClusterID)
 		node = o.GetNode(clusterID, *nodeID)
-		if node != nil && node.Status() != api.NodeStatusReady {
+		if node != nil && node.Status() != api.NodeStatusReady && !(stresstest.Enabled() && node.Status() == api.NodeStatusUnhealthy) {
 			node = nil
 		}
 	}
@@ -269,9 +270,13 @@ func (o *Orchestrator) CreateSandbox(
 
 	node, err = placement.PlaceSandbox(ctx, o.placementAlgorithm, clusterNodes, node, sbxRequest, builds.ToMachineInfo(build))
 	if err != nil {
+		clientMsg := "Failed to place sandbox"
+		if stresstest.Enabled() {
+			clientMsg = fmt.Sprintf("Failed to place sandbox: %v", err)
+		}
 		return sandbox.Sandbox{}, &api.APIError{
 			Code:      http.StatusInternalServerError,
-			ClientMsg: "Failed to place sandbox",
+			ClientMsg: clientMsg,
 			Err:       fmt.Errorf("failed to place sandbox: %w", err),
 		}
 	}
@@ -304,7 +309,7 @@ func (o *Orchestrator) CreateSandbox(
 		team.ID,
 		build.ID,
 		metadata,
-		time.Duration(team.Limits.MaxLengthHours)*time.Hour,
+		time.Duration(stresstest.LifetimeHours(team.Limits.MaxLengthHours))*time.Hour,
 		startTime,
 		endTime,
 		build.Vcpu,

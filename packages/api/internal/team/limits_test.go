@@ -12,7 +12,7 @@ import (
 )
 
 func TestLimitResources(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 
 	defaultLimits := &types.TeamLimits{
 		MaxVcpu:  32,
@@ -20,7 +20,6 @@ func TestLimitResources(t *testing.T) {
 	}
 
 	t.Run("valid CPU counts", func(t *testing.T) {
-		t.Parallel()
 		validCPUs := []int32{1, 2, 4, 8, 16, 32}
 		for _, cpuCount := range validCPUs {
 			cpu := cpuCount
@@ -31,7 +30,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid CPU count - odd number greater than 1", func(t *testing.T) {
-		t.Parallel()
 		invalidCPUs := []int32{3, 5, 7, 9, 31}
 		for _, cpuCount := range invalidCPUs {
 			cpu := cpuCount
@@ -43,7 +41,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid CPU count - exceeds Firecracker max", func(t *testing.T) {
-		t.Parallel()
 		highLimits := &types.TeamLimits{
 			MaxVcpu:  100,
 			MaxRamMb: 8192,
@@ -59,7 +56,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid CPU count - below minimum", func(t *testing.T) {
-		t.Parallel()
 		cpu := int32(0)
 		_, _, apiErr := LimitResources(defaultLimits, &cpu, nil)
 		require.NotNil(t, apiErr)
@@ -68,7 +64,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid CPU count - exceeds team limit", func(t *testing.T) {
-		t.Parallel()
 		lowLimits := &types.TeamLimits{
 			MaxVcpu:  8,
 			MaxRamMb: 8192,
@@ -81,14 +76,12 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("defaults when CPU is nil", func(t *testing.T) {
-		t.Parallel()
 		cpuResult, _, apiErr := LimitResources(defaultLimits, nil, nil)
 		require.Nil(t, apiErr)
 		assert.Equal(t, constants.DefaultTemplateCPU, cpuResult)
 	})
 
 	t.Run("valid memory", func(t *testing.T) {
-		t.Parallel()
 		validMemory := []int32{128, 256, 512, 1024, 2048}
 		for _, memMB := range validMemory {
 			mem := memMB
@@ -99,7 +92,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid memory - not divisible by 2", func(t *testing.T) {
-		t.Parallel()
 		mem := int32(129)
 		_, _, apiErr := LimitResources(defaultLimits, nil, &mem)
 		require.NotNil(t, apiErr)
@@ -108,7 +100,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid memory - below minimum", func(t *testing.T) {
-		t.Parallel()
 		mem := int32(64)
 		_, _, apiErr := LimitResources(defaultLimits, nil, &mem)
 		require.NotNil(t, apiErr)
@@ -117,7 +108,6 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("invalid memory - exceeds team limit", func(t *testing.T) {
-		t.Parallel()
 		mem := int32(16384)
 		_, _, apiErr := LimitResources(defaultLimits, nil, &mem)
 		require.NotNil(t, apiErr)
@@ -126,9 +116,21 @@ func TestLimitResources(t *testing.T) {
 	})
 
 	t.Run("defaults when memory is nil", func(t *testing.T) {
-		t.Parallel()
 		_, memResult, apiErr := LimitResources(defaultLimits, nil, nil)
 		require.Nil(t, apiErr)
 		assert.Equal(t, constants.DefaultTemplateMemory, memResult)
 	})
+}
+
+func TestStressResourcesIgnoreTeamAndProductCaps(t *testing.T) {
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "true")
+	limits := &types.TeamLimits{MaxVcpu: 1, MaxRamMb: 128}
+	cpu, ram := int32(64), int32(1<<20)
+	gotCPU, gotRAM, err := LimitResources(limits, &cpu, &ram)
+	require.Nil(t, err)
+	require.Equal(t, int64(cpu), gotCPU)
+	require.Equal(t, int64(ram), gotRAM)
+	cpu = 0
+	_, _, err = LimitResources(limits, &cpu, &ram)
+	require.NotNil(t, err, "invalid VM specifications still fail")
 }

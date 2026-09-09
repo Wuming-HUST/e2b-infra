@@ -31,6 +31,7 @@ import (
 	sbxlogger "github.com/e2b-dev/infra/packages/shared/pkg/logger/sandbox"
 	sandbox_network "github.com/e2b-dev/infra/packages/shared/pkg/sandbox-network"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	"github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -49,7 +50,7 @@ const (
 
 func (s *Server) Create(ctx context.Context, req *orchestrator.SandboxCreateRequest) (*orchestrator.SandboxCreateResponse, error) {
 	// set max request timeout for this request
-	ctx, cancel := context.WithTimeoutCause(ctx, requestTimeout, fmt.Errorf("request timed out"))
+	ctx, cancel := stresstest.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
 	// set up tracing
@@ -81,14 +82,16 @@ func (s *Server) Create(ctx context.Context, req *orchestrator.SandboxCreateRequ
 	maxRunningSandboxesPerNode := s.featureFlags.IntFlag(ctx, featureflags.MaxSandboxesPerNode)
 
 	runningSandboxes := s.sandboxes.Count()
-	if runningSandboxes >= maxRunningSandboxesPerNode {
+	if !stresstest.Enabled() && runningSandboxes >= maxRunningSandboxesPerNode {
 		telemetry.ReportEvent(ctx, "max number of running sandboxes reached")
 
 		return nil, status.Errorf(codes.ResourceExhausted, "max number of running sandboxes on node reached (%d), please retry", maxRunningSandboxesPerNode)
 	}
 
 	// Check if we've reached the max number of starting instances on this node
-	if req.GetSandbox().GetSnapshot() {
+	if stresstest.Enabled() {
+		// No startup semaphore: concurrency is controlled by the load generator.
+	} else if req.GetSandbox().GetSnapshot() {
 		err := s.waitForAcquire(ctx)
 		if err != nil {
 			return nil, err
@@ -103,7 +106,7 @@ func (s *Server) Create(ctx context.Context, req *orchestrator.SandboxCreateRequ
 			return nil, status.Errorf(codes.ResourceExhausted, "too many sandboxes starting on this node, please retry")
 		}
 	}
-	defer s.startingSandboxes.Release(1)
+	defer s.releaseStarting()
 
 	template, err := s.templateCache.GetTemplate(
 		ctx,
@@ -306,7 +309,7 @@ func (s *Server) List(ctx context.Context, _ *emptypb.Empty) (*orchestrator.Sand
 }
 
 func (s *Server) Delete(ctxConn context.Context, in *orchestrator.SandboxDeleteRequest) (*emptypb.Empty, error) {
-	ctx, cancel := context.WithTimeoutCause(ctxConn, requestTimeout, fmt.Errorf("request timed out"))
+	ctx, cancel := stresstest.WithTimeout(ctxConn, requestTimeout)
 	defer cancel()
 
 	ctx, childSpan := tracer.Start(ctx, "sandbox-delete")
@@ -449,7 +452,7 @@ func (s *Server) Checkpoint(ctx context.Context, in *orchestrator.SandboxCheckpo
 	if err := s.waitForAcquire(ctx); err != nil {
 		return nil, err
 	}
-	defer s.startingSandboxes.Release(1)
+	defer s.releaseStarting()
 
 	// Always stop the old sandbox when done — on success the resumed sandbox
 	// takes over, on failure this prevents a leaked sandbox that is running

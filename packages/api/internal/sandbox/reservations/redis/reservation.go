@@ -12,6 +12,7 @@ import (
 
 	"github.com/e2b-dev/infra/packages/api/internal/sandbox"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 )
 
 const (
@@ -43,7 +44,10 @@ func (s *ReservationStorage) Reserve(ctx context.Context, teamID uuid.UUID, sand
 	resultKeyStr := getResultKey(teamIDStr, sandboxID)
 
 	now := float64(time.Now().Unix())
-	staleCutoff := float64(time.Now().Add(-staleTTL).Unix())
+	staleCutoff := any(float64(time.Now().Add(-staleTTL).Unix()))
+	if stresstest.Enabled() {
+		staleCutoff = "-inf"
+	}
 
 	result, err := reserveScript.Run(ctx, s.redisClient,
 		[]string{storageIndexKey, pendingSetKey, resultKeyStr},

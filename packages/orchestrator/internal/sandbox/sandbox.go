@@ -36,6 +36,7 @@ import (
 	sbxlogger "github.com/e2b-dev/infra/packages/shared/pkg/logger/sandbox"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	"github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -55,7 +56,7 @@ var SandboxHttpTransport = otelhttp.NewTransport(
 
 // Http client that should be used for requests to sandboxes.
 var sandboxHttpClient = http.Client{
-	Timeout:   10 * time.Second,
+	Timeout:   stresstest.Timeout(10 * time.Second),
 	Transport: SandboxHttpTransport,
 }
 
@@ -1300,10 +1301,15 @@ func (s *Sandbox) WaitForEnvd(
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 
+	var startupDeadline <-chan time.Time
+	if !stresstest.Enabled() {
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+		startupDeadline = timer.C
+	}
 	go func() {
 		select {
-		// Ensure the syncing takes at most timeout seconds.
-		case <-time.After(timeout):
+		case <-startupDeadline:
 			cancel(fmt.Errorf("syncing took too long"))
 		case <-ctx.Done():
 			return

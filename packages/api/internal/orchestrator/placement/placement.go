@@ -14,6 +14,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/grpc/orchestrator"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 	"github.com/e2b-dev/infra/packages/shared/pkg/machineinfo"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 )
 
@@ -80,6 +81,11 @@ func PlaceSandbox(ctx context.Context, algorithm Algorithm, clusterNodes []*node
 			node.PlacementMetrics.Success(sbxRequest.GetSandbox().GetSandboxId())
 
 			return node, nil
+		}
+
+		if stresstest.Enabled() {
+			node.PlacementMetrics.Fail(sbxRequest.GetSandbox().GetSandboxId())
+			return nil, fmt.Errorf("sandbox create on node %s: %w", node.ID, utils.UnwrapGRPCError(err))
 		}
 
 		failedNode := node

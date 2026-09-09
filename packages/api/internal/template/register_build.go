@@ -20,6 +20,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/consts"
 	"github.com/e2b-dev/infra/packages/shared/pkg/id"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	gutils "github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -77,7 +78,7 @@ func RegisterBuild(
 	})
 
 	totalConcurrentTemplateBuilds := data.Team.Limits.BuildConcurrency
-	if len(teamBuildsExcludingCurrent) >= int(totalConcurrentTemplateBuilds) {
+	if !stresstest.Enabled() && len(teamBuildsExcludingCurrent) >= int(totalConcurrentTemplateBuilds) {
 		telemetry.ReportError(ctx, "team has reached max concurrent template builds", nil, telemetry.WithTeamID(data.Team.ID.String()), attribute.Int64("total.concurrent_template_builds", totalConcurrentTemplateBuilds))
 
 		return nil, &api.APIError{

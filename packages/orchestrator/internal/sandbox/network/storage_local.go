@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 )
 
 type StorageLocal struct {
@@ -50,7 +51,7 @@ func (s *StorageLocal) Acquire(ctx context.Context) (*Slot, error) {
 	spanCtx, span := tracer.Start(ctx, "network-namespace-acquire")
 	defer span.End()
 
-	acquireTimeoutCtx, acquireCancel := context.WithTimeout(spanCtx, time.Millisecond*500)
+	acquireTimeoutCtx, acquireCancel := stresstest.WithTimeout(spanCtx, time.Millisecond*500)
 	defer acquireCancel()
 
 	s.acquiredNsMu.Lock()

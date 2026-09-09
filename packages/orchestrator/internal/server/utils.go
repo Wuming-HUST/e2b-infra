@@ -6,10 +6,14 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 )
 
 func (s *Server) waitForAcquire(ctx context.Context) error {
+	if stresstest.Enabled() {
+		return ctx.Err()
+	}
 	ctx, cancel := context.WithTimeout(ctx, acquireTimeout)
 	defer cancel()
 
@@ -24,4 +28,10 @@ func (s *Server) waitForAcquire(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Server) releaseStarting() {
+	if !stresstest.Enabled() {
+		s.startingSandboxes.Release(1)
+	}
 }

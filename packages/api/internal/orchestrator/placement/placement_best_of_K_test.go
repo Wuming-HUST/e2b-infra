@@ -253,7 +253,7 @@ func TestBestOfK_ChooseNode_WithExclusions(t *testing.T) {
 }
 
 func TestBestOfK_ChooseNode_NoAvailableNodes(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx := t.Context()
 	config := DefaultBestOfKConfig()
 	algo := NewBestOfK(config).(*BestOfK)

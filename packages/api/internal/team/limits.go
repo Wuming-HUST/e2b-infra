@@ -7,6 +7,7 @@ import (
 	"github.com/e2b-dev/infra/packages/api/internal/api"
 	"github.com/e2b-dev/infra/packages/api/internal/constants"
 	"github.com/e2b-dev/infra/packages/auth/pkg/types"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 )
 
 func LimitResources(limits *types.TeamLimits, cpuCount, memoryMB *int32) (int64, int64, *api.APIError) {
@@ -23,7 +24,7 @@ func LimitResources(limits *types.TeamLimits, cpuCount, memoryMB *int32) (int64,
 			}
 		}
 
-		if cpu > constants.MaxTemplateCPU {
+		if !stresstest.Enabled() && cpu > constants.MaxTemplateCPU {
 			return 0, 0, &api.APIError{
 				Err:       fmt.Errorf("CPU count must be at most %d", constants.MaxTemplateCPU),
 				ClientMsg: fmt.Sprintf("CPU count must be at most %d", constants.MaxTemplateCPU),
@@ -39,7 +40,7 @@ func LimitResources(limits *types.TeamLimits, cpuCount, memoryMB *int32) (int64,
 			}
 		}
 
-		if cpu > limits.MaxVcpu {
+		if !stresstest.Enabled() && cpu > limits.MaxVcpu {
 			return 0, 0, &api.APIError{
 				Err:       fmt.Errorf("CPU count exceeds team limits (%d)", limits.MaxVcpu),
 				ClientMsg: fmt.Sprintf("CPU count can't be higher than %d (if you need to increase this limit, please contact support)", limits.MaxVcpu),
@@ -67,7 +68,7 @@ func LimitResources(limits *types.TeamLimits, cpuCount, memoryMB *int32) (int64,
 			}
 		}
 
-		if ramMB > limits.MaxRamMb {
+		if !stresstest.Enabled() && ramMB > limits.MaxRamMb {
 			return 0, 0, &api.APIError{
 				Err:       fmt.Errorf("memory exceeds team limits (%d MiB)", limits.MaxRamMb),
 				ClientMsg: fmt.Sprintf("Memory can't be higher than %d MiB (if you need to increase this limit, please contact support)", limits.MaxRamMb),
