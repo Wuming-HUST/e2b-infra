@@ -85,6 +85,8 @@ udevadm control --reload-rules
 udevadm trigger
 
 # Load the nbd module with 4096 devices
+# Unrestricted resource-overcommit test branch: allow virtual commitments.
+sysctl -w vm.overcommit_memory=1
 modprobe nbd nbds_max=4096
 
 # Create the directory for the fc mounts

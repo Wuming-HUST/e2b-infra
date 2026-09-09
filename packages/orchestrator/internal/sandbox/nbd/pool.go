@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
 
@@ -70,10 +71,17 @@ type (
 
 // DevicePool requires the nbd module to be loaded before running.
 //
-// Use `sudo modprobe nbd nbds_max=4096` to set the max number of devices to 4096, which is a good default for now.
+// In stress mode nbds_max only controls preallocation; GetDevice returns
+// IndexAny and successful connects register the actual kernel-assigned ID.
 type DevicePool struct {
-	done     chan struct{}
-	doneOnce sync.Once
+	// Dynamic allocation asks the kernel for a device on each connect; nbds_max
+	// is only the initial device count, not a capacity bound.
+	dynamic bool
+	// A device number can be reused immediately by the kernel. Track the mount
+	// identity, not just a bit, for atomic connect/disconnect ownership.
+	dynamicMounts map[DeviceSlot]*DirectPathMount
+	done          chan struct{}
+	doneOnce      sync.Once
 
 	// We use the bitset to speedup the free device lookup.
 	usedSlots *bitset.BitSet
@@ -88,14 +96,16 @@ func NewDevicePool() (*DevicePool, error) {
 		return nil, fmt.Errorf("failed to get max devices: %w", err)
 	}
 
-	if maxDevices == 0 {
+	if maxDevices == 0 && !stresstest.Enabled() {
 		return nil, errors.New("max devices is 0")
 	}
 
 	pool := &DevicePool{
-		done:      make(chan struct{}),
-		usedSlots: bitset.New(maxDevices),
-		slots:     make(chan DeviceSlot, int(math.Min(maxSlotsReady, float64(maxDevices)))),
+		dynamic:       stresstest.Enabled(),
+		dynamicMounts: make(map[DeviceSlot]*DirectPathMount),
+		done:          make(chan struct{}),
+		usedSlots:     bitset.New(maxDevices),
+		slots:         make(chan DeviceSlot, int(math.Min(maxSlotsReady, float64(maxDevices)))),
 	}
 
 	return pool, nil
@@ -124,6 +134,9 @@ func getMaxDevices() (uint, error) {
 
 func (d *DevicePool) Populate(ctx context.Context) {
 	defer close(d.slots)
+	if d.dynamic {
+		return
+	}
 
 	failedCount := 0
 	for {
@@ -261,12 +274,25 @@ func (d *DevicePool) getFreeDeviceSlot() (*DeviceSlot, error) {
 
 // GetDevice returns a slot if there is one available.
 func (d *DevicePool) GetDevice(ctx context.Context) (DeviceSlot, error) {
+	if d.dynamic {
+		select {
+		case <-d.done:
+			return 0, ErrClosed
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+			return math.MaxUint32, nil // nbdnl.IndexAny
+		}
+	}
 	select {
 	case <-d.done:
 		return 0, ErrClosed
 	case <-ctx.Done():
 		return 0, ctx.Err()
-	case slot := <-d.slots:
+	case slot, ok := <-d.slots:
+		if !ok {
+			return 0, ErrClosed
+		}
 		acquired.Add(ctx, 1)
 		slotCounter.Add(ctx, -1)
 
@@ -295,6 +321,14 @@ func (d *DevicePool) release(ctx context.Context, idx DeviceSlot) error {
 
 // ReleaseDevice will return an error if the device is not free and not release the slot — you can retry.
 func (d *DevicePool) ReleaseDevice(ctx context.Context, idx DeviceSlot, opts ...ReleaseOption) error {
+	if d.dynamic {
+		// Kernel allocation owns the free list. Checking this ID for idleness
+		// here could wait on a successor that has already reused it.
+		if idx != math.MaxUint32 {
+			released.Add(ctx, 1)
+		}
+		return nil
+	}
 	opt := releaseOptions{}
 	for _, o := range opts {
 		o(&opt)
@@ -338,11 +372,23 @@ func GetDevicePath(slot DeviceSlot) DevicePath {
 }
 
 func (d *DevicePool) Close(ctx context.Context) error {
-	logger.L().Info(ctx, "Closing device pool", zap.Uint("used_slots", d.usedSlots.Count()))
+	d.mu.Lock()
+	used := d.usedSlots.Count()
+	d.mu.Unlock()
+	logger.L().Info(ctx, "Closing device pool", zap.Uint("used_slots", used))
 
 	d.doneOnce.Do(func() {
 		close(d.done)
 	})
+
+	if d.dynamic {
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		if len(d.dynamicMounts) != 0 {
+			return fmt.Errorf("%d dynamic NBD mounts still open", len(d.dynamicMounts))
+		}
+		return nil
+	}
 
 	d.mu.Lock()
 

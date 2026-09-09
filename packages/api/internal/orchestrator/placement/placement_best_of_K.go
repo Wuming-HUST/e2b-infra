@@ -10,6 +10,7 @@ import (
 	"github.com/e2b-dev/infra/packages/api/internal/api"
 	"github.com/e2b-dev/infra/packages/api/internal/orchestrator/nodemanager"
 	"github.com/e2b-dev/infra/packages/shared/pkg/machineinfo"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 )
 
 // BestOfKConfig holds the configuration parameters for the placement algorithm
@@ -174,6 +175,9 @@ func (b *BestOfK) UpdateConfig(config BestOfKConfig) {
 func (b *BestOfK) chooseNode(_ context.Context, nodes []*nodemanager.Node, excludedNodes map[string]struct{}, resources nodemanager.SandboxResources, buildMachineInfo machineinfo.MachineInfo) (bestNode *nodemanager.Node, err error) {
 	// Fix the config, we want to dynamically update it
 	config := b.getConfig()
+	if stresstest.Enabled() {
+		config.K = max(config.K, 1)
+	}
 
 	// Filter eligible nodes
 	candidates := b.sample(nodes, config, excludedNodes, resources, buildMachineInfo)
@@ -185,7 +189,7 @@ func (b *BestOfK) chooseNode(_ context.Context, nodes []*nodemanager.Node, exclu
 		// Calculate score
 		score := b.Score(node, resources, config)
 
-		if score < bestScore {
+		if score < bestScore || (stresstest.Enabled() && bestNode == nil) {
 			bestNode = node
 			bestScore = score
 		}
@@ -227,8 +231,9 @@ func (b *BestOfK) sample(items []*nodemanager.Node, config BestOfKConfig, exclud
 			continue
 		}
 
-		// If the node is not ready, skip it
-		if n.Status() != api.NodeStatusReady {
+		// Stress still attempts nodes marked unhealthy so a slow health probe
+		// cannot become a capacity gate. Draining nodes remain excluded.
+		if n.Status() != api.NodeStatusReady && !(stresstest.Enabled() && n.Status() == api.NodeStatusUnhealthy) {
 			continue
 		}
 
@@ -237,13 +242,13 @@ func (b *BestOfK) sample(items []*nodemanager.Node, config BestOfKConfig, exclud
 			continue
 		}
 
-		if config.CanFit {
+		if !stresstest.Enabled() && config.CanFit {
 			if !b.CanFit(n, resources, config) {
 				continue
 			}
 		}
 
-		if config.TooManyStarting {
+		if !stresstest.Enabled() && config.TooManyStarting {
 			// To prevent overloading the node
 			if n.PlacementMetrics.InProgressCount() > maxStartingInstancesPerNode {
 				continue

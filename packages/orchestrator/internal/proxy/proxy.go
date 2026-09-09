@@ -20,6 +20,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 	reverseproxy "github.com/e2b-dev/infra/packages/shared/pkg/proxy"
 	"github.com/e2b-dev/infra/packages/shared/pkg/proxy/pool"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 )
 
@@ -49,7 +50,7 @@ func NewSandboxProxy(meterProvider metric.MeterProvider, port uint16, sandboxes 
 	connLimitConfig := &reverseproxy.ConnectionLimitConfig{
 		Limiter: limiter,
 		GetMaxLimit: func(ctx context.Context) int {
-			return featureFlags.IntFlag(ctx, featureflags.SandboxMaxIncomingConnections)
+			return stresstest.Limit(featureFlags.IntFlag(ctx, featureflags.SandboxMaxIncomingConnections))
 		},
 		OnConnectionAcquired: metrics.RecordConnectionsPerSandbox,
 		OnConnectionReleased: metrics.RecordConnectionDuration,

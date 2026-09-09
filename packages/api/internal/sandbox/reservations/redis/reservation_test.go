@@ -476,7 +476,7 @@ func TestReservation_ResultKeyTTL(t *testing.T) {
 }
 
 func TestReservation_StalePendingCleanup(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	_, client := setupTestReservationStorage(t)
 
 	teamID := uuid.New()
@@ -513,4 +513,23 @@ func TestReservation_StalePendingCleanup(t *testing.T) {
 	// Verify the orphaned sandbox is no longer in the set
 	score := client.ZScore(t.Context(), pendingSetKey, "orphaned-sandbox")
 	assert.ErrorIs(t, score.Err(), goredis.Nil)
+}
+
+func TestStressSlowReservationIsNotEvicted(t *testing.T) {
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "true")
+	storage, client := setupTestReservationStorage(t)
+	teamID := uuid.New()
+	pendingKey := getPendingSetKey(teamID.String())
+	require.NoError(t, client.ZAdd(t.Context(), pendingKey, goredis.Z{
+		Score: float64(time.Now().Add(-10 * time.Minute).Unix()), Member: "slow-sandbox",
+	}).Err())
+	finish, waiter, err := storage.Reserve(t.Context(), teamID, "slow-sandbox", -1)
+	require.NoError(t, err)
+	require.Nil(t, finish, "a slow creation must not be started twice")
+	require.NotNil(t, waiter)
+	// Other sandbox IDs still start despite a zero configured team allowance:
+	// the API passes -1 to the reservation backend in stress mode.
+	finish, _, err = storage.Reserve(t.Context(), teamID, "next-sandbox", -1)
+	require.NoError(t, err)
+	require.NotNil(t, finish)
 }

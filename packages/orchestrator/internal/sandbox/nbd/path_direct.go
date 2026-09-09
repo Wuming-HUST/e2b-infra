@@ -20,6 +20,7 @@ import (
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
 	featureflags "github.com/e2b-dev/infra/packages/shared/pkg/feature-flags"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 )
 
@@ -65,7 +66,22 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 
 	defer func() {
 		// Set the device index to the one returned, correctly capture error values
-		d.deviceIndex = retDeviceIndex
+		if err != nil && d.deviceIndex != math.MaxUint32 {
+			// A connect can succeed before readiness/cancellation fails. Release
+			// that actual device; IndexAny is never an owned device.
+			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), disconnectTimeout)
+			cleanupErr := d.Close(cleanupCtx)
+			err = errors.Join(err, cleanupErr)
+			cancel()
+			if cleanupErr == nil {
+				d.deviceIndex = math.MaxUint32
+				d.socksClient = nil
+				d.socksServer = nil
+				d.dispatchers = nil
+			}
+		} else {
+			d.deviceIndex = retDeviceIndex
+		}
 		logger.L().Debug(ctx, "opening direct path mount", zap.Uint32("device_index", d.deviceIndex), zap.Error(err))
 	}()
 
@@ -93,6 +109,10 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 		d.dispatchers = make([]*Dispatch, 0)
 
 		connections := d.featureFlags.IntFlag(ctx, featureflags.NBDConnectionsPerDevice)
+		if connections <= 0 {
+			releaseErr := d.devicePool.ReleaseDevice(ctx, deviceIndex)
+			return math.MaxUint32, errors.Join(fmt.Errorf("NBD connections per device must be positive: %d", connections), releaseErr)
+		}
 
 		for i := range connections {
 			// Create the socket pairs
@@ -119,13 +139,14 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 			server.Close()
 
 			dispatch := NewDispatch(serverc, d.Backend)
+			requestedDeviceIndex := deviceIndex
 			// Start reading commands on the socket and dispatching them to our provider
 			d.handlersWg.Go(func() {
 				handleErr := dispatch.Handle(ctx)
 				// The error is expected to happen if the nbd (socket connection) is closed
 				logger.L().Info(ctx, "closing handler for NBD commands",
 					zap.Error(handleErr),
-					zap.Uint32("device_index", deviceIndex),
+					zap.Uint32("requested_device_index", requestedDeviceIndex),
 					zap.Int("socket_index", i),
 				)
 			})
@@ -137,16 +158,17 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 
 		var opts []nbdnl.ConnectOption
 		opts = append(opts, nbdnl.WithBlockSize(d.blockSize))
-		opts = append(opts, nbdnl.WithTimeout(connectTimeout))
+		opts = append(opts, nbdnl.WithTimeout(stresstest.Timeout(connectTimeout)))
 		opts = append(opts, nbdnl.WithDeadconnTimeout(connectTimeout))
 
 		serverFlags := nbdnl.FlagHasFlags | nbdnl.FlagCanMulticonn
 
-		idx, connectErr := nbdnl.Connect(deviceIndex, d.socksClient, uint64(size), 0, serverFlags, opts...)
+		idx, connectErr := d.devicePool.connect(ctx, d, deviceIndex, uint64(size), serverFlags, opts...)
 		if connectErr == nil {
 			// The idx should be the same as deviceIndex, because we are connecting to it,
 			// but we will use the one returned by nbdnl
 			deviceIndex = idx
+			d.deviceIndex = idx
 
 			break
 		}
@@ -164,6 +186,10 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 		err = d.devicePool.ReleaseDevice(ctx, deviceIndex)
 		if err != nil {
 			logger.L().Error(ctx, "error opening NBD, error releasing device", zap.Error(err), zap.Uint32("device_index", deviceIndex))
+		}
+
+		if d.devicePool.dynamic {
+			return math.MaxUint32, fmt.Errorf("dynamic NBD connect: %w", connectErr)
 		}
 
 		if strings.Contains(connectErr.Error(), "invalid argument") {
@@ -195,6 +221,12 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 		time.Sleep(100 * time.Nanosecond)
 	}
 
+	if d.devicePool.dynamic {
+		if err := ensureDevicePath(deviceIndex); err != nil {
+			return math.MaxUint32, err
+		}
+	}
+
 	telemetry.ReportEvent(ctx, "connected to NBD")
 
 	return deviceIndex, nil
@@ -207,6 +239,15 @@ func (d *DirectPathMount) Close(ctx context.Context) error {
 	var errs []error
 
 	idx := d.deviceIndex
+
+	// Dynamic IDs can be reused as soon as a socket disconnects. Send the
+	// disconnect while this mount still owns its sockets, before closing them;
+	// never issue another command for the ID after kernel acknowledgement.
+	if d.devicePool.dynamic && idx != math.MaxUint32 {
+		if err := d.devicePool.disconnect(d, idx); err != nil {
+			return err
+		}
+	}
 
 	// First cancel the context, which will stop waiting on pending readAt/writeAt...
 	telemetry.ReportEvent(ctx, "canceling context")
@@ -233,8 +274,8 @@ func (d *DirectPathMount) Close(ctx context.Context) error {
 		d.Drain()
 	}
 
-	// Disconnect NBD
-	if idx != math.MaxUint32 {
+	// Static allocation reserves the ID until ReleaseDevice.
+	if !d.devicePool.dynamic && idx != math.MaxUint32 {
 		err := disconnectNBDWithTimeout(ctx, idx, disconnectTimeout)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("error disconnecting NBD: %w", err))

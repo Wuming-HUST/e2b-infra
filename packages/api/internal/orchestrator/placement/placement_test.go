@@ -33,7 +33,7 @@ func (m *mockAlgorithm) chooseNode(ctx context.Context, nodes []*nodemanager.Nod
 }
 
 func TestPlaceSandbox_SuccessfulPlacement(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx := t.Context()
 
 	// Create test nodes
@@ -64,7 +64,7 @@ func TestPlaceSandbox_SuccessfulPlacement(t *testing.T) {
 }
 
 func TestPlaceSandbox_WithPreferredNode(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx := t.Context()
 
 	// Create test nodes
@@ -102,7 +102,7 @@ func TestPlaceSandbox_WithPreferredNode(t *testing.T) {
 }
 
 func TestPlaceSandbox_ContextTimeout(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Millisecond)
 	defer cancel()
 
@@ -133,7 +133,7 @@ func TestPlaceSandbox_ContextTimeout(t *testing.T) {
 }
 
 func TestPlaceSandbox_NoNodes(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx := t.Context()
 
 	algorithm := &mockAlgorithm{}
@@ -153,7 +153,7 @@ func TestPlaceSandbox_NoNodes(t *testing.T) {
 }
 
 func TestPlaceSandbox_AllNodesExcluded(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx := t.Context()
 
 	algorithm := &mockAlgorithm{}
@@ -179,7 +179,7 @@ func TestPlaceSandbox_AllNodesExcluded(t *testing.T) {
 }
 
 func TestPlaceSandbox_ResourceExhausted(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	ctx := t.Context()
 
 	// Create test nodes - node1 will return ResourceExhausted, node2 will succeed

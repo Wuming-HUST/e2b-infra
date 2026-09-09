@@ -59,6 +59,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 	sbxlogger "github.com/e2b-dev/infra/packages/shared/pkg/logger/sandbox"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	"github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -73,6 +74,7 @@ const version = "0.1.0"
 var commitSHA string
 
 func main() {
+	fmt.Fprintf(os.Stderr, "E2B_UNRESTRICTED_STRESS=%t: resource admission and count quotas bypassed when enabled\n", stresstest.Enabled())
 	config, err := cfg.Parse()
 	if err != nil {
 		log.Fatalf("failed to parse config: %v", err)

@@ -33,6 +33,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/id"
 	sbxlogger "github.com/e2b-dev/infra/packages/shared/pkg/logger/sandbox"
 	sandbox_network "github.com/e2b-dev/infra/packages/shared/pkg/sandbox-network"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	sharedUtils "github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -130,7 +131,7 @@ func (a *APIStore) PostSandboxes(c *gin.Context) {
 	if body.Timeout != nil {
 		timeout = time.Duration(*body.Timeout) * time.Second
 
-		if timeout > time.Duration(teamInfo.Limits.MaxLengthHours)*time.Hour {
+		if !stresstest.Enabled() && timeout > time.Duration(teamInfo.Limits.MaxLengthHours)*time.Hour {
 			a.sendAPIStoreError(c, http.StatusBadRequest, fmt.Sprintf("Timeout cannot be greater than %d hours", teamInfo.Limits.MaxLengthHours))
 
 			return

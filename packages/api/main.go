@@ -40,6 +40,7 @@ import (
 	proxygrpc "github.com/e2b-dev/infra/packages/shared/pkg/grpc/proxy"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 	sbxlogger "github.com/e2b-dev/infra/packages/shared/pkg/logger/sandbox"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 	"github.com/e2b-dev/infra/packages/shared/pkg/telemetry"
 	sharedutils "github.com/e2b-dev/infra/packages/shared/pkg/utils"
 )
@@ -70,6 +71,7 @@ func NewGinServer(ctx context.Context, config cfg.Config, tel *telemetry.Client,
 	// Clear out the servers array in the swagger spec, that skips validating
 	// that server names match. We don't know how this thing will be run.
 	swagger.Servers = nil
+	api.ConfigureStressSchema(swagger)
 
 	r := gin.New()
 	// Use the raw (percent-encoded) URL path for route matching so that encoded slashes (%2F)
@@ -142,8 +144,10 @@ func NewGinServer(ctx context.Context, config cfg.Config, tel *telemetry.Client,
 
 	// Use our validation middleware to check all requests against the
 	// OpenAPI schema.
+	if !stresstest.Enabled() {
+		r.Use(limits.RequestSizeLimiter(maxUploadLimit))
+	}
 	r.Use(
-		limits.RequestSizeLimiter(maxUploadLimit),
 		middleware.OapiRequestValidatorWithOptions(swagger,
 			&middleware.Options{
 				ErrorHandler: func(c *gin.Context, message string, fallbackStatusCode int) {
@@ -207,8 +211,8 @@ func NewGinServer(ctx context.Context, config cfg.Config, tel *telemetry.Client,
 
 		// Configure request timeouts.
 		ReadHeaderTimeout: maxReadHeaderTimeout,
-		ReadTimeout:       maxReadTimeout,
-		WriteTimeout:      maxWriteTimeout,
+		ReadTimeout:       stresstest.Timeout(maxReadTimeout),
+		WriteTimeout:      stresstest.Timeout(maxWriteTimeout),
 
 		// Configure timeouts to be greater than the proxy timeouts.
 		IdleTimeout: idleTimeout,
@@ -488,5 +492,6 @@ func run() int {
 }
 
 func main() {
+	fmt.Fprintf(os.Stderr, "E2B_UNRESTRICTED_STRESS=%t: resource admission and count quotas bypassed when enabled\n", stresstest.Enabled())
 	os.Exit(run())
 }

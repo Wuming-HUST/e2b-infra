@@ -13,6 +13,7 @@ import (
 	"github.com/e2b-dev/infra/packages/api/internal/api"
 	"github.com/e2b-dev/infra/packages/api/internal/sandbox"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 )
 
 var errMaxInstanceLengthExceeded = fmt.Errorf("max instance length exceeded")
@@ -29,7 +30,7 @@ func (o *Orchestrator) KeepAliveFor(ctx context.Context, teamID uuid.UUID, sandb
 		ttl := getMaxAllowedTTL(now, sbx.StartTime, duration, sbx.MaxInstanceLength)
 		endTime := now.Add(ttl)
 
-		if (time.Since(sbx.StartTime)) > sbx.MaxInstanceLength {
+		if !stresstest.Enabled() && (time.Since(sbx.StartTime)) > sbx.MaxInstanceLength {
 			return sbx, errMaxInstanceLengthExceeded
 		}
 
@@ -72,6 +73,9 @@ func (o *Orchestrator) KeepAliveFor(ctx context.Context, teamID uuid.UUID, sandb
 
 // getMaxAllowedTTL calculates the maximum allowed TTL for a sandbox without exceeding its max instance length.
 func getMaxAllowedTTL(now time.Time, startTime time.Time, duration, maxInstanceLength time.Duration) time.Duration {
+	if stresstest.Enabled() {
+		return duration
+	}
 	timeLeft := maxInstanceLength - now.Sub(startTime)
 	if timeLeft <= 0 {
 		return 0

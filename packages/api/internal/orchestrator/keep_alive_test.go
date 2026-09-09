@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetMaxTTLNormal(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	now := time.Now()
 	ttl := getMaxAllowedTTL(now, now, 2*time.Hour, 3*time.Hour)
 	if ttl != 2*time.Hour {
@@ -15,7 +15,7 @@ func TestGetMaxTTLNormal(t *testing.T) {
 }
 
 func TestGetMaxTTLMax(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	now := time.Now()
 	ttl := getMaxAllowedTTL(now, now, 4*time.Hour, 3*time.Hour)
 	if ttl != 3*time.Hour {
@@ -24,7 +24,7 @@ func TestGetMaxTTLMax(t *testing.T) {
 }
 
 func TestGetMaxTTLExpired(t *testing.T) {
-	t.Parallel()
+	t.Setenv("E2B_UNRESTRICTED_STRESS", "false")
 	now := time.Now()
 	ttl := getMaxAllowedTTL(now, now.Add(-2*time.Hour), 4*time.Hour, time.Hour)
 	if ttl != 0 {

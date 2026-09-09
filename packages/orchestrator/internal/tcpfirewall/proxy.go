@@ -15,6 +15,7 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/connlimit"
 	featureflags "github.com/e2b-dev/infra/packages/shared/pkg/feature-flags"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
 )
 
 var _ sandbox.MapSubscriber = (*Proxy)(nil)
@@ -179,7 +180,7 @@ func (t *connectionHandler) HandleConn(conn net.Conn) {
 	sbxLogger := t.logger.With(logger.WithSandboxID(sandboxID))
 
 	// Check per-sandbox connection limit
-	maxLimit := t.featureFlags.IntFlag(ctx, featureflags.TCPFirewallMaxConnectionsPerSandbox)
+	maxLimit := stresstest.Limit(t.featureFlags.IntFlag(ctx, featureflags.TCPFirewallMaxConnectionsPerSandbox))
 	count, acquired := t.limiter.TryAcquire(sandboxID, maxLimit)
 	if !acquired {
 		sbxLogger.Warn(ctx, "connection limit exceeded for sandbox",
