@@ -168,15 +168,13 @@ func (c *FullFetchChunker) Slice(ctx context.Context, off, length int64) ([]byte
 func (c *FullFetchChunker) fetchToCache(ctx context.Context, off, length int64) error {
 	var eg errgroup.Group
 
-	chunks := header.BlocksOffsets(length, storage.MemoryChunkSize)
-
 	startingChunk := header.BlockIdx(off, storage.MemoryChunkSize)
 	startingChunkOffset := header.BlockOffset(startingChunk, storage.MemoryChunkSize)
+	end := off + min(length, c.size-off)
 
-	for _, chunkOff := range chunks {
-		// Ensure the closure captures the correct block offset.
-		fetchOff := startingChunkOffset + chunkOff
-
+	// An unaligned range can overlap more chunks than ceil(length/chunkSize).
+	// Cover the absolute range, including the offset within its first chunk.
+	for fetchOff := startingChunkOffset; fetchOff < end; fetchOff += storage.MemoryChunkSize {
 		eg.Go(func() (err error) {
 			defer func() {
 				if r := recover(); r != nil {

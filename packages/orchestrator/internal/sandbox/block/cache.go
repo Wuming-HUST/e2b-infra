@@ -231,13 +231,17 @@ func (c *Cache) Slice(off, length int64) ([]byte, error) {
 	if c.isClosed() {
 		return nil, NewErrCacheClosed(c.filePath)
 	}
+	if off < 0 || off > c.size || length < 0 {
+		return nil, fmt.Errorf("invalid cache range: offset %d, length %d, size %d", off, length, c.size)
+	}
+	length = min(length, c.size-off)
 
 	if c.mmap == nil {
 		return nil, nil
 	}
 
 	if c.dirtyFile || c.isCached(off, length) {
-		end := min(off+length, c.size)
+		end := off + length
 
 		return (*c.mmap)[off:end], nil
 	}
@@ -246,8 +250,14 @@ func (c *Cache) Slice(off, length int64) ([]byte, error) {
 }
 
 func (c *Cache) isCached(off, length int64) bool {
-	for _, blockOff := range header.BlocksOffsets(length, c.blockSize) {
-		_, dirty := c.dirty.Load(off + blockOff)
+	if length == 0 {
+		return true
+	}
+	// Cache keys are absolute block starts. A read may begin inside a block
+	// and must check every block overlapping its entire range.
+	first := header.BlockOffset(header.BlockIdx(off, c.blockSize), c.blockSize)
+	for blockOff := first; blockOff < off+length; blockOff += c.blockSize {
+		_, dirty := c.dirty.Load(blockOff)
 		if !dirty {
 			return false
 		}
@@ -257,6 +267,8 @@ func (c *Cache) isCached(off, length int64) bool {
 }
 
 func (c *Cache) setIsCached(off, length int64) {
+	// off must be block-aligned; callers publish complete blocks (except the
+	// final block at EOF). Rounding partial writes up would expose missing data.
 	for _, blockOff := range header.BlocksOffsets(length, c.blockSize) {
 		c.dirty.Store(off+blockOff, struct{}{})
 	}

@@ -17,7 +17,12 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
 )
 
-const sha256HexLength = sha256.Size * 2
+const (
+	sha256HexLength = sha256.Size * 2
+	// V1 references may point at images built with stale bytes in sparse ranges.
+	// Keep existing content-addressed files intact for VMs that still map them.
+	memoryImageReferenceVersion = "v2"
+)
 
 func checksumFile(path string) (string, error) {
 	file, err := os.Open(path)
@@ -61,7 +66,7 @@ func validateMaterializedImage(path string, expectedSize int64, expectedDigest s
 }
 
 func memoryImageReference(outputDir, key string) string {
-	return filepath.Join(outputDir, key+".ref")
+	return filepath.Join(outputDir, key+"."+memoryImageReferenceVersion+".ref")
 }
 
 func readMemoryImageReference(outputDir, key string, expectedSize int64) (string, error) {
@@ -178,6 +183,9 @@ func MaterializeMemoryImage(ctx context.Context, source block.ReadonlyDevice, ou
 	for offset := int64(0); offset < size; {
 		length := min(int64(len(buffer)), size-offset)
 		chunk := buffer[:length]
+		// build.File.ReadAt leaves uuid.Nil mappings untouched. Reusing the
+		// previous chunk's bytes would turn logical zeroes into nonzero data.
+		clear(chunk)
 		n, readErr := source.ReadAt(ctx, chunk, offset)
 		if readErr != nil && !errors.Is(readErr, io.EOF) {
 			return "", fmt.Errorf("read memory image at offset %d: %w", offset, readErr)
