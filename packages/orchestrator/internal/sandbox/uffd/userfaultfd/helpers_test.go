@@ -17,7 +17,10 @@ type testConfig struct {
 	// Page size of the memory area.
 	pagesize uint64
 	// Number of pages in the memory area.
-	numberOfPages uint64
+	numberOfPages        uint64
+	removeEnabled        bool
+	prefetchDuringRemove bool
+	collectRemoved       bool
 	// Operations to trigger on the memory area.
 	operations []operation
 }

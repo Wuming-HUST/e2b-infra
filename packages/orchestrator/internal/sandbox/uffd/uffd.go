@@ -217,7 +217,20 @@ func (u *Uffd) Exit() *utils.ErrorOnce {
 //
 // It *MUST* be only called after the sandbox was successfully paused via API and after the snapshot endpoint was called.
 func (u *Uffd) DiffMetadata(ctx context.Context, f *fc.Process) (*header.DiffMetadata, error) {
-	return f.DirtyMemory(ctx, u.memfile.BlockSize())
+	diff, err := f.DirtyMemory(ctx, u.memfile.BlockSize())
+	if err != nil {
+		return nil, err
+	}
+	handler, err := u.handler.WaitWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	removed, err := handler.RemovedOffsets(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("collect discarded memory for snapshot: %w", err)
+	}
+	diff.Dirty.InPlaceUnion(removed.BitSet())
+	return diff, nil
 }
 
 // PrefetchData returns page fault data for prefetch mapping.

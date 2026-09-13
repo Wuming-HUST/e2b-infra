@@ -20,38 +20,40 @@ import (
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/uffd/fdexit"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/uffd/memory"
 	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
+	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
 )
 
 var tracer = otel.Tracer("github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/uffd/userfaultfd")
 
 const maxRequestsInProgress = 4096
 
-// UFFDIO_COPY returns EAGAIN while the kernel has mmap_changing set on the VMA,
-// i.e. a concurrent operation is modifying the address space. With virtio-balloon
-// Free Page Reporting the guest reports free pages and Firecracker calls
-// madvise(MADV_DONTNEED) on the backing memory, which transiently sets that flag.
-// The condition clears as soon as the madvise finishes, so we retry the copy with
-// a short, capped backoff instead of tearing down the whole UFFD handler.
+// Address-space changes can outlive a fixed retry budget under FPR pressure.
+// Retry with bounded backoff until the caller or handler stops, releasing all
+// event-state locks before waiting so REMOVE can always make progress.
 var (
-	maxCopyRetries       = 32
-	copyRetryBaseBackoff = 50 * time.Microsecond
-	copyRetryMaxShift    = 5 // caps backoff at copyRetryBaseBackoff << 5 (~1.6ms)
+	ErrUnexpectedEventType = errors.New("unexpected event type")
+	ErrClosed              = errors.New("userfaultfd closed")
+	ErrPrefaultDiscarded   = errors.New("prefault skipped: guest released the page")
 )
 
-var ErrUnexpectedEventType = errors.New("unexpected event type")
-
-// copyWithEagainRetry runs the UFFDIO_COPY closure, retrying on EAGAIN (which is
-// transient under concurrent madvise, e.g. balloon Free Page Reporting). Any
-// other error - including success or EEXIST - is returned immediately.
-func copyWithEagainRetry(copy func() error) error {
-	var err error
-	for attempt := 0; ; attempt++ {
-		err = copy()
-		if !errors.Is(err, unix.EAGAIN) || attempt >= maxCopyRetries {
+func copyWithEagainRetry(ctx context.Context, copy func() error) error {
+	delay := 50 * time.Microsecond
+	for {
+		if err := ctx.Err(); err != nil {
 			return err
 		}
-
-		time.Sleep(copyRetryBaseBackoff << min(attempt, copyRetryMaxShift))
+		err := copy()
+		if !errors.Is(err, unix.EAGAIN) {
+			return err
+		}
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+		delay = min(delay*2, 1600*time.Microsecond)
 	}
 }
 
@@ -73,10 +75,13 @@ type Userfaultfd struct {
 	settleRequests sync.RWMutex
 
 	prefetchTracker *block.PrefetchTracker
+	removedRanges   removedPageRanges
 
 	wg errgroup.Group
 
-	logger logger.Logger
+	logger    logger.Logger
+	closeOnce sync.Once
+	closeErr  error
 }
 
 // NewUserfaultfdFromFd creates a new userfaultfd instance with optional configuration.
@@ -107,13 +112,27 @@ func NewUserfaultfdFromFd(fd uintptr, src block.Slicer, m *memory.Mapping, logge
 }
 
 func (u *Userfaultfd) Close() error {
-	return u.fd.close()
+	u.closeOnce.Do(func() {
+		u.removedRanges.mu.Lock()
+		defer u.removedRanges.mu.Unlock()
+		u.removedRanges.closed = true
+		u.closeErr = u.fd.close()
+	})
+	return u.closeErr
 }
 
 func (u *Userfaultfd) Serve(
 	ctx context.Context,
 	fdExit *fdexit.FdExit,
-) error {
+) (serveErr error) {
+	ctx, cancel := context.WithCancel(ctx)
+	stopWake := context.AfterFunc(ctx, func() { _ = fdExit.SignalExit() })
+	defer func() {
+		cancel()
+		stopWake()
+		serveErr = errors.Join(serveErr, u.wg.Wait())
+	}()
+	var pending []func() error
 	pollFds := []unix.PollFd{
 		{Fd: int32(u.fd), Events: unix.POLLIN},
 		{Fd: fdExit.Reader(), Events: unix.POLLIN},
@@ -139,9 +158,18 @@ func (u *Userfaultfd) Serve(
 
 outerLoop:
 	for {
+		// A saturated worker pool must not stop the reader acknowledging FPR.
+		for len(pending) > 0 && u.wg.TryGo(pending[0]) {
+			pending[0] = nil
+			pending = pending[1:]
+		}
+		pollTimeout := -1
+		if len(pending) > 0 {
+			pollTimeout = 1
+		}
 		if _, err := unix.Poll(
 			pollFds,
-			-1,
+			pollTimeout,
 		); err != nil {
 			if err == unix.EINTR {
 				u.logger.Debug(ctx, "uffd: interrupted polling, going back to polling")
@@ -162,13 +190,6 @@ outerLoop:
 
 		exitFd := pollFds[1]
 		if hasEvent(exitFd.Revents, unix.POLLIN) {
-			errMsg := u.wg.Wait()
-			if errMsg != nil {
-				u.logger.Warn(ctx, "UFFD fd exit error while waiting for goroutines to finish", zap.Error(errMsg))
-
-				return fmt.Errorf("failed to handle uffd: %w", errMsg)
-			}
-
 			return nil
 		}
 
@@ -203,67 +224,19 @@ outerLoop:
 			continue
 		}
 
-		buf := make([]byte, unsafe.Sizeof(UffdMsg{}))
-
-		for {
-			_, err := syscall.Read(int(u.fd), buf)
-			if err == syscall.EINTR {
-				u.logger.Debug(ctx, "uffd: interrupted read, reading again")
-
-				continue
-			}
-
-			if err == nil {
-				// There is no error so we can proceed.
-
-				eagainCounter.Log(ctx)
-				noDataCounter.Log(ctx)
-
-				break
-			}
-
-			if err == syscall.EAGAIN {
-				eagainCounter.Increase("EAGAIN")
-
-				// Continue polling the fd.
-				continue outerLoop
-			}
-
-			u.logger.Error(ctx, "uffd: read error", zap.Error(err))
-
-			return fmt.Errorf("failed to read: %w", err)
-		}
-
-		msg := *(*UffdMsg)(unsafe.Pointer(&buf[0]))
-
-		switch msgEvent := getMsgEvent(&msg); msgEvent {
-		case UFFD_EVENT_PAGEFAULT:
-			// Handled below.
-
-		case UFFD_EVENT_REMOVE, UFFD_EVENT_REMAP, UFFD_EVENT_UNMAP:
-			// Informational events emitted when the registered address space
-			// changes underneath us. With virtio-balloon Free Page Reporting
-			// (and 4KB pages) the guest reports free pages, Firecracker calls
-			// madvise(MADV_DONTNEED) on the backing memory, and the kernel
-			// delivers UFFD_EVENT_REMOVE for that range.
-			//
-			// These events need no acknowledgement. We don't untrack the range:
-			// faultPage never skips already-mapped pages, so any later access to
-			// a removed page faults again and is correctly re-copied from the
-			// source. Just drop the event and keep serving.
-			rng := getRemoveRange(&msg)
-			u.logger.Debug(ctx, "UFFD serve address-space change event",
-				zap.Any("event_type", msgEvent),
-				zap.Uint64("start", rng.Start),
-				zap.Uint64("end", rng.End),
-			)
-
+		msg, err := u.readEvent()
+		if errors.Is(err, unix.EINTR) {
 			continue
-
-		default:
-			u.logger.Error(ctx, "UFFD serve unexpected event type", zap.Any("event_type", msgEvent))
-
-			return ErrUnexpectedEventType
+		}
+		if errors.Is(err, unix.EAGAIN) {
+			eagainCounter.Increase("EAGAIN")
+			continue outerLoop
+		}
+		if err != nil {
+			return fmt.Errorf("read UFFD event: %w", err)
+		}
+		if getMsgEvent(&msg) == UFFD_EVENT_REMOVE {
+			continue
 		}
 
 		arg := getMsgArg(&msg)
@@ -282,8 +255,8 @@ outerLoop:
 		// Handle write to missing page (WRITE flag)
 		// If the event has WRITE flag, it was a write to a missing page.
 		// For the write to be executed, we first need to copy the page from the source to the guest memory.
-		if flags&UFFD_PAGEFAULT_FLAG_WRITE != 0 {
-			u.wg.Go(func() error {
+		if flags == UFFD_PAGEFAULT_FLAG_WRITE {
+			pending = append(pending, func() error {
 				return u.faultPage(ctx, addr, offset, pagesize, u.src, fdExit.SignalExit, block.Write)
 			})
 
@@ -293,7 +266,7 @@ outerLoop:
 		// Handle read to missing page ("MISSING" flag)
 		// If the event has no flags, it was a read to a missing page and we need to copy the page from the source to the guest memory.
 		if flags == 0 {
-			u.wg.Go(func() error {
+			pending = append(pending, func() error {
 				return u.faultPage(ctx, addr, offset, pagesize, u.src, fdExit.SignalExit, block.Read)
 			})
 
@@ -302,6 +275,64 @@ outerLoop:
 
 		// MINOR and WP flags are not expected as we don't register the uffd with these flags.
 		return fmt.Errorf("unexpected event type: %d, closing uffd", flags)
+	}
+}
+
+// readEvent pairs the nonblocking read (which acknowledges REMOVE to the
+// kernel) with source invalidation. Installs cannot slip into that interval.
+// Source I/O and EAGAIN backoff never hold this lock.
+func (u *Userfaultfd) readEvent() (UffdMsg, error) {
+	u.removedRanges.mu.Lock()
+	defer u.removedRanges.mu.Unlock()
+	var msg UffdMsg
+	if u.removedRanges.closed {
+		return msg, ErrClosed
+	}
+	buf := make([]byte, unsafe.Sizeof(msg))
+	n, err := syscall.Read(int(u.fd), buf)
+	if err != nil {
+		return msg, err
+	}
+	if n != len(buf) {
+		return msg, fmt.Errorf("short UFFD event: %d bytes", n)
+	}
+	msg = *(*UffdMsg)(unsafe.Pointer(&buf[0]))
+	switch event := getMsgEvent(&msg); event {
+	case UFFD_EVENT_PAGEFAULT:
+		return msg, nil
+	case UFFD_EVENT_REMOVE:
+		rng := getRemoveRange(&msg)
+		start, end := uintptr(rng.Start), uintptr(rng.End)
+		if end <= start {
+			return msg, fmt.Errorf("invalid REMOVE range [%x, %x)", start, end)
+		}
+		for cursor := start; cursor < end; {
+			matched := false
+			for _, region := range u.ma.Regions {
+				regionEnd := region.BaseHostVirtAddr + region.Size
+				if cursor < region.BaseHostVirtAddr || cursor >= regionEnd {
+					continue
+				}
+				next := min(end, regionEnd)
+				if cursor%region.PageSize != 0 || next%region.PageSize != 0 {
+					return msg, fmt.Errorf("unaligned REMOVE range [%x, %x)", cursor, next)
+				}
+				cursor = next
+				matched = true
+				break
+			}
+			if !matched {
+				return msg, fmt.Errorf("REMOVE address %x outside guest mapping", cursor)
+			}
+		}
+		u.removedRanges.addLocked(start, end)
+		return msg, nil
+	default:
+		// REMAP has from/to/len, not start/end. Firecracker registers only
+		// REMOVE and uses a stable mapping. Stop before any future prefault
+		// can target an unmapped or repurposed address.
+		u.removedRanges.closed = true
+		return msg, fmt.Errorf("%w: %d", ErrUnexpectedEventType, event)
 	}
 }
 
@@ -323,6 +354,56 @@ func (u *Userfaultfd) PrefetchData() block.PrefetchData {
 	defer u.settleRequests.Unlock()
 
 	return u.prefetchTracker.PrefetchData()
+}
+
+// RemovedOffsets must be called after pausing the VM and taking its snapshot.
+// Wait for queued REMOVE acknowledgements to be reflected in our state. All
+// ever-discarded pages must be exported in the next diff: they may now contain
+// zeros OR newer guest writes, so marking them all Empty would lose data.
+func (u *Userfaultfd) RemovedOffsets(ctx context.Context) (*block.Tracker, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		u.removedRanges.mu.RLock()
+		if u.removedRanges.closed {
+			u.removedRanges.mu.RUnlock()
+			return nil, ErrClosed
+		}
+		poll := []unix.PollFd{{Fd: int32(u.fd), Events: unix.POLLIN}}
+		_, err := unix.Poll(poll, 0)
+		if err != nil {
+			u.removedRanges.mu.RUnlock()
+			if errors.Is(err, unix.EINTR) {
+				continue
+			}
+			return nil, err
+		}
+		if !hasEvent(poll[0].Revents, unix.POLLIN) {
+			removed := block.NewTracker(u.src.BlockSize())
+			for _, r := range u.removedRanges.ranges {
+				for addr := r.start; addr < r.end; {
+					offset, size, err := u.ma.GetOffset(addr)
+					if err != nil {
+						u.removedRanges.mu.RUnlock()
+						return nil, err
+					}
+					removed.Add(offset)
+					addr += size
+				}
+			}
+			u.removedRanges.mu.RUnlock()
+			return removed, nil
+		}
+		u.removedRanges.mu.RUnlock()
+		timer := time.NewTimer(time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 // Prefault proactively copies a page to guest memory at the given offset.
@@ -383,8 +464,13 @@ func (u *Userfaultfd) faultPage(
 		}
 	}()
 
-	b, dataErr := source.Slice(ctx, offset, int64(pagesize))
-	if dataErr != nil {
+	var b []byte
+	var dataErr error
+	if !u.removedRanges.contains(addr) {
+		b, dataErr = source.Slice(ctx, offset, int64(pagesize))
+	}
+	// A discard also invalidates a failed in-flight source fetch.
+	if dataErr != nil && !u.removedRanges.contains(addr) {
 		var signalErr error
 		if onFailure != nil {
 			signalErr = onFailure()
@@ -406,9 +492,23 @@ func (u *Userfaultfd) faultPage(
 	//if accessType != block.Write {
 	//	copyMode |= UFFDIO_COPY_MODE_WP
 	//}
-	
-	copyErr := copyWithEagainRetry(func() error {
-		return u.fd.copy(addr, pagesize, b, copyMode)
+
+	copyErr := copyWithEagainRetry(ctx, func() error {
+		// Hold the read lock across the ioctl. REMOVE takes the write lock, so
+		// an event cannot invalidate a page between the state check and copy.
+		return u.removedRanges.with(addr, func(removed bool) error {
+			if removed {
+				if accessType == block.Prefetch {
+					return ErrPrefaultDiscarded
+				}
+				if pagesize == header.HugepageSize {
+					return u.fd.copy(addr, pagesize, header.EmptyHugePage, copyMode)
+				}
+				return u.fd.zero(addr, pagesize)
+			}
+
+			return u.fd.copy(addr, pagesize, b, copyMode)
+		})
 	})
 	if errors.Is(copyErr, unix.EEXIST) {
 		// Page is already mapped
@@ -417,7 +517,13 @@ func (u *Userfaultfd) faultPage(
 		return nil
 	}
 
+	if errors.Is(copyErr, ErrPrefaultDiscarded) {
+		return copyErr
+	}
 	if copyErr != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
 		var signalErr error
 		if onFailure != nil {
 			signalErr = onFailure()

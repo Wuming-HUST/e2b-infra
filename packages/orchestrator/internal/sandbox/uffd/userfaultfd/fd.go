@@ -53,6 +53,7 @@ const (
 	UFFDIO_REGISTER   = C.UFFDIO_REGISTER
 	UFFDIO_UNREGISTER = C.UFFDIO_UNREGISTER
 	UFFDIO_COPY       = C.UFFDIO_COPY
+	UFFDIO_ZEROPAGE   = C.UFFDIO_ZEROPAGE
 
 	UFFD_PAGEFAULT_FLAG_WRITE = C.UFFD_PAGEFAULT_FLAG_WRITE
 
@@ -76,6 +77,7 @@ type (
 	UffdioRegister     = C.struct_uffdio_register
 	UffdioRange        = C.struct_uffdio_range
 	UffdioCopy         = C.struct_uffdio_copy
+	UffdioZeropage     = C.struct_uffdio_zeropage
 	UffdioWriteProtect = C.struct_uffdio_writeprotect
 )
 
@@ -122,7 +124,7 @@ func getPagefaultAddress(pagefault *UffdPagefault) uintptr {
 	return uintptr(pagefault.address)
 }
 
-// UffdRemoveRange mirrors the `remove`/`remap`/`unmap` arm of the uffd_msg arg
+// UffdRemoveRange mirrors the `remove`/`unmap` arm of the uffd_msg arg
 // union, which carries the [start, end) host virtual address range affected.
 type UffdRemoveRange struct {
 	Start uint64
@@ -150,6 +152,24 @@ func (f Fd) copy(addr, pagesize uintptr, data []byte, mode CULong) error {
 	// Check if the copied size matches the requested pagesize
 	if cpy.copy != CLong(pagesize) {
 		return fmt.Errorf("UFFDIO_COPY copied %d bytes, expected %d", cpy.copy, pagesize)
+	}
+
+	return nil
+}
+
+func (f Fd) zero(addr, pagesize uintptr) error {
+	zero := UffdioZeropage{
+		_range:   newUffdioRange(CULong(addr)&^CULong(pagesize-1), CULong(pagesize)),
+		mode:     0,
+		zeropage: 0,
+	}
+
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(f), UFFDIO_ZEROPAGE, uintptr(unsafe.Pointer(&zero))); errno != 0 {
+		return errno
+	}
+
+	if zero.zeropage != CLong(pagesize) {
+		return fmt.Errorf("UFFDIO_ZEROPAGE zeroed %d bytes, expected %d", zero.zeropage, pagesize)
 	}
 
 	return nil

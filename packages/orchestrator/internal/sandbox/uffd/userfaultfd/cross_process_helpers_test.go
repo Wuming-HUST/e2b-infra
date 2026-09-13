@@ -18,8 +18,10 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,22 +92,39 @@ func configureCrossProcessTest(t *testing.T, tt testConfig) (*testHandler, error
 
 	// We can pass mapping nil as the serve is used only in the helper process.
 	uffdFd, err := newFd(syscall.O_CLOEXEC | syscall.O_NONBLOCK)
+	if err != nil && tt.removeEnabled {
+		uffdFd, err = newRemoveTestFd()
+	}
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		uffdFd.close()
 	})
 
-	err = configureApi(uffdFd, tt.pagesize)
+	if tt.removeEnabled {
+		err = configureRemoveTestAPI(uffdFd)
+	} else {
+		err = configureApi(uffdFd, tt.pagesize)
+	}
 	require.NoError(t, err)
 
-	err = register(uffdFd, memoryStart, uint64(size), UFFDIO_REGISTER_MODE_MISSING|UFFDIO_REGISTER_MODE_WP)
+	mode := CULong(UFFDIO_REGISTER_MODE_MISSING)
+	if !tt.removeEnabled {
+		mode |= UFFDIO_REGISTER_MODE_WP
+	}
+	err = register(uffdFd, memoryStart, uint64(size), mode)
 	require.NoError(t, err)
 
 	cmd := exec.CommandContext(t.Context(), os.Args[0], "-test.run=TestHelperServingProcess")
 	cmd.Env = append(os.Environ(), "GO_TEST_HELPER_PROCESS=1")
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GO_MMAP_START=%d", memoryStart))
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GO_MMAP_PAGE_SIZE=%d", tt.pagesize))
+	if tt.prefetchDuringRemove {
+		cmd.Env = append(cmd.Env, "GO_PREFETCH_DURING_REMOVE=1")
+	}
+	if tt.collectRemoved {
+		cmd.Env = append(cmd.Env, "GO_COLLECT_REMOVED=1")
+	}
 
 	dup, err := syscall.Dup(int(uffdFd))
 	require.NoError(t, err)
@@ -292,6 +311,28 @@ func crossProcessServe() error {
 	if err != nil {
 		return fmt.Errorf("exit creating uffd: %w", err)
 	}
+	var prefetchWg sync.WaitGroup
+	if os.Getenv("GO_PREFETCH_DURING_REMOVE") == "1" {
+		prefetchWg.Add(1)
+		go func() {
+			defer prefetchWg.Done()
+			ticker := time.NewTicker(100 * time.Microsecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					for off := 0; off < len(content); off += int(pageSize) {
+						if err := uffd.Prefault(ctx, int64(off), content[off:off+int(pageSize)]); err != nil && !errors.Is(err, ErrPrefaultDiscarded) {
+							cancel(err)
+							return
+						}
+					}
+				}
+			}
+		}()
+	}
 
 	offsetsFile := os.NewFile(uintptr(5), "offsets")
 
@@ -307,7 +348,18 @@ func crossProcessServe() error {
 			case <-ctx.Done():
 				return
 			case <-offsetsSignal:
-				for offset := range uffd.faulted().Offsets() {
+				var offsets *block.Tracker
+				if os.Getenv("GO_COLLECT_REMOVED") == "1" {
+					var err error
+					offsets, err = uffd.RemovedOffsets(ctx)
+					if err != nil {
+						cancel(err)
+						return
+					}
+				} else {
+					offsets = uffd.faulted()
+				}
+				for offset := range offsets.Offsets() {
 					writeErr := binary.Write(offsetsFile, binary.LittleEndian, uint64(offset))
 					if writeErr != nil {
 						msg := fmt.Errorf("error writing offsets to file: %w", writeErr)
@@ -349,6 +401,8 @@ func crossProcessServe() error {
 	}()
 
 	cleanup := func() {
+		cancel(nil)
+		prefetchWg.Wait()
 		err := fdExit.SignalExit()
 		if err != nil {
 			msg := fmt.Errorf("error signaling exit: %w", err)
