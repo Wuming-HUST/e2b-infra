@@ -2,6 +2,7 @@ package memory
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
 	"github.com/e2b-dev/infra/packages/shared/pkg/fc/models"
@@ -35,8 +36,15 @@ func NewMappingFromFc(regions []*models.GuestMemoryRegionMapping) (*Mapping, err
 	r := make([]Region, len(regions))
 
 	for i, infoRegion := range regions {
+		if infoRegion == nil {
+			return nil, fmt.Errorf("nil memory region %d", i)
+		}
 		if infoRegion.BaseHostVirtAddr == nil || infoRegion.Size == nil || infoRegion.Offset == nil || infoRegion.PageSize == nil {
 			return nil, fmt.Errorf("missing required fields for memory region %d", i)
+		}
+		if *infoRegion.BaseHostVirtAddr < 0 || *infoRegion.Size <= 0 || *infoRegion.Offset < 0 || *infoRegion.PageSize <= 0 ||
+			*infoRegion.BaseHostVirtAddr > math.MaxInt64-*infoRegion.Size || *infoRegion.Offset > math.MaxInt64-*infoRegion.Size {
+			return nil, fmt.Errorf("invalid bounds for memory region %d", i)
 		}
 
 		r[i] = Region{
@@ -63,6 +71,9 @@ func (m *Mapping) GetOffset(hostVirtAddr uintptr) (int64, uintptr, error) {
 
 // GetHostVirtRanges returns the host virtual addresses and sizes (ranges) that cover exactly the given [offset, offset+length) range in the host virtual address space.
 func (m *Mapping) GetHostVirtRanges(off int64, size int64) (hostVirtRanges []block.Range, err error) {
+	if off < 0 || size < 0 || off > math.MaxInt64-size {
+		return nil, fmt.Errorf("invalid memory range offset=%d size=%d", off, size)
+	}
 	for n := int64(0); n < size; {
 		currentOff := off + n
 

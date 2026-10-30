@@ -2,6 +2,7 @@ package block
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -52,6 +53,10 @@ type Cache struct {
 	dirty     sync.Map
 	dirtyFile bool
 	closed    atomic.Bool
+
+	// Digest of the successfully captured process-memory stream at creation.
+	// It describes that checkpoint, not any later cache mutations.
+	processMemoryDigest *[sha256.Size]byte
 }
 
 // When we are passing filePath that is a file that has content we want to server want to use dirtyFile = true.
@@ -397,6 +402,17 @@ func (c *Cache) Path() string {
 	return c.filePath
 }
 
+// ProcessMemorySHA256 returns the digest of the original packed export. For a
+// full-logical export this is the digest of all logical RAM in offset order.
+// Ordinary caches have no process-memory digest. Later cache writes do not
+// change this checkpoint receipt.
+func (c *Cache) ProcessMemorySHA256() ([sha256.Size]byte, bool) {
+	if c.processMemoryDigest == nil {
+		return [sha256.Size]byte{}, false
+	}
+	return *c.processMemoryDigest, true
+}
+
 func NewCacheFromProcessMemory(
 	ctx context.Context,
 	blockSize int64,
@@ -404,11 +420,35 @@ func NewCacheFromProcessMemory(
 	pid int,
 	ranges []Range,
 ) (*Cache, error) {
-	size := GetSize(ranges)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if blockSize <= 0 || blockSize > MAX_RW_COUNT {
+		return nil, fmt.Errorf("invalid process-memory block size %d", blockSize)
+	}
+	var size int64
+	for _, r := range ranges {
+		if r.Start < 0 || r.Size <= 0 || r.Start > math.MaxInt64-r.Size || size > math.MaxInt64-r.Size {
+			return nil, fmt.Errorf("invalid process-memory range %+v", r)
+		}
+		size += r.Size
+	}
+	if size%blockSize != 0 {
+		return nil, fmt.Errorf("process-memory size %d is not aligned to block size %d", size, blockSize)
+	}
+	// Never truncate an existing artifact. The caller publishes the returned
+	// cache only after all ranges have been copied successfully.
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("reserve process-memory cache: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return nil, errors.Join(err, os.Remove(filePath))
+	}
 
 	cache, err := NewCache(size, blockSize, filePath, false)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(err, os.Remove(filePath))
 	}
 
 	if size == 0 {
@@ -428,15 +468,24 @@ func (c *Cache) copyProcessMemory(
 	pid int,
 	rs []Range,
 ) error {
+	return c.copyProcessMemoryWithReader(ctx, pid, rs, unix.ProcessVMReadv)
+}
+
+type processMemoryReader func(int, []unix.Iovec, []unix.RemoteIovec, uint) (int, error)
+
+func (c *Cache) copyProcessMemoryWithReader(ctx context.Context, pid int, rs []Range, read processMemoryReader) error {
 	// We need to align the maximum read/write count to the block size, so we can use mark the offsets as dirty correctly.
 	// Because the MAX_RW_COUNT is not aligned to arbitrary block sizes, we need to align it to the block size we use for the cache.
-	alignedRwCount := getAlignedMaxRwCount(c.blockSize)
+	// Bound each faulting read as well as the kernel MAX_RW_COUNT. This limits
+	// the amount of backing data faulted by an individual syscall.
+	alignedRwCount := min(getAlignedMaxRwCount(c.blockSize), max(c.blockSize, (8<<20)/c.blockSize*c.blockSize))
 
 	// We need to split the ranges because the Kernel does not support reading/writing more than MAX_RW_COUNT bytes in a single operation.
 	ranges := splitOversizedRanges(rs, alignedRwCount)
 
 	var offset int64
 	var rangeIdx int64
+	digest := sha256.New()
 
 	for {
 		var remote []unix.RemoteIovec
@@ -468,41 +517,33 @@ func (c *Cache) copyProcessMemory(
 			break
 		}
 
-		address, err := c.address(offset)
-		if err != nil {
-			return fmt.Errorf("failed to get address: %w", err)
-		}
-
-		local := []unix.Iovec{
-			{
-				Base: address,
-				// We could keep this as full cache length, but we might as well be exact here.
-				Len: uint64(segmentSize),
-			},
-		}
-
-		for {
+		var copied int64
+		var transientRetries int
+		for copied < segmentSize {
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
 			}
 
-			// We could retry only on the remaining segment size, but for simplicity we retry the whole segment.
-			n, err := unix.ProcessVMReadv(pid,
-				local,
-				remote,
-				0,
-			)
-			if errors.Is(err, unix.EAGAIN) {
-				continue
+			address, err := c.address(offset + copied)
+			if err != nil {
+				return fmt.Errorf("failed to get address: %w", err)
 			}
+			local := []unix.Iovec{{Base: address, Len: uint64(segmentSize - copied)}}
+			n, err := read(pid, local, remote, 0)
 			if errors.Is(err, unix.EINTR) {
 				continue
 			}
-			if errors.Is(err, unix.ENOMEM) {
-				time.Sleep(oomMinBackoff + time.Duration(rand.Intn(int(oomMaxJitter.Milliseconds())))*time.Millisecond)
-
+			if (errors.Is(err, unix.ENOMEM) || errors.Is(err, unix.EAGAIN)) && transientRetries < 3 {
+				transientRetries++
+				timer := time.NewTimer(oomMinBackoff + time.Duration(rand.Intn(int(oomMaxJitter.Milliseconds())))*time.Millisecond)
+				select {
+				case <-ctx.Done():
+					timer.Stop()
+					return ctx.Err()
+				case <-timer.C:
+				}
 				continue
 			}
 
@@ -510,19 +551,36 @@ func (c *Cache) copyProcessMemory(
 				return fmt.Errorf("failed to read memory: %w", err)
 			}
 
-			if int64(n) != segmentSize {
-				return fmt.Errorf("failed to read memory: expected %d bytes, got %d", segmentSize, n)
+			if n <= 0 || int64(n) > segmentSize-copied {
+				return fmt.Errorf("failed to read memory: expected progress up to %d bytes, got %d", segmentSize-copied, n)
 			}
-
-			for _, blockOff := range header.BlocksOffsets(segmentSize, c.blockSize) {
-				c.dirty.Store(offset+blockOff, struct{}{})
+			// process_vm_readv may stop at any remote IOV boundary. Continue at
+			// exactly the unread logical byte, even across unrelated host HVAs.
+			_, _ = digest.Write((*c.mmap)[offset+copied : offset+copied+int64(n)])
+			copied += int64(n)
+			transientRetries = 0
+			remaining := n
+			for len(remote) > 0 && remaining >= remote[0].Len {
+				remaining -= remote[0].Len
+				remote = remote[1:]
 			}
-
-			offset += segmentSize
-
-			break
+			if remaining > 0 {
+				remote[0].Base += uintptr(remaining)
+				remote[0].Len -= remaining
+			}
 		}
+		offset += segmentSize
 	}
+	if offset != c.size {
+		return fmt.Errorf("incomplete process-memory export: %d of %d bytes", offset, c.size)
+	}
+	// Mark whole logical blocks only after every region has succeeded. Region
+	// and short-read boundaries need not align with snapshot block boundaries.
+	for _, off := range header.BlocksOffsets(c.size, c.blockSize) {
+		c.dirty.Store(off, struct{}{})
+	}
+	c.processMemoryDigest = new([sha256.Size]byte)
+	copy(c.processMemoryDigest[:], digest.Sum(nil))
 
 	return nil
 }

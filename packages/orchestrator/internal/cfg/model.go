@@ -25,6 +25,7 @@ type BuilderConfig struct {
 	SandboxDir                 string        `env:"SANDBOX_DIR"              envDefault:"/fc-vm"`
 	SharedChunkCacheDir        string        `env:"SHARED_CHUNK_CACHE_PATH"`
 	TemplatesDir               string        `env:"TEMPLATES_DIR,expand"     envDefault:"${ORCHESTRATOR_BASE_PATH}/build-templates"`
+	SharedNBDMemoryEnabled     bool          `env:"SHARED_NBD_MEMORY_ENABLED" envDefault:"false"`
 	FileMemoryBackendEnabled   bool          `env:"FILE_MEMORY_BACKEND_ENABLED" envDefault:"false"`
 	FileMemoryBackendDir       string        `env:"FILE_MEMORY_BACKEND_DIR,expand" envDefault:"${ORCHESTRATOR_BASE_PATH}/template-memory"`
 

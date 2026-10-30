@@ -421,6 +421,8 @@ func run(config cfg.Config) (success bool) {
 	closers = append(closers, closer{"tcp egress firewall", tcpFirewall.Close})
 
 	// device pool
+	var factoryShutdownComplete bool
+	var factoryShutdownErr error
 	devicePool, err := nbd.NewDevicePool()
 	if err != nil {
 		logger.L().Fatal(ctx, "failed to create device pool", zap.Error(err))
@@ -430,7 +432,15 @@ func run(config cfg.Config) (success bool) {
 
 		return nil
 	})
-	closers = append(closers, closer{"device pool", devicePool.Close})
+	closers = append(closers, closer{"device pool", func(closeCtx context.Context) error {
+		if !factoryShutdownComplete {
+			return fmt.Errorf("skip NBD pool close: sandbox factory shutdown did not complete")
+		}
+		if factoryShutdownErr != nil {
+			return fmt.Errorf("skip NBD pool close after unconfirmed sandbox/backing cleanup: %w", factoryShutdownErr)
+		}
+		return devicePool.Close(context.WithoutCancel(closeCtx))
+	}})
 
 	// network pool
 	slotStorage, err := newStorage(ctx, nodeID, config.NetworkConfig)
@@ -447,6 +457,11 @@ func run(config cfg.Config) (success bool) {
 
 	// sandbox factory
 	sandboxFactory := sandbox.NewFactory(config.BuilderConfig, networkPool, devicePool, featureFlags, hostStatsDelivery, cgroupManager)
+	closers = append(closers, closer{"sandbox factory and shared RAM backings", func(closeCtx context.Context) error {
+		factoryShutdownErr = sandboxFactory.DrainMemoryBackings(context.WithoutCancel(closeCtx))
+		factoryShutdownComplete = true
+		return factoryShutdownErr
+	}})
 
 	volumeService := volumes.New(config)
 
@@ -613,6 +628,9 @@ func run(config cfg.Config) (success bool) {
 	case serviceErr := <-serviceError:
 		logger.L().Error(ctx, "Service error", zap.Error(serviceErr))
 	}
+	// Fence/cancel startup before GracefulStop waits for in-flight RPCs. Final
+	// teardown runs after RPC/template services stop and before NBD pool close.
+	sandboxFactory.BeginShutdown()
 
 	closeCtx, cancelCloseCtx := context.WithCancel(context.Background())
 	defer cancelCloseCtx()

@@ -195,13 +195,17 @@ func (c *Cache) AddSnapshot(
 	switch memfileDiff.(type) {
 	case *build.NoDiff:
 	default:
-		c.buildStore.Add(memfileDiff)
+		if err := c.buildStore.Add(memfileDiff); err != nil {
+			return fmt.Errorf("failed to cache snapshot memory: %w", err)
+		}
 	}
 
 	switch rootfsDiff.(type) {
 	case *build.NoDiff:
 	default:
-		c.buildStore.Add(rootfsDiff)
+		if err := c.buildStore.Add(rootfsDiff); err != nil {
+			return fmt.Errorf("failed to cache snapshot rootfs: %w", err)
+		}
 	}
 
 	storageTemplate, err := newTemplateFromStorage(
@@ -282,7 +286,7 @@ func (c *Cache) getTemplateWithFetch(ctx context.Context, templateToCache *stora
 	}
 
 	cachedTemplate := t.Value()
-	allowFileBackend := c.config.FileMemoryBackendEnabled && fileBackendEligible
+	allowFileBackend := c.config.FileMemoryBackendEnabled && !c.config.SharedNBDMemoryEnabled && fileBackendEligible
 	if allowFileBackend {
 		if source, ok := cachedTemplate.(*storageTemplate); ok {
 			backgroundCtx := context.WithoutCancel(ctx)

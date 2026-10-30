@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/google/uuid"
 
 	blockmetrics "github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block/metrics"
-	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
 )
@@ -37,61 +37,81 @@ func NewFile(
 	}
 }
 
-func (b *File) ReadAt(ctx context.Context, p []byte, off int64) (n int, err error) {
-	for n < len(p) {
-		mappedOffset, mappedLength, buildID, err := b.header.GetShiftedMapping(ctx, off+int64(n))
-		if err != nil {
-			return 0, fmt.Errorf("failed to get mapping: %w", err)
-		}
-
-		remainingReadLength := int64(len(p)) - int64(n)
-
-		readLength := min(mappedLength, remainingReadLength)
-
-		if readLength <= 0 {
-			logger.L().Error(ctx, fmt.Sprintf(
-				"(%d bytes left to read, off %d) reading %d bytes from %+v/%+v: [%d:] -> [%d:%d] <> %d (mapped length: %d, remaining read length: %d)\n>>> EOF\n",
-				len(p)-n,
-				off,
-				readLength,
-				buildID,
-				b.fileType,
-				mappedOffset,
-				n,
-				int64(n)+readLength,
-				n,
-				mappedLength,
-				remainingReadLength,
-			))
-
-			return n, io.EOF
-		}
-
-		// Skip reading when the uuid is nil.
-		// We will use this to handle base builds that are already diffs.
-		// The passed slice p must start as empty, otherwise we would need to copy the empty values there.
-		if *buildID == uuid.Nil {
-			n += int(readLength)
-
-			continue
-		}
-
-		mappedBuild, err := b.getBuild(ctx, buildID)
+func (b *File) ReadAt(ctx context.Context, p []byte, off int64) (int, error) {
+	return readLogicalAt(ctx, b.header, p, off, func(ctx context.Context, buildID uuid.UUID, dst []byte, mappedOffset int64) (int, error) {
+		candidate, err := b.storageDiff(&buildID)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get build: %w", err)
 		}
-
-		buildN, err := mappedBuild.ReadAt(ctx,
-			p[n:int64(n)+readLength],
-			mappedOffset,
-		)
+		mappedBuild, err := b.store.Pin(ctx, candidate)
 		if err != nil {
-			return 0, fmt.Errorf("failed to read from source: %w", err)
+			return 0, err
 		}
+		defer mappedBuild.Close()
+		return mappedBuild.ReadAt(ctx, dst, mappedOffset)
+	})
+}
 
-		n += buildN
+// readLogicalAt translates arbitrary byte ranges through the block-aligned
+// header. Explicit zero extents must clear reused caller buffers; missing or
+// truncated backing data must never be accepted as a zero extent.
+func readLogicalAt(ctx context.Context, h *header.Header, p []byte, off int64,
+	read func(context.Context, uuid.UUID, []byte, int64) (int, error),
+) (n int, err error) {
+	if h == nil || h.Metadata == nil || h.Metadata.BlockSize == 0 || h.Metadata.BlockSize > math.MaxInt64 || h.Metadata.Size > math.MaxInt64 || off < 0 {
+		return 0, fmt.Errorf("invalid logical read offset or header")
 	}
-
+	if len(p) == 0 {
+		return 0, nil
+	}
+	size := int64(h.Metadata.Size)
+	if off >= size {
+		return 0, io.EOF
+	}
+	blockSize := int64(h.Metadata.BlockSize)
+	limit := min(int64(len(p)), size-off)
+	for int64(n) < limit {
+		if err := ctx.Err(); err != nil {
+			return n, err
+		}
+		logicalOffset := off + int64(n)
+		withinBlock := logicalOffset % blockSize
+		mappedOffset, mappedLength, buildID, err := h.GetShiftedMapping(ctx, logicalOffset-withinBlock)
+		if err != nil {
+			return n, fmt.Errorf("failed to get mapping: %w", err)
+		}
+		if mappedOffset < 0 || mappedOffset > math.MaxInt64-withinBlock || mappedLength <= withinBlock {
+			return n, fmt.Errorf("invalid logical mapping at offset %d", logicalOffset)
+		}
+		mappedOffset += withinBlock
+		readLength := min(mappedLength-withinBlock, limit-int64(n))
+		dst := p[n : int64(n)+readLength]
+		if *buildID == uuid.Nil {
+			clear(dst)
+			n += len(dst)
+			continue
+		}
+		for copied := 0; copied < len(dst); {
+			if err := ctx.Err(); err != nil {
+				return n, err
+			}
+			count, readErr := read(ctx, *buildID, dst[copied:], mappedOffset+int64(copied))
+			if count < 0 || count > len(dst)-copied {
+				return n, fmt.Errorf("invalid source read count %d", count)
+			}
+			copied += count
+			n += count
+			if readErr != nil {
+				return n, fmt.Errorf("failed to read from source: %w", readErr)
+			}
+			if count == 0 {
+				return n, fmt.Errorf("failed to read from source: %w", io.ErrNoProgress)
+			}
+		}
+	}
+	if n < len(p) {
+		return n, io.EOF
+	}
 	return n, nil
 }
 
@@ -121,6 +141,18 @@ func (b *File) Slice(ctx context.Context, off, _ int64) ([]byte, error) {
 }
 
 func (b *File) getBuild(ctx context.Context, buildID *uuid.UUID) (Diff, error) {
+	storageDiff, err := b.storageDiff(buildID)
+	if err != nil {
+		return nil, err
+	}
+	source, err := b.store.Get(ctx, storageDiff)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get build from store: %w", err)
+	}
+	return source, nil
+}
+
+func (b *File) storageDiff(buildID *uuid.UUID) (*StorageDiff, error) {
 	storageDiff, err := newStorageDiff(
 		b.store.cachePath,
 		buildID.String(),
@@ -134,10 +166,5 @@ func (b *File) getBuild(ctx context.Context, buildID *uuid.UUID) (Diff, error) {
 		return nil, fmt.Errorf("failed to create storage diff: %w", err)
 	}
 
-	source, err := b.store.Get(ctx, storageDiff)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get build from store: %w", err)
-	}
-
-	return source, nil
+	return storageDiff, nil
 }

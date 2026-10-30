@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -39,6 +40,7 @@ type DirectPathMount struct {
 	featureFlags *featureflags.Client
 
 	Backend     block.Device
+	readOnly    bool
 	deviceIndex uint32
 	blockSize   uint64
 
@@ -46,7 +48,21 @@ type DirectPathMount struct {
 	socksClient []*os.File
 	socksServer []io.Closer
 
-	handlersWg sync.WaitGroup
+	handlersWg    sync.WaitGroup
+	failureOnce   sync.Once
+	failureDone   chan struct{}
+	failureErr    error
+	closing       atomic.Bool
+	transportLost atomic.Bool
+	closeOnce     sync.Once
+	closeErr      error
+}
+
+var ErrTransportOwnershipUnknown = errors.New("NBD transport lost; device ownership unknown, backing quarantined")
+
+type mountFailure struct {
+	err           error
+	transportLost bool
 }
 
 func NewDirectPathMount(b block.Device, devicePool *DevicePool, featureFlags *featureflags.Client) *DirectPathMount {
@@ -58,11 +74,56 @@ func NewDirectPathMount(b block.Device, devicePool *DevicePool, featureFlags *fe
 		socksClient:  make([]*os.File, 0),
 		socksServer:  make([]io.Closer, 0),
 		deviceIndex:  math.MaxUint32,
+		failureDone:  make(chan struct{}),
 	}
 }
 
+// NewReadonlyDirectPathMount serves immutable RAM without allocating a writable
+// cache. The registry owns the source; closing this mount never closes it.
+func NewReadonlyDirectPathMount(b block.ReadonlyDevice, devicePool *DevicePool, featureFlags *featureflags.Client) *DirectPathMount {
+	d := NewDirectPathMount(readonlyMountDevice{b}, devicePool, featureFlags)
+	d.readOnly = true
+	return d
+}
+
+type readonlyMountDevice struct{ block.ReadonlyDevice }
+
+func (readonlyMountDevice) WriteAt([]byte, int64) (int, error) { return 0, syscall.EROFS }
+func (readonlyMountDevice) Close() error                       { return nil }
+
+// Done broadcasts unexpected service failure to every holder. Explicit Close
+// is an orderly shutdown and does not signal failure. Err is safe after Done.
+func (d *DirectPathMount) Done() <-chan struct{} { return d.failureDone }
+func (d *DirectPathMount) Err() error {
+	select {
+	case <-d.failureDone:
+		return d.failureErr
+	default:
+		return nil
+	}
+}
+func (d *DirectPathMount) fail(err error) {
+	d.failureOnce.Do(func() { d.failureErr = err; close(d.failureDone) })
+}
+
+func (d *DirectPathMount) serverFlags() nbdnl.ServerFlags {
+	flags := nbdnl.FlagHasFlags | nbdnl.FlagCanMulticonn
+	if d.readOnly {
+		flags |= nbdnl.FlagReadOnly
+	}
+	return flags
+}
+
 func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err error) {
-	ctx, d.cancelfn = context.WithCancel(ctx)
+	serviceCtx := ctx
+	if d.readOnly {
+		// Caller cancellation aborts Open, but only Close may terminate an
+		// established transport: its sockets keep the kernel device owned.
+		serviceCtx, d.cancelfn = context.WithCancel(context.WithoutCancel(ctx))
+	} else {
+		ctx, d.cancelfn = context.WithCancel(ctx)
+		serviceCtx = ctx
+	}
 
 	defer func() {
 		// Set the device index to the one returned, correctly capture error values
@@ -91,6 +152,9 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 	if err != nil {
 		return math.MaxUint32, err
 	}
+	if d.readOnly && (size <= 0 || uint64(size)%d.blockSize != 0) {
+		return math.MaxUint32, fmt.Errorf("NBD size %d must be positive and aligned to %d", size, d.blockSize)
+	}
 
 	telemetry.ReportEvent(ctx, "got backend size")
 
@@ -113,6 +177,10 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 			releaseErr := d.devicePool.ReleaseDevice(ctx, deviceIndex)
 			return math.MaxUint32, errors.Join(fmt.Errorf("NBD connections per device must be positive: %d", connections), releaseErr)
 		}
+		// A failed connect attempt closes its sockets as part of retry. Buffer
+		// errors per attempt and publish them only after that attempt connects.
+		attemptErrors := make(chan mountFailure, 2*connections)
+		var attemptConnected atomic.Bool
 
 		for i := range connections {
 			// Create the socket pairs
@@ -139,10 +207,31 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 			server.Close()
 
 			dispatch := NewDispatch(serverc, d.Backend)
+			if d.readOnly {
+				dispatch = NewReadonlyDispatch(serverc, d.Backend)
+				dispatch.onFailure = func(serviceErr error) {
+					select {
+					case attemptErrors <- mountFailure{err: serviceErr}:
+					default:
+					}
+				}
+			}
 			requestedDeviceIndex := deviceIndex
 			// Start reading commands on the socket and dispatching them to our provider
 			d.handlersWg.Go(func() {
-				handleErr := dispatch.Handle(ctx)
+				handleErr := dispatch.Handle(serviceCtx)
+				if d.readOnly && !d.closing.Load() && serviceCtx.Err() == nil {
+					if handleErr == nil {
+						handleErr = errors.New("readonly NBD service disconnected")
+					}
+					select {
+					case attemptErrors <- mountFailure{err: handleErr, transportLost: true}:
+					default:
+					}
+					if attemptConnected.Load() {
+						d.transportLost.Store(true)
+					}
+				}
 				// The error is expected to happen if the nbd (socket connection) is closed
 				logger.L().Info(ctx, "closing handler for NBD commands",
 					zap.Error(handleErr),
@@ -161,7 +250,7 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 		opts = append(opts, nbdnl.WithTimeout(stresstest.Timeout(connectTimeout)))
 		opts = append(opts, nbdnl.WithDeadconnTimeout(connectTimeout))
 
-		serverFlags := nbdnl.FlagHasFlags | nbdnl.FlagCanMulticonn
+		serverFlags := d.serverFlags()
 
 		idx, connectErr := d.devicePool.connect(ctx, d, deviceIndex, uint64(size), serverFlags, opts...)
 		if connectErr == nil {
@@ -169,6 +258,24 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 			// but we will use the one returned by nbdnl
 			deviceIndex = idx
 			d.deviceIndex = idx
+			attemptConnected.Store(true)
+			if d.readOnly {
+				d.handlersWg.Go(func() {
+					for {
+						select {
+						case serviceErr := <-attemptErrors:
+							if !d.closing.Load() && serviceCtx.Err() == nil {
+								if serviceErr.transportLost {
+									d.transportLost.Store(true)
+								}
+								d.fail(serviceErr.err)
+							}
+						case <-serviceCtx.Done():
+							return
+						}
+					}
+				})
+			}
 
 			break
 		}
@@ -208,6 +315,8 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 		select {
 		case <-ctx.Done():
 			return math.MaxUint32, ctx.Err()
+		case <-d.failureDone:
+			return math.MaxUint32, d.Err()
 		default:
 		}
 
@@ -226,6 +335,14 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 			return math.MaxUint32, err
 		}
 	}
+	if d.readOnly {
+		if err := validateReadonlyReady(GetDevicePath(deviceIndex), size); err != nil {
+			return math.MaxUint32, err
+		}
+		if err := d.Err(); err != nil {
+			return math.MaxUint32, err
+		}
+	}
 
 	telemetry.ReportEvent(ctx, "connected to NBD")
 
@@ -233,6 +350,17 @@ func (d *DirectPathMount) Open(ctx context.Context) (retDeviceIndex uint32, err 
 }
 
 func (d *DirectPathMount) Close(ctx context.Context) error {
+	d.closing.Store(true)
+	d.closeOnce.Do(func() { d.closeErr = d.close(ctx) })
+	return d.closeErr
+}
+
+func (d *DirectPathMount) close(ctx context.Context) error {
+	if d.readOnly && d.transportLost.Load() {
+		// A stale number is not authority to disconnect a possibly reused
+		// kernel device. Keep the source, sockets and pool entry quarantined.
+		return ErrTransportOwnershipUnknown
+	}
 	ctx, span := tracer.Start(ctx, "direct-path-mount-close")
 	defer span.End()
 
@@ -243,8 +371,18 @@ func (d *DirectPathMount) Close(ctx context.Context) error {
 	// Dynamic IDs can be reused as soon as a socket disconnects. Send the
 	// disconnect while this mount still owns its sockets, before closing them;
 	// never issue another command for the ID after kernel acknowledgement.
-	if d.devicePool.dynamic && idx != math.MaxUint32 {
-		if err := d.devicePool.disconnect(d, idx); err != nil {
+	if idx != math.MaxUint32 && (d.devicePool.dynamic || d.readOnly) {
+		if d.readOnly {
+			if err := d.checkReadonlyTransport(); err != nil {
+				d.transportLost.Store(true)
+				return errors.Join(ErrTransportOwnershipUnknown, err)
+			}
+		}
+		if d.devicePool.dynamic {
+			if err := d.devicePool.disconnect(d, idx); err != nil {
+				return err
+			}
+		} else if err := disconnectNBDWithTimeout(ctx, idx, disconnectTimeout); err != nil {
 			return err
 		}
 	}
@@ -259,7 +397,7 @@ func (d *DirectPathMount) Close(ctx context.Context) error {
 	telemetry.ReportEvent(ctx, "closing socket pairs server")
 	for _, v := range d.socksServer {
 		err := v.Close()
-		if err != nil {
+		if err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, os.ErrClosed) {
 			errs = append(errs, fmt.Errorf("error closing server pair: %w", err))
 		}
 	}
@@ -275,7 +413,7 @@ func (d *DirectPathMount) Close(ctx context.Context) error {
 	}
 
 	// Static allocation reserves the ID until ReleaseDevice.
-	if !d.devicePool.dynamic && idx != math.MaxUint32 {
+	if !d.devicePool.dynamic && !d.readOnly && idx != math.MaxUint32 {
 		err := disconnectNBDWithTimeout(ctx, idx, disconnectTimeout)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("error disconnecting NBD: %w", err))
@@ -286,7 +424,7 @@ func (d *DirectPathMount) Close(ctx context.Context) error {
 	telemetry.ReportEvent(ctx, "closing socket pairs client")
 	for _, v := range d.socksClient {
 		err := v.Close()
-		if err != nil {
+		if err != nil && !errors.Is(err, os.ErrClosed) {
 			errs = append(errs, fmt.Errorf("error closing socket pair client: %w", err))
 		}
 	}

@@ -394,8 +394,16 @@ func TestDiffStoreConcurrentEvictionRace(t *testing.T) {
 
 				// Occasionally try to access the item, which calls resetDelete
 				if j%5 == 0 {
-					_, err := store.Get(t.Context(), diff)
+					// Add transferred diff's ownership. TTL/replacement may have
+					// already closed it; a miss must receive a fresh candidate,
+					// never resurrect the original snapshot's retired mapping.
+					candidate, err := newDiffWithAsserts(t, cachePath, buildID, Rootfs, blockSize)
+					if !assert.NoError(t, err) {
+						continue
+					}
+					_, err = store.Get(t.Context(), candidate)
 					assert.NoError(t, err)
+					assert.NoError(t, candidate.Close())
 				}
 			}
 		}(i)
@@ -481,8 +489,13 @@ func TestDiffStoreResetDeleteRace(t *testing.T) {
 
 			// This call to Get() will trigger resetDelete, which is where the race occurs
 			// Multiple goroutines calling resetDelete on the same key can race
-			_, err = store.Get(t.Context(), iterDiff)
+			candidate, err := newDiffWithAsserts(t, cachePath, fmt.Sprintf("%s-%d", buildID, iteration), Rootfs, blockSize)
+			if !assert.NoError(t, err) {
+				return
+			}
+			_, err = store.Get(t.Context(), candidate)
 			assert.NoError(t, err)
+			assert.NoError(t, candidate.Close())
 
 			// Also try direct resetDelete calls to increase race probability
 			store.resetDelete(iterDiff.CacheKey())

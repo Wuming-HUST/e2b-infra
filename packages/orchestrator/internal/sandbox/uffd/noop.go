@@ -2,6 +2,7 @@ package uffd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bits-and-blooms/bitset"
 
@@ -32,24 +33,24 @@ func (m *NoopMemory) Prefault(_ context.Context, _ int64, _ []byte) error {
 	return nil
 }
 
-func (m *NoopMemory) DiffMetadata(ctx context.Context, f *fc.Process) (*header.DiffMetadata, error) {
-	diffInfo, err := f.MemoryInfo(ctx, m.blockSize)
-	if err != nil {
+func (m *NoopMemory) DiffMetadata(ctx context.Context, _ *fc.Process) (*header.DiffMetadata, error) {
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-
-	dirty := diffInfo.Dirty.Difference(diffInfo.Empty)
-
+	if m.size < 0 || m.blockSize <= 0 || m.size%m.blockSize != 0 {
+		return nil, fmt.Errorf("invalid logical RAM layout: size=%d block_size=%d", m.size, m.blockSize)
+	}
+	// File/MAP_PRIVATE RAM has no complete change tracker. In particular, an
+	// unfaulted nonzero parent page must never become an Empty override. Export
+	// every logical block, including zeros, from the same frozen checkpoint.
+	// Residency (mincore/pagemap) cannot determine content or safe inheritance.
 	numberOfPages := header.TotalBlocks(m.size, m.blockSize)
-
-	empty := bitset.New(uint(numberOfPages))
-	empty.FlipRange(0, uint(numberOfPages))
-
-	empty = empty.Difference(dirty)
+	dirty := bitset.New(uint(numberOfPages))
+	dirty.FlipRange(0, uint(numberOfPages))
 
 	return &header.DiffMetadata{
 		Dirty:     dirty,
-		Empty:     empty,
+		Empty:     bitset.New(0),
 		BlockSize: m.blockSize,
 	}, nil
 }

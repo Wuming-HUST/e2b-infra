@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
 	blockmetrics "github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block/metrics"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
@@ -156,4 +157,10 @@ func (d *Storage) Header() *header.Header {
 
 func (d *Storage) Close() error {
 	return nil
+}
+
+// AcquireMemoryView returns a source that owns its layered backing independently
+// of template eviction and DiffStore invalidation. No RAM bytes are prefetched.
+func (d *Storage) AcquireMemoryView(ctx context.Context) (block.ReadonlyDevice, error) {
+	return d.source.Pin(ctx)
 }

@@ -2,8 +2,10 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
 )
@@ -22,7 +24,7 @@ func NewLocalDiffFile(
 ) (*LocalDiffFile, error) {
 	cachePath := GenerateDiffCachePath(basePath, buildId, diffType)
 
-	f, err := os.OpenFile(cachePath, os.O_RDWR|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(cachePath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -76,8 +78,12 @@ func (f *LocalDiffFile) CloseToDiff(
 }
 
 type localDiff struct {
-	cacheKey DiffStoreKey
-	cache    *block.Cache
+	cacheKey      DiffStoreKey
+	cache         *block.Cache
+	ownerMu       sync.Mutex
+	storeOwned    bool
+	ownerClosed   bool
+	ownerCloseErr error
 }
 
 var _ Diff = (*localDiff)(nil)
@@ -111,7 +117,12 @@ func (b *localDiff) CachePath() (string, error) {
 }
 
 func (b *localDiff) Close() error {
-	return b.cache.Close()
+	b.ownerMu.Lock()
+	defer b.ownerMu.Unlock()
+	if b.storeOwned {
+		return nil
+	}
+	return b.closeOwnedLocked()
 }
 
 func (b *localDiff) ReadAt(_ context.Context, p []byte, off int64) (int, error) {
@@ -140,4 +151,9 @@ func (b *localDiff) Init(context.Context) error {
 
 func (b *localDiff) BlockSize() int64 {
 	return b.cache.BlockSize()
+}
+
+// ProcessMemorySHA256 describes the immutable process-memory capture at creation.
+func (b *localDiff) ProcessMemorySHA256() ([sha256.Size]byte, bool) {
+	return b.cache.ProcessMemorySHA256()
 }

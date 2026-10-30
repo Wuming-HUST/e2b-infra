@@ -87,6 +87,7 @@ func (b *StorageDiff) CacheKey() DiffStoreKey {
 func (b *StorageDiff) Init(ctx context.Context) error {
 	obj, err := b.persistence.OpenSeekable(ctx, b.storagePath, b.storageObjectType)
 	if err != nil {
+		b.chunker.SetError(err)
 		return err
 	}
 

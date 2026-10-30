@@ -101,7 +101,21 @@ type Prefetch struct {
 	Memory *MemoryPrefetchMapping `json:"memory"`
 }
 
+// Checkpoint binds the frozen state and immutable payloads. LogicalRAMSHA256
+// is populated only for full_logical capture; a delta digest is not a RAM hash.
+type Checkpoint struct {
+	FormatVersion      int    `json:"format_version"`
+	RAMExportMode      string `json:"ram_export_mode"`
+	LogicalRAMSize     uint64 `json:"logical_ram_size"`
+	LogicalRAMSHA256   string `json:"logical_ram_sha256,omitempty"`
+	RAMHeaderSHA256    string `json:"ram_header_sha256"`
+	RootfsHeaderSHA256 string `json:"rootfs_header_sha256"`
+	RootfsDiffSHA256   string `json:"rootfs_diff_sha256"`
+	FCStateSHA256      string `json:"fc_state_sha256"`
+}
+
 type Template struct {
+	Checkpoint   *Checkpoint      `json:"checkpoint,omitempty"`
 	Version      uint64           `json:"version"`
 	Template     TemplateMetadata `json:"template"`
 	Context      Context          `json:"context"`
@@ -143,6 +157,7 @@ func (t Template) NewVersionTemplate(metadata TemplateMetadata) Template {
 
 func (t Template) SameVersionTemplate(metadata TemplateMetadata) Template {
 	return Template{
+		Checkpoint:   t.Checkpoint,
 		Version:      t.Version,
 		Template:     metadata,
 		Context:      t.Context,
@@ -155,6 +170,7 @@ func (t Template) SameVersionTemplate(metadata TemplateMetadata) Template {
 // WithPrefetch returns a copy of the template with the given prefetch mapping.
 func (t Template) WithPrefetch(prefetch *Prefetch) Template {
 	return Template{
+		Checkpoint:   t.Checkpoint,
 		Version:      t.Version,
 		Template:     t.Template,
 		Context:      t.Context,

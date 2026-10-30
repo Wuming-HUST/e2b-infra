@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/cgroup"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/memorybacking"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/network"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/rootfs"
@@ -154,9 +156,10 @@ type Sandbox struct {
 	// every time a new Firecracker VM is started.
 	LifecycleID string
 
-	config  cfg.BuilderConfig
-	files   *storage.SandboxFiles
-	cleanup *Cleanup
+	config   cfg.BuilderConfig
+	files    *storage.SandboxFiles
+	cleanup  *Cleanup
+	onClosed func(error)
 
 	process      *fc.Process
 	cgroupHandle *cgroup.CgroupHandle
@@ -201,6 +204,8 @@ func (m *Metadata) SetStartedAt(t time.Time) {
 }
 
 type Factory struct {
+	lifecycle         factoryLifecycle
+	memoryBackings    *memorybacking.Registry
 	config            cfg.BuilderConfig
 	networkPool       *network.Pool
 	devicePool        *nbd.DevicePool
@@ -217,7 +222,7 @@ func NewFactory(
 	hostStatsDelivery hoststats.Delivery,
 	cgroupManager cgroup.Manager,
 ) *Factory {
-	return &Factory{
+	f := &Factory{
 		config:            config,
 		networkPool:       networkPool,
 		devicePool:        devicePool,
@@ -225,6 +230,20 @@ func NewFactory(
 		hostStatsDelivery: hostStatsDelivery,
 		cgroupManager:     cgroupManager,
 	}
+	f.memoryBackings = memorybacking.NewRegistry(nil, newSharedNBDFactory(devicePool, featureFlags))
+	return f
+}
+
+// BeginShutdown rejects new startup and cancels pending startup before RPC drain.
+func (f *Factory) BeginShutdown() { f.lifecycle.beginShutdown() }
+
+// DrainMemoryBackings waits for startup cleanup, closes every tracked sandbox
+// (FC exit precedes lease release), then drains shared RAM before pool teardown.
+// Cancellation, including ForceStop, cannot skip this safety ordering.
+func (f *Factory) DrainMemoryBackings(ctx context.Context) error {
+	ctx = context.WithoutCancel(ctx)
+	sandboxErr := f.lifecycle.drain(ctx)
+	return errors.Join(sandboxErr, f.memoryBackings.Drain(ctx))
 }
 
 // checkHugePagesMatch verifies that the API-requested page size
@@ -252,18 +271,40 @@ func (f *Factory) CreateSandbox(
 	processOptions fc.ProcessOptions,
 	apiConfigToStore *orchestrator.SandboxConfig,
 ) (s *Sandbox, e error) {
+	startupCtx, startup, startupErr := f.lifecycle.begin(ctx)
+	if startupErr != nil {
+		return nil, startupErr
+	}
+	ctx = startupCtx
+	var startupCleanupErr error
+	defer func() {
+		if e == nil && s != nil {
+			startup.finish(s.Close, func(remove func(error)) { s.onClosed = remove })
+		} else {
+			startup.finish(nil, nil, startupCleanupErr)
+		}
+	}()
 	ctx, span := tracer.Start(ctx, "create sandbox")
 	defer span.End()
 	defer handleSpanError(span, &e)
 
 	execCtx, execSpan := startExecutionSpan(ctx)
+	execCtx, cancelExec := context.WithCancel(execCtx)
 
 	exit := utils.NewErrorOnce()
 
 	cleanup := NewCleanup()
+	cleanup.AddPriority(ctx, func(context.Context) error { cancelExec(); return nil })
+	var startupPending []<-chan struct{}
 	defer func() {
 		if e != nil {
+			startup.cancel(e)
+			cancelExec()
+			for _, done := range startupPending {
+				<-done
+			}
 			cleanupErr := cleanup.Run(ctx)
+			startupCleanupErr = cleanupErr
 			e = errors.Join(e, cleanupErr)
 			handleSpanError(execSpan, &e)
 			execSpan.End()
@@ -271,6 +312,7 @@ func (f *Factory) CreateSandbox(
 	}()
 
 	ipsPromise := getNetworkSlot(ctx, f.networkPool, cleanup, config.Network)
+	startupPending = append(startupPending, ipsPromise.Done())
 
 	sandboxFiles := template.Files().NewSandboxFiles(runtime.SandboxID)
 	cleanup.Add(ctx, cleanupFiles(f.config, sandboxFiles))
@@ -354,6 +396,14 @@ func (f *Factory) CreateSandbox(
 	}
 
 	telemetry.ReportEvent(ctx, "created fc client")
+	cleanup.AddPriority(ctx, func(cleanCtx context.Context) error {
+		if _, err := fcHandle.Pid(); err != nil {
+			return nil
+		}
+		err := fcHandle.Stop(cleanCtx)
+		<-fcHandle.Exit.Done()
+		return err
+	})
 
 	err = fcHandle.Create(
 		ctx,
@@ -459,6 +509,22 @@ func (f *Factory) ResumeSandbox(
 	endAt time.Time,
 	apiConfigToStore *orchestrator.SandboxConfig,
 ) (s *Sandbox, e error) {
+	startupCtx, startup, startupErr := f.lifecycle.begin(ctx)
+	if startupErr != nil {
+		return nil, startupErr
+	}
+	ctx = startupCtx
+	var startupCleanupErr error
+	defer func() {
+		if e == nil && s != nil {
+			startup.finish(s.Close, func(remove func(error)) { s.onClosed = remove })
+		} else {
+			startup.finish(nil, nil, startupCleanupErr)
+		}
+	}()
+	if err := template.ValidateCheckpoint(ctx, t); err != nil {
+		return nil, fmt.Errorf("validate restore checkpoint: %w", err)
+	}
 	ctx, span := tracer.Start(ctx, "resume sandbox")
 	defer span.End()
 	defer handleSpanError(span, &e)
@@ -471,13 +537,22 @@ func (f *Factory) ResumeSandbox(
 	}()
 
 	execCtx, execSpan := startExecutionSpan(ctx)
+	execCtx, cancelExec := context.WithCancel(execCtx)
 
 	exit := utils.NewErrorOnce()
 
 	cleanup := NewCleanup()
+	cleanup.AddPriority(ctx, func(context.Context) error { cancelExec(); return nil })
+	var startupPending []<-chan struct{}
 	defer func() {
 		if e != nil {
+			startup.cancel(e)
+			cancelExec()
+			for _, done := range startupPending {
+				<-done
+			}
 			cleanupErr := cleanup.Run(ctx)
+			startupCleanupErr = cleanupErr
 			e = errors.Join(e, cleanupErr)
 			handleSpanError(execSpan, &e)
 			execSpan.End()
@@ -509,6 +584,41 @@ func (f *Factory) ResumeSandbox(
 		return nil, fmt.Errorf("failed to get resume memfile size: %w", err)
 	}
 
+	// Shared NBD is an explicit restore mode: acquisition failures must fail
+	// restore, never silently fall back to an unrelated backing path.
+	var memoryLease *memorybacking.Lease
+	if f.config.SharedNBDMemoryEnabled {
+		if config.HugePages || resumeMemfile.BlockSize() != 4096 || os.Getpagesize() != 4096 {
+			return nil, fmt.Errorf("shared NBD RAM requires 4 KiB host and snapshot pages without hugetlb")
+		}
+		if _, ok := resumeMemfile.(template.MemoryViewProvider); !ok {
+			return nil, fmt.Errorf("shared NBD RAM source does not support owned memory views")
+		}
+		id, err := template.MemoryBackingIdentity(ctx, t)
+		if err != nil {
+			return nil, fmt.Errorf("identify memory backing: %w", err)
+		}
+		memoryLease, err = f.memoryBackings.AcquireWithSource(ctx, id,
+			func(sourceCtx context.Context, requested memorybacking.SnapshotIdentity) (memorybacking.SnapshotSource, error) {
+				view, err := template.AcquireMemoryView(sourceCtx, resumeMemfile)
+				if err != nil {
+					return nil, err
+				}
+				source, err := memorybacking.NewLocalSource(sourceCtx, requested, view,
+					memorybacking.SourceOptions{MaxReadBytes: 32 << 20, Close: view.Close})
+				if err != nil {
+					return nil, errors.Join(err, view.Close())
+				}
+				return source, nil
+			})
+		if err != nil {
+			return nil, fmt.Errorf("acquire shared NBD RAM: %w", err)
+		}
+		cleanup.Add(ctx, memoryLease.Release)
+		fileMemoryBackendPath, useFileMemoryBackend = memoryLease.Path(), true
+		telemetry.ReportEvent(ctx, "selected shared readonly NBD memory backend")
+	}
+
 	// Uffd initialization
 	fcUffdPath := sandboxFiles.SandboxUffdSocketPath()
 	uffdPromise := utils.NewPromise(func() (*uffd.Uffd, error) {
@@ -521,6 +631,7 @@ func (f *Factory) ResumeSandbox(
 
 		return uffd.New(memfile, fcUffdPath), nil
 	})
+	startupPending = append(startupPending, uffdPromise.Done())
 
 	// Prefetching
 	go func() {
@@ -569,6 +680,7 @@ func (f *Factory) ResumeSandbox(
 
 	// Slot initialization
 	ipsPromise := getNetworkSlot(ctx, f.networkPool, cleanup, config.Network)
+	startupPending = append(startupPending, ipsPromise.Done())
 
 	// Rootfs initialization
 	overlayPromise := utils.NewPromise(func() (rootfs.Provider, error) {
@@ -603,6 +715,7 @@ func (f *Factory) ResumeSandbox(
 
 		return overlay, nil
 	})
+	startupPending = append(startupPending, overlayPromise.Done())
 
 	// Memory initialization
 	memoryPromise := utils.NewPromise(func() (struct{}, error) {
@@ -629,6 +742,7 @@ func (f *Factory) ResumeSandbox(
 
 		return struct{}{}, nil
 	})
+	startupPending = append(startupPending, memoryPromise.Done())
 
 	t2 := time.Now()
 	// Wait for all resources to be initialized
@@ -689,6 +803,14 @@ func (f *Factory) ResumeSandbox(
 	if fcErr != nil {
 		return nil, fmt.Errorf("failed to create FC: %w", fcErr)
 	}
+	cleanup.AddPriority(ctx, func(cleanCtx context.Context) error {
+		if _, err := fcHandle.Pid(); err != nil {
+			return nil // configure failed before starting a process
+		}
+		err := fcHandle.Stop(cleanCtx)
+		<-fcHandle.Exit.Done()
+		return err
+	})
 	zap.L().Sugar().Infof("[ResumeSandbox] fc.NewProcess cost: %.3f ms, traceID=%s", time.Since(t4).Seconds()*1000, traceID)
 	phaseStart := time.Now()
 	telemetry.ReportEvent(ctx, "created FC process")
@@ -707,6 +829,26 @@ func (f *Factory) ResumeSandbox(
 	if useFileMemoryBackend {
 		sandboxMemory = uffd.NewNoopMemory(resumeMemfileSize, resumeMemfile.BlockSize())
 		snapshotMemoryBackend = fc.NewFileSnapshotMemoryBackend(fileMemoryBackendPath)
+		if memoryLease != nil {
+			leased := newLeasedMemory(sandboxMemory, memoryLease)
+			sandboxMemory = leased
+			if err := leased.Start(execCtx, ""); err != nil {
+				return nil, err
+			}
+			cleanup.AddNoContext(ctx, leased.Stop)
+			// Cancellation only affects this FC startup. The registry services
+			// all other leases independently.
+			startCtx, cancelStart := context.WithCancelCause(ctx)
+			defer cancelStart(nil)
+			memoryStartCtx = startCtx
+			go func() {
+				select {
+				case <-memoryLease.Done():
+					cancelStart(memoryLease.Err())
+				case <-startCtx.Done():
+				}
+			}()
+		}
 	} else {
 		fcUffd, uffdErr := uffdPromise.Wait(ctx)
 		if uffdErr != nil {
@@ -862,6 +1004,9 @@ func (s *Sandbox) Wait(ctx context.Context) error {
 
 func (s *Sandbox) Close(ctx context.Context) error {
 	err := s.cleanup.Run(ctx)
+	if s.onClosed != nil {
+		s.onClosed(err)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to cleanup sandbox: %w", err)
 	}
@@ -963,9 +1108,9 @@ func (s *Sandbox) Shutdown(ctx context.Context) error {
 //  2. We call FC snapshot endpoint without specifying memfile path. With our custom FC,
 //     this only creates the snapfile and drains and flushes the disk.
 //  3. We call custom FC endpoint that returns memory addresses of the sandbox memory, that we will process after.
-//  4. In case of NoopMemory (the sandbox was not a resume) we also call the custom FC endpoint,
-//     that returns info about resident memory pages and about empty memory pages.
-//  5. Base on the info from the custom FC endpoint or from Uffd we copy the pages directly from the FC process to a local cache.
+//  4. File-backed and cold-boot RAM use full_logical export: every logical block
+//     is copied, including nonresident backing and swapped private pages.
+//  5. The selected metadata supplies the logical blocks to the bounded exporter.
 //  6. We then can either close the sandbox or resume it.
 func (s *Sandbox) Pause(
 	ctx context.Context,
@@ -975,9 +1120,13 @@ func (s *Sandbox) Pause(
 	defer span.End()
 
 	cleanup := NewCleanup()
+	paused := false
 	defer func() {
 		// Cleanup the snapshot if an error occurs
 		if e != nil {
+			if paused {
+				e = errors.Join(e, s.Close(context.WithoutCancel(ctx)))
+			}
 			err := cleanup.Run(ctx)
 			e = errors.Join(e, err)
 		}
@@ -986,6 +1135,11 @@ func (s *Sandbox) Pause(
 	snapshotTemplateFiles, err := storage.TemplateFiles{BuildID: m.Template.BuildID}.CacheFiles(s.config.StorageConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get template files: %w", err)
+	}
+	// Links delete their paths on cleanup. Reject an existing destination
+	// before registering them so a failed snapshot never removes prior data.
+	if err := rejectExistingSnapshotPaths(snapshotTemplateFiles.CacheSnapfilePath(), snapshotTemplateFiles.CacheMetadataPath()); err != nil {
+		return nil, err
 	}
 	cleanup.AddNoContext(ctx, snapshotTemplateFiles.Close)
 
@@ -1000,6 +1154,7 @@ func (s *Sandbox) Pause(
 	if err := s.process.Pause(ctx); err != nil {
 		return nil, fmt.Errorf("failed to pause VM: %w", err)
 	}
+	paused = true
 
 	// Snapfile is not closed as it's returned and cached for later use (like resume)
 	snapfile := template.NewLocalFileLink(snapshotTemplateFiles.CacheSnapfilePath())
@@ -1058,12 +1213,7 @@ func (s *Sandbox) Pause(
 	metadataFileLink := template.NewLocalFileLink(snapshotTemplateFiles.CacheMetadataPath())
 	cleanup.AddNoContext(ctx, metadataFileLink.Close)
 
-	err = m.ToFile(metadataFileLink.Path())
-	if err != nil {
-		return nil, err
-	}
-
-	return &Snapshot{
+	result := &Snapshot{
 		Snapfile:          snapfile,
 		Metafile:          metadataFileLink,
 		MemfileDiff:       memfileDiff,
@@ -1072,7 +1222,11 @@ func (s *Sandbox) Pause(
 		RootfsDiffHeader:  rootfsDiffHeader,
 
 		cleanup: cleanup,
-	}, nil
+	}
+	if err := sealSnapshotMetadata(ctx, result, m); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // MemoryPrefetchData returns the ordered page fault data for prefetch mapping.
@@ -1102,6 +1256,9 @@ func pauseProcessMemory(
 	}
 
 	memfileDiffPath := build.GenerateDiffCachePath(cacheDir, buildID.String(), build.Memfile)
+	if err := rejectExistingSnapshotPaths(memfileDiffPath); err != nil {
+		return nil, nil, err
+	}
 
 	cache, err := fc.ExportMemory(
 		ctx,

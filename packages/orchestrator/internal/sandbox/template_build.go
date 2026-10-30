@@ -154,6 +154,7 @@ func uploadFileAsBlob(ctx context.Context, b storage.Blob, path string) error {
 }
 
 func (t *TemplateBuild) Upload(ctx context.Context, metadataPath string, fcSnapfilePath string, memfilePath *string, rootfsPath *string) chan error {
+	publishCtx := ctx
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
@@ -216,14 +217,17 @@ func (t *TemplateBuild) Upload(ctx context.Context, metadataPath string, fcSnapf
 		return nil
 	})
 
-	eg.Go(func() error {
-		return t.uploadMetadata(ctx, metadataPath)
-	})
-
 	done := make(chan error)
 
 	go func() {
-		done <- eg.Wait()
+		// Metadata is the commit marker. Failed payload uploads must not publish
+		// a completed checkpoint. errgroup cancels its context on Wait success,
+		// so publication uses the original caller context.
+		if err := eg.Wait(); err != nil {
+			done <- err
+			return
+		}
+		done <- t.uploadMetadata(publishCtx, metadataPath)
 	}()
 
 	return done

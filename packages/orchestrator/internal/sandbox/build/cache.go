@@ -28,6 +28,9 @@ type deleteDiff struct {
 }
 
 type DiffStore struct {
+	// Serialize publication with acquisition. Entries are initialized before they
+	// become visible; a pin is taken before an eviction can retire the entry.
+	mu        sync.Mutex
 	cachePath string
 	cache     *ttlcache.Cache[DiffStoreKey, Diff]
 	cancel    func()
@@ -96,34 +99,41 @@ func (s *DiffStore) Start(ctx context.Context) {
 func (s *DiffStore) Close() {
 	s.cancel()
 	s.cache.Stop()
+	s.RemoveCache()
 }
 
 func (s *DiffStore) Get(ctx context.Context, diff Diff) (Diff, error) {
-	s.resetDelete(diff.CacheKey())
-	source, found := s.cache.GetOrSet(
-		diff.CacheKey(),
-		diff,
-		ttlcache.WithTTL[DiffStoreKey, Diff](ttlcache.DefaultTTL),
-	)
-
-	value := source.Value()
-	if value == nil {
-		return nil, fmt.Errorf("failed to get source from cache: %s", diff.CacheKey())
+	pin, err := s.Pin(ctx, diff)
+	if err != nil {
+		return nil, err
 	}
-
-	if !found {
-		err := diff.Init(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to init source: %w", err)
-		}
-	}
-
-	return value, nil
+	entry := pin.entry
+	_ = pin.Close()
+	return entry, nil
 }
 
-func (s *DiffStore) Add(d Diff) {
+// Add transfers ownership of d to the store. For a local snapshot Diff, the
+// original snapshot handle can subsequently be closed without closing the
+// store's mapping. Replacing or expiring an entry retires its cache reference;
+// outstanding pins keep its data alive.
+func (s *DiffStore) Add(d Diff) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.resetDelete(d.CacheKey())
-	s.cache.Set(d.CacheKey(), d, ttlcache.DefaultTTL)
+	if item := s.cache.Get(d.CacheKey()); item != nil {
+		if entry, ok := item.Value().(*cachedDiff); ok && entry.original == d {
+			return nil
+		}
+	}
+	owned, err := ownDiff(d)
+	if err != nil {
+		return fmt.Errorf("failed to take ownership of local diff: %w", err)
+	}
+	// Get hides expired entries without deleting them. Set would otherwise
+	// overwrite that entry in place and lose its owner without an eviction.
+	s.cache.Delete(d.CacheKey())
+	s.cache.Set(d.CacheKey(), newCachedDiff(d, owned), ttlcache.DefaultTTL)
+	return nil
 }
 
 func (s *DiffStore) Has(d Diff) bool {
@@ -306,5 +316,7 @@ func diskUsage(path string) (uint64, uint64, error) {
 }
 
 func (s *DiffStore) RemoveCache() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.cache.DeleteAll()
 }
