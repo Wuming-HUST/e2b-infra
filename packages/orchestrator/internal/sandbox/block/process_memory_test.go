@@ -143,3 +143,39 @@ func TestProcessMemoryRejectsInvalidRangesBeforeCreatingArtifact(t *testing.T) {
 		require.ErrorIs(t, err, os.ErrNotExist)
 	}
 }
+
+func TestProcessMemoryEmptyCandidateCaptureHasDigestWithoutReadingPID(t *testing.T) {
+	cache, err := NewCacheFromProcessMemory(t.Context(), 4096, t.TempDir()+"/empty", -1, nil)
+	require.NoError(t, err)
+	defer cache.Close()
+	digest, ok := cache.ProcessMemorySHA256()
+	require.True(t, ok)
+	require.Equal(t, sha256.Sum256(nil), digest)
+	require.Empty(t, cache.dirtySortedKeys())
+	info, err := os.Stat(cache.Path())
+	require.NoError(t, err)
+	require.Zero(t, info.Size())
+}
+
+func TestProcessMemoryInterruptedReadRetriesWithoutLosingBytes(t *testing.T) {
+	cache, err := NewCache(4096, 4096, t.TempDir()+"/cache", false)
+	require.NoError(t, err)
+	defer cache.Close()
+	calls := 0
+	want := bytes.Repeat([]byte{0x5a}, 4096)
+	err = cache.copyProcessMemoryWithReader(t.Context(), 1, []Range{{Start: 0x10000, Size: 4096}},
+		func(_ int, local []unix.Iovec, remote []unix.RemoteIovec, _ uint) (int, error) {
+			calls++
+			if calls == 1 {
+				return 0, unix.EINTR
+			}
+			require.Equal(t, uintptr(0x10000), remote[0].Base)
+			copy(unsafe.Slice(local[0].Base, len(want)), want)
+			return len(want), nil
+		})
+	require.NoError(t, err)
+	require.Equal(t, 2, calls)
+	digest, ok := cache.ProcessMemorySHA256()
+	require.True(t, ok)
+	require.Equal(t, sha256.Sum256(want), digest)
+}

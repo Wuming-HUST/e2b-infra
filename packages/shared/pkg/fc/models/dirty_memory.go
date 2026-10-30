@@ -19,6 +19,15 @@ type DirtyMemory struct {
 	// Bitmap for dirty pages. Each bit represents whether a page has been written since write-protection was enabled.
 	// Required: true
 	Bitmap []uint64 `json:"bitmap"`
+
+	// Optional versioned contract. Missing fields from older FCs fail closed
+	// in the tracked File backend; legacy UFFD consumers still use Bitmap.
+	TrackingVersion  uint32 `json:"tracking_version,omitempty"`
+	TrackingMode     string `json:"tracking_mode,omitempty"`
+	TrackingComplete bool   `json:"tracking_complete,omitempty"`
+	CaptureReady     bool   `json:"capture_ready,omitempty"`
+	LogicalSize      uint64 `json:"logical_size,omitempty"`
+	PageSize         uint64 `json:"page_size,omitempty"`
 }
 
 // Validate validates this dirty memory

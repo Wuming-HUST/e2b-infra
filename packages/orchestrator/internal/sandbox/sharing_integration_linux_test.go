@@ -134,6 +134,8 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 			t.Errorf("NBD cleanup: %v", err)
 		}
 	})
+	exportMode := os.Getenv("E2B_SHARING_RAM_EXPORT_MODE")
+	require.NoError(t, (cfg.BuilderConfig{RAMExportMode: exportMode}).ValidateRAMExportMode())
 	configFor := func(mode string) cfg.Config {
 		base := filepath.Join(runDir, mode)
 		config := cfg.Config{BuilderConfig: cfg.BuilderConfig{
@@ -142,7 +144,7 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 			OrchestratorBaseDir: base, DefaultCacheDir: filepath.Join(base, "build-cache"),
 			TemplatesDir: filepath.Join(base, "templates"), EnvdTimeout: 30 * time.Second,
 			FileMemoryBackendEnabled: true, FileMemoryBackendDir: filepath.Join(base, "file-memory"),
-			SharedNBDMemoryEnabled: mode == "B1", NetworkConfig: netConfig,
+			SharedNBDMemoryEnabled: mode == "B1", RAMExportMode: exportMode, NetworkConfig: netConfig,
 			StorageConfig: storage.Config{SandboxCacheDir: filepath.Join(base, "rootfs-cow"),
 				SnapshotCacheDir: filepath.Join(base, "snapshot-cache"), TemplateCacheDir: filepath.Join(base, "template-cache")},
 		}}
@@ -218,6 +220,21 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 		// External checkpoint freezes every device writer. The native full dump
 		// and production Pause export below observe this same frozen RAM state.
 		require.NoError(t, sbx.process.CreateSnapshot(ctx, prefix+"-freeze.snap"))
+		tracked := false
+		var candidateHash string
+		var candidateSize int64
+		var candidatePages uint
+		if backend, ok := sbx.Resources.memory.(interface{ RAMExportMode() string }); ok && backend.RAMExportMode() == "tracked_delta" {
+			tracked = true
+			// Select and capture BEFORE the full oracle faults in cold RAM.
+			candidates, err := sbx.Resources.memory.DiffMetadata(ctx, sbx.process)
+			require.NoError(t, err)
+			candidatePages = candidates.Dirty.Count()
+			capture, err := sbx.process.ExportMemory(ctx, candidates.Dirty, prefix+"-candidates.ram", 4096)
+			require.NoError(t, err)
+			candidateHash, candidateSize = sharingHashFile(t, prefix+"-candidates.ram")
+			require.NoError(t, capture.Close())
+		}
 		require.NoError(t, sharingFCRequest(ctx, sbx, "/snapshot/create", map[string]any{
 			"snapshot_type": "Full", "snapshot_path": prefix + "-native.snap", "mem_file_path": prefix + "-native.ram"}))
 		buildID := uuid.NewString()
@@ -230,11 +247,39 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 		require.NoError(t, err)
 		nativeHash, nativeSize := sharingHashFile(t, prefix+"-native.ram")
 		exportedHash, exportedSize := sharingHashFile(t, memPath)
-		require.Equal(t, nativeSize, exportedSize)
-		require.Equal(t, nativeHash, exportedHash, "native and production full_logical export differ")
+		if tracked {
+			require.Equal(t, "tracked_delta", snapshot.RAMExportMode)
+			require.Equal(t, int64(candidatePages)*4096, exportedSize)
+			require.Equal(t, candidateSize, exportedSize)
+			require.Equal(t, candidateHash, exportedHash, "production candidates changed after the full oracle read")
+		} else {
+			require.Equal(t, nativeSize, exportedSize)
+			require.Equal(t, nativeHash, exportedHash, "native and production full_logical export differ")
+		}
 		require.NoError(t, snapshot.Upload(ctx, persistence, storage.TemplateFiles{BuildID: buildID}))
+		if tracked {
+			// Resolve through the production layered source: this reads both the
+			// new packed payload and every inherited historical BuildID as needed.
+			resolved, err := b1Cache.GetTemplate(ctx, buildID, false, false)
+			require.NoError(t, err)
+			require.NoError(t, template.ValidateCheckpoint(ctx, resolved))
+			logical, err := resolved.Memfile(ctx)
+			require.NoError(t, err)
+			digest := sha256.New()
+			buffer := make([]byte, 1<<20)
+			for off := int64(0); off < nativeSize; off += int64(len(buffer)) {
+				chunk := buffer[:min(int64(len(buffer)), nativeSize-off)]
+				n, err := logical.ReadAt(ctx, chunk, off)
+				require.NoError(t, err)
+				require.Equal(t, len(chunk), n)
+				_, _ = digest.Write(chunk)
+			}
+			require.Equal(t, nativeHash, hex.EncodeToString(digest.Sum(nil)), "parent + production delta differs from complete frozen RAM")
+			require.Less(t, exportedSize, nativeSize, "test workload must demonstrate a real partial capture")
+		}
 		sharingReceipt(t, prefix+"-checkpoint.json", map[string]any{"build_id": buildID,
-			"ram_sha256": exportedHash, "ram_size": exportedSize, "native_same_frozen_state": true})
+			"payload_sha256": exportedHash, "payload_size": exportedSize, "ram_sha256": nativeHash, "ram_size": nativeSize,
+			"candidate_pages": candidatePages, "tracked_delta": tracked, "native_same_frozen_state": true})
 		return buildID
 	}
 	aID := pauseUpload("A", cold)
@@ -313,7 +358,7 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 		sharingCheckFiles(t, ctx, third, fixture.Checkpoints["after_edits"].ExpectedFiles)
 		require.NoError(t, third.Close(ctx))
 		sharingReceipt(t, filepath.Join(runDir, mode+"-result.json"), map[string]any{
-			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true,
+			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true, "requested_ram_export_mode": exportMode,
 			"trace_derived_source_edit_fixture": true, "complete_original_trace": false})
 	}
 	sharingReceipt(t, filepath.Join(runDir, "result.json"), map[string]any{

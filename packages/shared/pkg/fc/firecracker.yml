@@ -1107,6 +1107,27 @@ definitions:
     required:
       - bitmap
     properties:
+      tracking_version:
+        type: integer
+        format: uint32
+        description: Version 1 tracks cumulative KVM and VMM changes since restore.
+      tracking_mode:
+        type: string
+        description: Dirty selection policy. File deltas require bitmap.
+      tracking_complete:
+        type: boolean
+        description: Logging and software bitmaps are enabled on every RAM region.
+      capture_ready:
+        type: boolean
+        description: A successful state-only save has frozen CPU and device writers.
+      logical_size:
+        type: integer
+        format: uint64
+        description: Total logical RAM bytes, excluding GPA holes.
+      page_size:
+        type: integer
+        format: uint64
+        description: Bitmap granularity in bytes.
       bitmap:
         type: array
         description: Bitmap for dirty pages. Each bit represents whether a page has been written since write-protection was enabled.

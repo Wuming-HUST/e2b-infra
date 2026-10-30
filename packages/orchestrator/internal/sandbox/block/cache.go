@@ -452,6 +452,8 @@ func NewCacheFromProcessMemory(
 	}
 
 	if size == 0 {
+		digest := sha256.Sum256(nil)
+		cache.processMemoryDigest = &digest
 		return cache, nil
 	}
 

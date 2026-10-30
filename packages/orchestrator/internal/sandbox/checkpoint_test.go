@@ -251,6 +251,65 @@ func TestCheckpointSealFullLogicalUsesRealCaptureDigestAndEmptyRootfs(t *testing
 	}
 }
 
+func TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash(t *testing.T) {
+	for _, empty := range []bool{false, true} {
+		t.Run(map[bool]string{false: "nonempty", true: "empty"}[empty], func(t *testing.T) {
+			s, data := newCheckpointSnapshot(t)
+			s.RAMExportMode = "tracked_delta"
+			if empty {
+				data = nil
+				s.MemfileDiffHeader.Mapping[0].BuildId = uuid.New()
+				path, _ := s.MemfileDiff.CachePath()
+				if err := os.WriteFile(path, nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			path, _ := s.MemfileDiff.CachePath()
+			s.MemfileDiff = checkpointDigestDiff{checkpointPathDiff: checkpointPathDiff{path: path}, digest: sha256.Sum256(data), valid: true}
+			if err := sealSnapshotMetadata(t.Context(), s, metadata.Template{Version: metadata.CurrentVersion}); err != nil {
+				t.Fatal(err)
+			}
+			m, err := metadata.FromFile(s.Metafile.Path())
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := m.Checkpoint
+			want := sha256.Sum256(data)
+			if c.FormatVersion != 2 || c.RAMExportMode != "tracked_delta" || c.RAMTrackingVersion != 1 ||
+				c.LogicalRAMSHA256 != "" || c.RAMPayloadSHA256 != hex.EncodeToString(want[:]) || c.RAMPayloadSize != uint64(len(data)) {
+				t.Fatalf("invalid tracked manifest: %+v", c)
+			}
+		})
+	}
+}
+
+func TestCheckpointSealTrackedRejectsIncompletePayloadBeforePublish(t *testing.T) {
+	for _, change := range []string{"missing_digest", "wrong_digest_state", "wrong_length"} {
+		t.Run(change, func(t *testing.T) {
+			s, data := newCheckpointSnapshot(t)
+			s.RAMExportMode = "tracked_delta"
+			path, _ := s.MemfileDiff.CachePath()
+			s.MemfileDiff = checkpointDigestDiff{checkpointPathDiff: checkpointPathDiff{path: path}, digest: sha256.Sum256(data), valid: true}
+			switch change {
+			case "missing_digest":
+				s.MemfileDiff = checkpointPathDiff{path: path}
+			case "wrong_digest_state":
+				s.MemfileDiff = checkpointDigestDiff{checkpointPathDiff: checkpointPathDiff{path: path}}
+			case "wrong_length":
+				if err := os.Truncate(path, 0); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := sealSnapshotMetadata(t.Context(), s, metadata.Template{Version: metadata.CurrentVersion}); err == nil {
+				t.Fatal("published incomplete tracked payload")
+			}
+			if _, err := os.Stat(s.Metafile.Path()); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("metadata became visible: %v", err)
+			}
+		})
+	}
+}
+
 func TestCheckpointSealFullLogicalRequiresCapturedDigest(t *testing.T) {
 	for _, validMethod := range []bool{false, true} {
 		t.Run(map[bool]string{false: "no-capture-method", true: "capture-not-valid"}[validMethod], func(t *testing.T) {

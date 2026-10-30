@@ -122,6 +122,10 @@ def frozen(vm, run, name, disk, sender):
     vm.api('PATCH', '/vm', {'state': 'Paused'})
     vm.snapshot(state)
     regions = vm.mappings()
+    delta = None
+    if vm.track_dirty:
+        from tracked_delta_check import capture_checkpoint
+        delta = capture_checkpoint(vm, regions, run / f'{name}.tracked.ram')
     samples = []
     ram = None
     for index in range(3):
@@ -131,6 +135,8 @@ def frozen(vm, run, name, disk, sender):
         time.sleep(0.15)
     if len({s['ram_sha256'] for s in samples}) != 1 or len({s['disk_sha256'] for s in samples}) != 1:
         raise AssertionError(f'RAM/disk mutated after external checkpoint freeze: {samples}')
+    if delta and delta['sha256'] != samples[0]['ram_sha256']:
+        raise AssertionError('device-write candidate reconstruction differs from frozen full RAM')
     if sender.count <= before_packets + 10:
         raise AssertionError('network injector did not remain active during freeze')
     native = not os.environ.get('M11_DIAGNOSTIC_SKIP_NATIVE')
@@ -143,7 +149,7 @@ def frozen(vm, run, name, disk, sender):
     shutil.copyfile(disk, disk_copy)
     if k.sha256_file(disk_copy) != disk_receipt['sha256']:
         raise AssertionError('frozen block image copy mismatch')
-    receipt = {'samples': samples, 'injected_during_freeze': sender.count - before_packets, 'disk_oracle': disk_receipt,
+    receipt = {'samples': samples, 'tracked_delta': delta, 'injected_during_freeze': sender.count - before_packets, 'disk_oracle': disk_receipt,
                'state_sha256': k.sha256_file(state), 'external_equals_native': True if native else None, 'ram': str(ram), 'state': str(state), 'disk': str(disk_copy)}
     k.save_json(run / f'{name}-freeze.json', receipt)
     return state, ram, disk_copy
@@ -154,6 +160,7 @@ def main():
     for name in ('firecracker','kernel','guest-binary','nbd-helper','module-dir','output'):
         p.add_argument('--'+name, required=True, type=Path)
     p.add_argument('--cleanup-failed', action='store_true')
+    p.add_argument('--tracked-delta', action='store_true', help='add candidate-only capture versus full RAM, including async block and TAP RX writes')
     args = p.parse_args()
     for name in ('firecracker','kernel','guest_binary','nbd_helper'):
         setattr(args, name, getattr(args,name).resolve(strict=True))

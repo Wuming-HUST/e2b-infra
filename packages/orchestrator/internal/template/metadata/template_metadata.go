@@ -108,6 +108,9 @@ type Checkpoint struct {
 	RAMExportMode      string `json:"ram_export_mode"`
 	LogicalRAMSize     uint64 `json:"logical_ram_size"`
 	LogicalRAMSHA256   string `json:"logical_ram_sha256,omitempty"`
+	RAMPayloadSHA256   string `json:"ram_payload_sha256,omitempty"`
+	RAMPayloadSize     uint64 `json:"ram_payload_size,omitempty"`
+	RAMTrackingVersion uint32 `json:"ram_tracking_version,omitempty"`
 	RAMHeaderSHA256    string `json:"ram_header_sha256"`
 	RootfsHeaderSHA256 string `json:"rootfs_header_sha256"`
 	RootfsDiffSHA256   string `json:"rootfs_diff_sha256"`

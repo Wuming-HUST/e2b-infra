@@ -118,6 +118,10 @@ func (sb *StartScriptBuilder) firecrackerCommand(args startScriptArgs, rootfsPat
 		args.FirecrackerSocket,
 	)
 
+	if sb.builderConfig.RAMExportMode == "tracked_delta" {
+		firecrackerArgs += " --kvm-dirty-bitmap --dirty-export-policy bitmap"
+	}
+
 	helper := strings.TrimSpace(sb.builderConfig.FirecrackerNetnsExecHelper)
 	if helper == "" || helper == "disabled" || helper == "ip-netns-exec" {
 		return fmt.Sprintf("ip netns exec %s %s", args.NamespaceID, firecrackerArgs)

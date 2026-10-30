@@ -11,6 +11,7 @@ import (
 )
 
 type Snapshot struct {
+	RAMExportMode     string
 	MemfileDiff       build.Diff
 	MemfileDiffHeader *header.Header
 	RootfsDiff        build.Diff

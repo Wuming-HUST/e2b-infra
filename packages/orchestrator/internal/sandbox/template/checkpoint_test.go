@@ -108,6 +108,58 @@ func TestCheckpointValidateAcceptsSealedFullAndDelta(t *testing.T) {
 	}
 }
 
+func TestCheckpointValidateTrackedContractAndPayloadLayout(t *testing.T) {
+	for _, change := range []string{"valid", "old_version", "wrong_tracking", "missing_digest", "logical_hash", "wrong_length"} {
+		t.Run(change, func(t *testing.T) {
+			fixture := newCheckpointTemplate(t)
+			c := fixture.meta.Checkpoint
+			c.FormatVersion, c.RAMExportMode, c.RAMTrackingVersion = 2, "tracked_delta", 1
+			c.RAMPayloadSHA256, c.RAMPayloadSize, c.LogicalRAMSHA256 = checkpointTestSHA([]byte("payload")), 4096, ""
+			switch change {
+			case "old_version":
+				c.FormatVersion = 1
+			case "wrong_tracking":
+				c.RAMTrackingVersion = 2
+			case "missing_digest":
+				c.RAMPayloadSHA256 = ""
+			case "logical_hash":
+				c.LogicalRAMSHA256 = checkpointTestSHA(nil)
+			case "wrong_length":
+				c.RAMPayloadSize = 0
+			}
+			err := ValidateCheckpoint(t.Context(), fixture)
+			if (err == nil) != (change == "valid") {
+				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
+}
+
+func TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles(t *testing.T) {
+	current, parent := uuid.New(), uuid.New()
+	h, err := header.NewHeader(header.NewTemplateMetadata(current, 4096, 3*4096), []*header.BuildMap{
+		{Offset: 0, Length: 3 * 4096, BuildId: parent},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateTrackedPayloadLayout(h, 0); err != nil {
+		t.Fatal(err)
+	}
+	h.Mapping = []*header.BuildMap{
+		{Offset: 0, Length: 4096, BuildId: current, BuildStorageOffset: 0},
+		{Offset: 4096, Length: 4096, BuildId: parent, BuildStorageOffset: 4096},
+		{Offset: 8192, Length: 4096, BuildId: current, BuildStorageOffset: 4096},
+	}
+	if err := ValidateTrackedPayloadLayout(h, 8192); err != nil {
+		t.Fatal(err)
+	}
+	h.Mapping[2].BuildStorageOffset = 8192
+	if err := ValidateTrackedPayloadLayout(h, 8192); err == nil {
+		t.Fatal("accepted payload hole")
+	}
+}
+
 func TestCheckpointValidateRejectsStateHeaderAndSizeMismatch(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

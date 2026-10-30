@@ -11,6 +11,14 @@ import (
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
 )
 
+func TestTrackedMemoryStartCommand(t *testing.T) {
+	for _, mode := range []string{"", "full_logical", "tracked_delta"} {
+		builder := NewStartScriptBuilder(cfg.BuilderConfig{RAMExportMode: mode})
+		command := builder.firecrackerCommand(startScriptArgs{FirecrackerPath: "/fc", FirecrackerSocket: "/sock"}, ConstantRootfsPaths)
+		require.Equal(t, mode == "tracked_delta", strings.Contains(command, "--kvm-dirty-bitmap --dirty-export-policy bitmap"))
+	}
+}
+
 func TestStartScriptBuilder_Build(t *testing.T) {
 	t.Parallel()
 	config, err := cfg.ParseBuilder()

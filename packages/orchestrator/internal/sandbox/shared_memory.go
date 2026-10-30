@@ -73,7 +73,13 @@ type leasedMemory struct {
 func newLeasedMemory(backend uffd.MemoryBackend, lease *memorybacking.Lease) *leasedMemory {
 	return &leasedMemory{MemoryBackend: backend, lease: lease, exit: utils.NewErrorOnce(), stop: make(chan struct{})}
 }
-func (m *leasedMemory) Ready() chan struct{}   { return m.MemoryBackend.Ready() }
+func (m *leasedMemory) Ready() chan struct{} { return m.MemoryBackend.Ready() }
+func (m *leasedMemory) RAMExportMode() string {
+	if backend, ok := m.MemoryBackend.(interface{ RAMExportMode() string }); ok {
+		return backend.RAMExportMode()
+	}
+	return ""
+}
 func (m *leasedMemory) Exit() *utils.ErrorOnce { return m.exit }
 func (m *leasedMemory) Start(ctx context.Context, path string) error {
 	if err := m.MemoryBackend.Start(ctx, path); err != nil {

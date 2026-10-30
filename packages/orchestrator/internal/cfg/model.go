@@ -27,6 +27,7 @@ type BuilderConfig struct {
 	TemplatesDir               string        `env:"TEMPLATES_DIR,expand"     envDefault:"${ORCHESTRATOR_BASE_PATH}/build-templates"`
 	SharedNBDMemoryEnabled     bool          `env:"SHARED_NBD_MEMORY_ENABLED" envDefault:"false"`
 	FileMemoryBackendEnabled   bool          `env:"FILE_MEMORY_BACKEND_ENABLED" envDefault:"false"`
+	RAMExportMode              string        `env:"RAM_EXPORT_MODE" envDefault:"full_logical"`
 	FileMemoryBackendDir       string        `env:"FILE_MEMORY_BACKEND_DIR,expand" envDefault:"${ORCHESTRATOR_BASE_PATH}/template-memory"`
 
 	DefaultCacheDir string `env:"DEFAULT_CACHE_DIR,expand" envDefault:"${ORCHESTRATOR_BASE_PATH}/build"`
@@ -36,6 +37,9 @@ type BuilderConfig struct {
 }
 
 func makePathsAbsolute(c *BuilderConfig) error {
+	if err := c.ValidateRAMExportMode(); err != nil {
+		return err
+	}
 	for _, item := range []*string{
 		&c.DefaultCacheDir,
 		&c.FirecrackerNetnsExecHelper,
@@ -70,6 +74,15 @@ func makePathsAbsolute(c *BuilderConfig) error {
 	}
 
 	return nil
+}
+
+func (c BuilderConfig) ValidateRAMExportMode() error {
+	switch c.RAMExportMode {
+	case "", "full_logical", "tracked_delta":
+		return nil
+	default:
+		return fmt.Errorf("unsupported RAM_EXPORT_MODE %q", c.RAMExportMode)
+	}
 }
 
 type Config struct {

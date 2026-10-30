@@ -82,8 +82,11 @@ class VM:
         tty.setraw(slave)
         self.buffer = bytearray()
         self.log = (self.directory / "serial.log").open("ab", buffering=0)
+
+        self.track_dirty = bool(getattr(args, "tracked_delta", False)) and name not in ("initial", "seed")
+        flags = ["--kvm-dirty-bitmap", "--dirty-export-policy", "bitmap"] if self.track_dirty else []
         self.process = subprocess.Popen(
-            [str(args.firecracker), "--api-sock", str(self.api_path)],
+            [str(args.firecracker), "--api-sock", str(self.api_path)] + flags,
             stdin=slave, stdout=slave, stderr=slave, close_fds=True)
         os.close(slave)
         save_json(self.directory / "pid.json", {"pid": self.process.pid, "api_socket": str(self.api_path)})
@@ -150,9 +153,10 @@ class VM:
         return self.event(command.split()[0])
 
     def restore(self, state, backing):
+        self.parent_backing = Path(backing)
         self.api("PUT", "/snapshot/load", {
             "snapshot_path": str(state), "mem_backend": {"backend_type": "File", "backend_path": str(backing)},
-            "enable_diff_snapshots": False, "resume_vm": False})
+            "enable_diff_snapshots": self.track_dirty, "resume_vm": False})
 
     def snapshot(self, state, ram=None):
         body = {"snapshot_type": "Full", "snapshot_path": str(state)}

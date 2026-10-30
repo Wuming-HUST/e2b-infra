@@ -119,8 +119,16 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
 	if c == nil {
 		return nil
 	}
-	if c.FormatVersion != 1 || (c.RAMExportMode != "full_logical" && c.RAMExportMode != "uffd_delta") {
+	legacy := c.FormatVersion == 1 && (c.RAMExportMode == "full_logical" || c.RAMExportMode == "uffd_delta")
+	tracked := c.FormatVersion == 2 && c.RAMExportMode == "tracked_delta"
+	if !legacy && !tracked {
 		return fmt.Errorf("unsupported checkpoint format or RAM export mode")
+	}
+	if tracked {
+		digest, err := hex.DecodeString(c.RAMPayloadSHA256)
+		if err != nil || len(digest) != sha256.Size || c.RAMTrackingVersion != 1 || c.LogicalRAMSHA256 != "" {
+			return fmt.Errorf("invalid tracked checkpoint contract or payload checksum")
+		}
 	}
 	if c.RAMExportMode == "full_logical" {
 		digest, err := hex.DecodeString(c.LogicalRAMSHA256)
@@ -131,6 +139,11 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
 	mem, err := t.Memfile(ctx)
 	if err != nil {
 		return err
+	}
+	if tracked {
+		if err := ValidateTrackedPayloadLayout(mem.Header(), c.RAMPayloadSize); err != nil {
+			return err
+		}
 	}
 	root, err := t.Rootfs()
 	if err != nil {
@@ -170,6 +183,33 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
 	}
 	if digest != c.FCStateSHA256 {
 		return fmt.Errorf("checkpoint FC state checksum mismatch")
+	}
+	return nil
+}
+
+// ValidateTrackedPayloadLayout binds the packed payload length to the extents
+// supplied by this generation. Inherited extents require their original objects.
+func ValidateTrackedPayloadLayout(h *header.Header, payloadSize uint64) error {
+	if h == nil || h.Metadata == nil || h.Metadata.BlockSize != 4096 || h.Metadata.Size == 0 || h.Metadata.Size%4096 != 0 {
+		return fmt.Errorf("invalid tracked checkpoint RAM header")
+	}
+	var packed, covered uint64
+	for _, part := range h.Mapping {
+		if part == nil || part.Offset != covered || covered > h.Metadata.Size || part.Length == 0 ||
+			part.Length > h.Metadata.Size-covered || part.Length%4096 != 0 || part.BuildStorageOffset%4096 != 0 {
+			return fmt.Errorf("invalid tracked checkpoint logical extent")
+		}
+		covered += part.Length
+		if part.BuildId != h.Metadata.BuildId {
+			continue
+		}
+		if part.BuildStorageOffset != packed || packed > payloadSize || part.Length > payloadSize-packed {
+			return fmt.Errorf("tracked RAM payload extent does not match packed capture")
+		}
+		packed += part.Length
+	}
+	if covered != h.Metadata.Size || packed != payloadSize || payloadSize > h.Metadata.Size {
+		return fmt.Errorf("tracked RAM payload length differs from header")
 	}
 	return nil
 }

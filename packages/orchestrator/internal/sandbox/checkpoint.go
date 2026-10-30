@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
 )
@@ -103,6 +104,35 @@ func sealSnapshotMetadata(ctx context.Context, s *Snapshot, m metadata.Template)
 	}
 	h := s.MemfileDiffHeader
 	checkpoint.LogicalRAMSize = h.Metadata.Size
+	if s.RAMExportMode == "tracked_delta" {
+		checkpoint.FormatVersion = 2
+		checkpoint.RAMExportMode = "tracked_delta"
+		checkpoint.RAMTrackingVersion = 1
+		size, err := s.MemfileDiff.Size(ctx)
+		if err != nil {
+			return fmt.Errorf("read tracked RAM payload size: %w", err)
+		}
+		if size < 0 {
+			return errors.New("negative tracked RAM payload size")
+		}
+		checkpoint.RAMPayloadSize = uint64(size)
+		if err := template.ValidateTrackedPayloadLayout(h, checkpoint.RAMPayloadSize); err != nil {
+			return err
+		}
+		captured, ok := s.MemfileDiff.(interface {
+			ProcessMemorySHA256() ([sha256.Size]byte, bool)
+		})
+		if !ok {
+			return errors.New("tracked checkpoint has no captured payload digest")
+		}
+		digest, ok := captured.ProcessMemorySHA256()
+		if !ok {
+			return errors.New("tracked checkpoint has no captured payload digest")
+		}
+		checkpoint.RAMPayloadSHA256 = hex.EncodeToString(digest[:])
+		m.Checkpoint = checkpoint
+		return publishCheckpointMetadata(ctx, m, s.Metafile.Path())
+	}
 	var covered uint64
 	full := true
 	for _, part := range h.Mapping {

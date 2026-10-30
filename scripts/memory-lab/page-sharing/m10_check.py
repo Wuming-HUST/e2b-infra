@@ -30,6 +30,9 @@ def wait_balloon(vm, target, path):
 
 
 def checkpoint(vm, regions, run, name):
+    if vm.track_dirty:
+        from tracked_delta_check import capture_checkpoint
+        return capture_checkpoint(vm, regions, run / (name + '.ram'))
     receipt = k.export_memory(vm, regions, run / (name + '.ram'))
     vm.snapshot(run / (name + '.native.state'), run / (name + '.native.ram'))
     if k.sha256_file(run / (name + '.native.ram')) != receipt['sha256']:
@@ -161,6 +164,7 @@ def main():
     p.add_argument('--free-page-reporting', action='store_true', help='exercise natural FPR with balloon target held at zero')
     p.add_argument('--probe-only', action='store_true')
     p.add_argument('--cleanup-failed', action='store_true')
+    p.add_argument('--tracked-delta', action='store_true', help='select KVM/VMM candidates before reading RAM; compare reconstructed delta with native full RAM')
     a = p.parse_args()
     for n in ('firecracker', 'kernel', 'guest_binary', 'nbd_helper'):
         setattr(a, n, getattr(a, n).resolve(strict=True))

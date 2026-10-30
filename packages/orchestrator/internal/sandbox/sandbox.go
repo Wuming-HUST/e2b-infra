@@ -380,10 +380,16 @@ func (f *Factory) CreateSandbox(
 	zap.L().Sugar().Errorf("[NUMA][CreateSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
 
+	// Cold boot has no parent RAM baseline; always use full logical export.
+	if err := f.config.ValidateRAMExportMode(); err != nil {
+		return nil, err
+	}
+	processConfig := f.config
+	processConfig.RAMExportMode = "full_logical"
 	fcHandle, err := fc.NewProcess(
 		ctx,
 		execCtx,
-		f.config,
+		processConfig,
 		ips,
 		sandboxFiles,
 		config.FirecrackerConfig,
@@ -784,10 +790,22 @@ func (f *Factory) ResumeSandbox(
 
 	zap.L().Sugar().Errorf("[NUMA][ResumeSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
+	if err := f.config.ValidateRAMExportMode(); err != nil {
+		return nil, err
+	}
+	trackFileMemory := f.config.RAMExportMode == "tracked_delta" && useFileMemoryBackend &&
+		!config.HugePages && os.Getpagesize() == 4096 && resumeMemfile.BlockSize() == 4096 &&
+		resumeMemfileSize > 0 && resumeMemfile.Header() != nil && resumeMemfile.Header().Metadata != nil
+	processConfig := f.config
+	processConfig.RAMExportMode = "full_logical"
+	if trackFileMemory {
+		processConfig.RAMExportMode = "tracked_delta"
+	}
+	telemetry.ReportEvent(ctx, "selected RAM export mode: "+processConfig.RAMExportMode)
 	fcHandle, fcErr := fc.NewProcess(
 		ctx,
 		execCtx,
-		f.config,
+		processConfig,
 		ips,
 		sandboxFiles,
 		// The versions need to base exactly the same as the paused sandbox template because of the FC compatibility.
@@ -829,6 +847,10 @@ func (f *Factory) ResumeSandbox(
 	if useFileMemoryBackend {
 		sandboxMemory = uffd.NewNoopMemory(resumeMemfileSize, resumeMemfile.BlockSize())
 		snapshotMemoryBackend = fc.NewFileSnapshotMemoryBackend(fileMemoryBackendPath)
+		if trackFileMemory {
+			sandboxMemory = uffd.NewTrackedFileMemory(resumeMemfileSize, resumeMemfile.BlockSize())
+			snapshotMemoryBackend.TrackDirty = true
+		}
 		if memoryLease != nil {
 			leased := newLeasedMemory(sandboxMemory, memoryLease)
 			sandboxMemory = leased
@@ -1222,6 +1244,9 @@ func (s *Sandbox) Pause(
 		RootfsDiffHeader:  rootfsDiffHeader,
 
 		cleanup: cleanup,
+	}
+	if backend, ok := s.Resources.memory.(interface{ RAMExportMode() string }); ok {
+		result.RAMExportMode = backend.RAMExportMode()
 	}
 	if err := sealSnapshotMetadata(ctx, result, m); err != nil {
 		return nil, err
