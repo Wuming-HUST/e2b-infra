@@ -189,13 +189,13 @@ class VM:
 
 
 class NBDHelper:
-    def __init__(self, binary, source, run):
+    def __init__(self, binary, source, run, layout_id="fixture-128m-low-ram-4k-v1"):
         self.directory = run / "nbd-helper"
         self.directory.mkdir()
         self.log = (self.directory / "stderr.log").open("wb", buffering=0)
         self.stdout_log = (self.directory / "stdout.jsonl").open("wb", buffering=0)
         self.buffer = bytearray()
-        self.process = subprocess.Popen([str(binary), "--source", str(source), "--layout-id", "fixture-128m-low-ram-4k-v1"],
+        self.process = subprocess.Popen([str(binary), "--source", str(source), "--layout-id", layout_id],
                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.log)
         save_json(self.directory / "pid.json", {"pid": self.process.pid})
         self.ready = self.event("ready")

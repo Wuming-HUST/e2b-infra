@@ -76,3 +76,75 @@ Target KVM results remain separate from Go package tests and orchestrator E2E
 acceptance. These fixtures do not test guest block/network completion races,
 FPR/balloon, memory pressure, remote object storage, or application traces.
 Real swap is tested only when the optional M09 receipt says `mechanism_only`.
+
+The additional `m10_check.py` and `m11_check.py` runners cover actual
+balloon/FPR discard and concurrent Async block/TAP receive respectively.
+Their fixtures, preconditions and independent oracles are described in
+`m10.md` and `m11.md`. They remain separate from application acceptance.
+
+## Real Factory integration
+
+`TestSharingFactoryIntegration` in the sandbox package runs real envd through
+the production Factory, Pause, local-storage upload, template cache and restore
+paths. It is opt-in, needs root/KVM/NBD/network privileges, and uses only new
+run artifacts and its own network slots. Set `E2B_UNRESTRICTED_STRESS=true` to
+select kernel-allocated NBD indices (the test also sets it explicitly).
+
+Inputs are absolute paths in `E2B_SHARING_FC`, `E2B_SHARING_KERNEL`,
+`E2B_SHARING_ROOTFS`, `E2B_SHARING_INITRD` and `E2B_SHARING_TRACE_FIXTURE`.
+`E2B_SHARING_INTEGRATION_DIR` must name a new directory. The optional guest init
+path is `E2B_SHARING_INIT` (default `/sbin/sharing-init`). The guest needs real
+envd, `/bin/sh`, Python 3 and base64, plus the matching block/network drivers.
+The test does not install applications or start platform services.
+
+`prepare_factory_fixture.sh EXISTING_TEMPLATE NEW_DIRECTORY` copies the
+existing ARM64 envd image and creates the init script/initrd in that directory.
+It targets the recorded Debian `6.1.0-50-arm64` module layout; it is not a
+general guest image builder. `prepare_factory_network_deps.sh NEW_DIRECTORY`
+can unpack a SHA-pinned openEuler ARM64 iptables RPM into a task directory;
+prepend the printed directory to the test's PATH. System packages stay intact.
+
+```sh
+# Build once with the Linux target toolchain and dependency caches.
+cd packages/orchestrator
+go test -c -o /absolute/path/to/sharing-sandbox.test ./internal/sandbox
+# Set the explicit inputs above, then run in a fresh directory.
+sudo -n --preserve-env=PATH,E2B_SHARING_FC,E2B_SHARING_KERNEL,E2B_SHARING_ROOTFS,E2B_SHARING_INITRD,E2B_SHARING_TRACE_FIXTURE,E2B_SHARING_INTEGRATION_DIR \
+  /absolute/path/to/sharing-sandbox.test \
+  -test.run '^TestSharingFactoryIntegration$' -test.v -test.timeout 10m
+```
+
+Both B0 regular-file RAM and B1 shared-NBD RAM restore the same initial
+checkpoint and compare the original source-edit fixture's complete file hashes.
+Each mode executes A→B→C through upload and cache restore. Same-freeze native
+full RAM dumps provide an independent oracle for the actual Pause export.
+B1 also checks two concurrent holders and writable rootfs isolation. These five
+original tools do not establish complete original trace compatibility.
+
+## Original source-edit slice
+
+`biofabric-source-edit-slice.json` preserves the complete original arguments of
+five BioFabric trace tools: Write steps 50/55 and Edit steps 60/63/65. The source
+SHA, original call IDs, excluded steps, and full-file SHA/size oracles are stored
+in the fixture. This is a trace-derived file editing check; it does not execute
+the excluded compilation commands or establish complete original trace parity.
+
+Run the two Write calls before the checkpoint, verify `after_writes`, pause and
+restore, verify the same files again, and then run the three Edit calls and
+verify `after_edits`. Preserve absolute paths and UTF-8 bytes. An Edit without
+`replace_all` must match exactly once. The included original Read parameters
+are optional validation probes; their earlier historical observations describe
+different file contents and are not the checkpoint oracle.
+
+```sh
+python3 scripts/memory-lab/page-sharing/trace_slice.py verify \
+  --fixture scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json
+```
+
+This checks fixture and oracle consistency. Add `--source /path/to/agent/trajectory.json`
+to verify exact extraction against the pinned original trace. To check actual
+downloaded guest files, add `--phase after_writes` or `--phase after_edits` and
+`--directory /path/to/downloaded-root`; files must retain their paths below
+that directory. The `expected` subcommand writes the independently computed
+phase files into a new directory. `extract --source ... --output ...` creates
+a fresh fixture and refuses to overwrite an existing file.

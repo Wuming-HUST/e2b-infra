@@ -36,6 +36,10 @@ import (
 var tracer = otel.Tracer("github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc")
 
 type ProcessOptions struct {
+	// InitrdPath is an optional host path for kernels whose rootfs drivers are modules.
+	// Empty keeps the existing kernel-only boot source.
+	InitrdPath string
+
 	// IoEngine is the io engine to use for the rootfs drive.
 	IoEngine *string
 
@@ -335,7 +339,7 @@ func (p *Process) Create(
 	}
 
 	kernelArgs := args.String()
-	err = p.client.setBootSource(ctx, kernelArgs, p.kernelPath)
+	err = p.client.setBootSource(ctx, kernelArgs, p.kernelPath, options.InitrdPath)
 	if err != nil {
 		fcStopErr := p.Stop(ctx)
 

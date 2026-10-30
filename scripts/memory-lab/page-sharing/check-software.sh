@@ -16,7 +16,7 @@ run_check() {
     printf '%s\t%d\n' "$name" "$rc" >>"$result_dir/exit-codes.tsv"
     if ((rc != 0)); then status=1; fi
 }
-run_check contracts go test -p 2 ./internal/sandbox ./internal/sandbox/memorybacking ./internal/sandbox/nbd ./internal/sandbox/template ./internal/sandbox/uffd ./internal/sandbox/uffd/memory ./internal/sandbox/fc ./internal/sandbox/build ./internal/sandbox/block -run 'Test(NoopMemory|ProcessMemory|ExportMemoryRanges|LogicalReadAt|ReadonlyDispatch|Dispatch|WriteFull|ReadonlyMount|Registry|HTTP|LocalSource|FileMemory|Materialize|Mapping|FactoryLifecycle|SnapshotPaths|Checkpoint|Pinned|LocalDiffOwnership|DiffPin|OwnedMemoryView)' -count=1 -v
+run_check contracts go test -p 2 ./internal/sandbox ./internal/sandbox/memorybacking ./internal/sandbox/nbd ./internal/sandbox/template ./internal/sandbox/uffd ./internal/sandbox/uffd/memory ./internal/sandbox/fc ./internal/sandbox/build ./internal/sandbox/block -run 'Test(NoopMemory|ProcessMemory|ExportMemoryRanges|LogicalReadAt|ReadonlyDispatch|Dispatch|WriteFull|ReadonlyMount|Registry|HTTP|LocalSource|FileMemory|Materialize|Mapping|FactoryLifecycle|SnapshotPaths|Checkpoint|Pinned|LocalDiffOwnership|DiffPin|OwnedMemoryView|BootSourceOptionalInitrd)' -count=1 -v
 run_check race go test -p 2 -race ./internal/sandbox/memorybacking ./internal/sandbox/nbd ./internal/sandbox ./internal/sandbox/build ./internal/sandbox/template -run 'Test(Registry|HTTP|LocalSource|ReadonlyDispatch|Dispatch|WriteFull|ReadonlyMount|FactoryLifecycle|SnapshotPaths|Checkpoint|Pinned|LocalDiffOwnership|DiffPin|OwnedMemoryView)' -count=1
 run_check headers go test -p 2 ../shared/pkg/storage/header ./internal/template/metadata -count=1
 run_check orchestrator go build -p 2 -o "$result_dir/orchestrator" .

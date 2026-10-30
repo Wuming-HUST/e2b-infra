@@ -160,11 +160,12 @@ func (c *apiClient) setMmds(ctx context.Context, metadata *MmdsMetadata) error {
 	return nil
 }
 
-func (c *apiClient) setBootSource(ctx context.Context, kernelArgs string, kernelPath string) error {
+func (c *apiClient) setBootSource(ctx context.Context, kernelArgs string, kernelPath string, initrdPath string) error {
 	bootSourceConfig := operations.PutGuestBootSourceParams{
 		Context: ctx,
 		Body: &models.BootSource{
 			BootArgs:        kernelArgs,
+			InitrdPath:      initrdPath,
 			KernelImagePath: &kernelPath,
 		},
 	}
