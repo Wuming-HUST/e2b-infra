@@ -1,0 +1,150 @@
+=== RUN   TestMergeMappingsRemoveEmpty
+=== PAUSE TestMergeMappingsRemoveEmpty
+=== RUN   TestMergeMappingsBaseBeforeDiffNoOverlap
+=== PAUSE TestMergeMappingsBaseBeforeDiffNoOverlap
+=== RUN   TestMergeMappingsDiffBeforeBaseNoOverlap
+=== PAUSE TestMergeMappingsDiffBeforeBaseNoOverlap
+=== RUN   TestMergeMappingsBaseInsideDiff
+=== PAUSE TestMergeMappingsBaseInsideDiff
+=== RUN   TestMergeMappingsDiffInsideBase
+=== PAUSE TestMergeMappingsDiffInsideBase
+=== RUN   TestMergeMappingsBaseAfterDiffWithOverlap
+=== PAUSE TestMergeMappingsBaseAfterDiffWithOverlap
+=== RUN   TestMergeMappingsDiffAfterBaseWithOverlap
+=== PAUSE TestMergeMappingsDiffAfterBaseWithOverlap
+=== RUN   TestNormalizeMappingsEmptySlice
+=== PAUSE TestNormalizeMappingsEmptySlice
+=== RUN   TestNormalizeMappingsSingleMapping
+=== PAUSE TestNormalizeMappingsSingleMapping
+=== RUN   TestNormalizeMappingsNoAdjacentSameBuildId
+=== PAUSE TestNormalizeMappingsNoAdjacentSameBuildId
+=== RUN   TestNormalizeMappingsTwoAdjacentSameBuildId
+=== PAUSE TestNormalizeMappingsTwoAdjacentSameBuildId
+=== RUN   TestNormalizeMappingsAllSameBuildId
+=== PAUSE TestNormalizeMappingsAllSameBuildId
+=== RUN   TestNormalizeMappingsMultipleGroupsSameBuildId
+=== PAUSE TestNormalizeMappingsMultipleGroupsSameBuildId
+=== RUN   TestNormalizeMappingsAlternatingBuildIds
+=== PAUSE TestNormalizeMappingsAlternatingBuildIds
+=== RUN   TestNormalizeMappingsThreeConsecutiveSameBuildId
+=== PAUSE TestNormalizeMappingsThreeConsecutiveSameBuildId
+=== RUN   TestNormalizeMappingsMixedPattern
+=== PAUSE TestNormalizeMappingsMixedPattern
+=== RUN   TestNormalizeMappingsZeroLengthMapping
+=== PAUSE TestNormalizeMappingsZeroLengthMapping
+=== RUN   TestNormalizeMappingsDoesNotModifyInput
+=== PAUSE TestNormalizeMappingsDoesNotModifyInput
+=== RUN   TestTrackedDeltaGenerationsInheritColdZeroAndEmptyRounds
+--- PASS: TestTrackedDeltaGenerationsInheritColdZeroAndEmptyRounds (0.00s)
+=== CONT  TestMergeMappingsRemoveEmpty
+--- PASS: TestMergeMappingsRemoveEmpty (0.00s)
+=== CONT  TestNormalizeMappingsDoesNotModifyInput
+--- PASS: TestNormalizeMappingsDoesNotModifyInput (0.00s)
+=== CONT  TestNormalizeMappingsZeroLengthMapping
+--- PASS: TestNormalizeMappingsZeroLengthMapping (0.00s)
+=== CONT  TestNormalizeMappingsMixedPattern
+--- PASS: TestNormalizeMappingsMixedPattern (0.00s)
+=== CONT  TestNormalizeMappingsThreeConsecutiveSameBuildId
+--- PASS: TestNormalizeMappingsThreeConsecutiveSameBuildId (0.00s)
+=== CONT  TestNormalizeMappingsAlternatingBuildIds
+--- PASS: TestNormalizeMappingsAlternatingBuildIds (0.00s)
+=== CONT  TestNormalizeMappingsMultipleGroupsSameBuildId
+--- PASS: TestNormalizeMappingsMultipleGroupsSameBuildId (0.00s)
+=== CONT  TestNormalizeMappingsAllSameBuildId
+--- PASS: TestNormalizeMappingsAllSameBuildId (0.00s)
+=== CONT  TestNormalizeMappingsTwoAdjacentSameBuildId
+--- PASS: TestNormalizeMappingsTwoAdjacentSameBuildId (0.00s)
+=== CONT  TestNormalizeMappingsNoAdjacentSameBuildId
+--- PASS: TestNormalizeMappingsNoAdjacentSameBuildId (0.00s)
+=== CONT  TestNormalizeMappingsSingleMapping
+--- PASS: TestNormalizeMappingsSingleMapping (0.00s)
+=== CONT  TestNormalizeMappingsEmptySlice
+--- PASS: TestNormalizeMappingsEmptySlice (0.00s)
+=== CONT  TestMergeMappingsDiffAfterBaseWithOverlap
+--- PASS: TestMergeMappingsDiffAfterBaseWithOverlap (0.00s)
+=== CONT  TestMergeMappingsBaseAfterDiffWithOverlap
+--- PASS: TestMergeMappingsBaseAfterDiffWithOverlap (0.00s)
+=== CONT  TestMergeMappingsDiffInsideBase
+--- PASS: TestMergeMappingsDiffInsideBase (0.00s)
+=== CONT  TestMergeMappingsBaseInsideDiff
+--- PASS: TestMergeMappingsBaseInsideDiff (0.00s)
+=== CONT  TestMergeMappingsDiffBeforeBaseNoOverlap
+--- PASS: TestMergeMappingsDiffBeforeBaseNoOverlap (0.00s)
+=== CONT  TestMergeMappingsBaseBeforeDiffNoOverlap
+--- PASS: TestMergeMappingsBaseBeforeDiffNoOverlap (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/shared/pkg/storage/header	0.019s
+=== RUN   TestDeserialize
+=== PAUSE TestDeserialize
+=== RUN   TestDeserialize_ReadError
+=== PAUSE TestDeserialize_ReadError
+=== RUN   TestDeserialize_VersionEdgeCases
+=== PAUSE TestDeserialize_VersionEdgeCases
+=== CONT  TestDeserialize
+=== RUN   TestDeserialize/Valid_current_version_template_with_all_fields
+=== PAUSE TestDeserialize/Valid_current_version_template_with_all_fields
+=== RUN   TestDeserialize/Valid_current_version_template_with_from_template
+=== PAUSE TestDeserialize/Valid_current_version_template_with_from_template
+=== RUN   TestDeserialize/Valid_current_version_template_minimal_fields
+=== PAUSE TestDeserialize/Valid_current_version_template_minimal_fields
+=== RUN   TestDeserialize/Deprecated_version_1
+=== PAUSE TestDeserialize/Deprecated_version_1
+=== RUN   TestDeserialize/Version_less_than_deprecated_(0)
+=== PAUSE TestDeserialize/Version_less_than_deprecated_(0)
+=== RUN   TestDeserialize/Version_as_string_(should_be_treated_as_deprecated)
+=== PAUSE TestDeserialize/Version_as_string_(should_be_treated_as_deprecated)
+=== RUN   TestDeserialize/No_version_field
+=== PAUSE TestDeserialize/No_version_field
+=== RUN   TestDeserialize/Invalid_JSON
+=== PAUSE TestDeserialize/Invalid_JSON
+=== RUN   TestDeserialize/Empty_input
+=== PAUSE TestDeserialize/Empty_input
+=== RUN   TestDeserialize/Valid_version_but_invalid_template_structure
+=== PAUSE TestDeserialize/Valid_version_but_invalid_template_structure
+=== CONT  TestDeserialize/Valid_current_version_template_with_all_fields
+=== CONT  TestDeserialize/No_version_field
+=== CONT  TestDeserialize_VersionEdgeCases
+=== RUN   TestDeserialize_VersionEdgeCases/Version_exactly_equals_deprecated_version
+=== PAUSE TestDeserialize_VersionEdgeCases/Version_exactly_equals_deprecated_version
+=== CONT  TestDeserialize/Version_as_string_(should_be_treated_as_deprecated)
+=== RUN   TestDeserialize_VersionEdgeCases/Version_as_float_1.0
+=== CONT  TestDeserialize/Version_less_than_deprecated_(0)
+=== PAUSE TestDeserialize_VersionEdgeCases/Version_as_float_1.0
+=== CONT  TestDeserialize/Deprecated_version_1
+=== RUN   TestDeserialize_VersionEdgeCases/Version_as_negative_number
+=== PAUSE TestDeserialize_VersionEdgeCases/Version_as_negative_number
+=== RUN   TestDeserialize_VersionEdgeCases/Version_as_null
+=== CONT  TestDeserialize/Valid_current_version_template_minimal_fields
+=== PAUSE TestDeserialize_VersionEdgeCases/Version_as_null
+=== CONT  TestDeserialize/Valid_version_but_invalid_template_structure
+=== CONT  TestDeserialize/Invalid_JSON
+=== CONT  TestDeserialize_ReadError
+--- PASS: TestDeserialize_ReadError (0.00s)
+=== RUN   TestDeserialize_VersionEdgeCases/Version_as_boolean
+=== PAUSE TestDeserialize_VersionEdgeCases/Version_as_boolean
+=== CONT  TestDeserialize_VersionEdgeCases/Version_exactly_equals_deprecated_version
+=== CONT  TestDeserialize/Empty_input
+=== CONT  TestDeserialize/Valid_current_version_template_with_from_template
+=== CONT  TestDeserialize_VersionEdgeCases/Version_as_null
+--- PASS: TestDeserialize (0.00s)
+    --- PASS: TestDeserialize/No_version_field (0.00s)
+    --- PASS: TestDeserialize/Valid_current_version_template_with_all_fields (0.00s)
+    --- PASS: TestDeserialize/Version_as_string_(should_be_treated_as_deprecated) (0.00s)
+    --- PASS: TestDeserialize/Version_less_than_deprecated_(0) (0.00s)
+    --- PASS: TestDeserialize/Deprecated_version_1 (0.00s)
+    --- PASS: TestDeserialize/Valid_current_version_template_minimal_fields (0.00s)
+    --- PASS: TestDeserialize/Valid_version_but_invalid_template_structure (0.00s)
+    --- PASS: TestDeserialize/Invalid_JSON (0.00s)
+    --- PASS: TestDeserialize/Empty_input (0.00s)
+    --- PASS: TestDeserialize/Valid_current_version_template_with_from_template (0.00s)
+=== CONT  TestDeserialize_VersionEdgeCases/Version_as_negative_number
+=== CONT  TestDeserialize_VersionEdgeCases/Version_as_float_1.0
+=== CONT  TestDeserialize_VersionEdgeCases/Version_as_boolean
+--- PASS: TestDeserialize_VersionEdgeCases (0.00s)
+    --- PASS: TestDeserialize_VersionEdgeCases/Version_exactly_equals_deprecated_version (0.00s)
+    --- PASS: TestDeserialize_VersionEdgeCases/Version_as_null (0.00s)
+    --- PASS: TestDeserialize_VersionEdgeCases/Version_as_negative_number (0.00s)
+    --- PASS: TestDeserialize_VersionEdgeCases/Version_as_float_1.0 (0.00s)
+    --- PASS: TestDeserialize_VersionEdgeCases/Version_as_boolean (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata	0.016s

@@ -1,0 +1,45 @@
+2026-10-30T14:28:20.820612986 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T14:28:20.820790076 [anonymous-instance:main] Listening on API socket ("/tmp/psg-obgk86kd/fc.sock").
+2026-10-30T14:28:20.824773769 [anonymous-instance:fc_api] API server started.
+2026-10-30T14:28:20.824831289 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/B.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/B.ram\"}, \"enable_diff_snapshots\": true, \"resume_vm\": false}".
+2026-10-30T14:28:20.825064179 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:28:20.825197579 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T14:28:20.825200219 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T14:28:20.829602652 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 4525 us.
+2026-10-30T14:28:20.829844061 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:20.829855191 [anonymous-instance:fc_api] 'load snapshot' API request took 5029 us.
+2026-10-30T14:28:20.830560610 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T14:28:20.830762230 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T14:28:20.830793130 [anonymous-instance:main] 'resume vm' VMM action took 34 us.
+2026-10-30T14:28:20.830977719 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:20.830986029 [anonymous-instance:fc_api] 'resume vm' API request took 427 us.
+PSG {"event":"write","page":1,"value":165}
+PSG {"event":"zero","page":2,"value":0}
+2026-10-30T14:28:20.834930063 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T14:28:20.835180972 [anonymous-instance:main] 'pause vm' VMM action took 27 us.
+2026-10-30T14:28:20.835196902 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:20.835200222 [anonymous-instance:fc_api] 'pause vm' API request took 273 us.
+2026-10-30T14:28:20.835414862 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/C.state\"}".
+2026-10-30T14:28:20.835423832 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:28:20.838191717 [anonymous-instance:main] 'create full snapshot' VMM action took 2763 us.
+2026-10-30T14:28:20.838433847 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:20.838446827 [anonymous-instance:fc_api] 'create full snapshot' API request took 3033 us.
+2026-10-30T14:28:20.839144706 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T14:28:20.839397725 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:28:20.840775563 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:28:20.841066753 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":59030,"kvm_collect_ns":41760,"kvm_ioctls":1,"vmm_collect_ns":10620,"vmm_words":512,"pagemap_ns":240,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":135,"kernel_vmm_pages":135,"pagemap_only_pages":0}
+2026-10-30T14:28:20.841077873 [anonymous-instance:main] 'get dirty memory' VMM action took 72 us.
+2026-10-30T14:28:20.841302952 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:28:20.843098279 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:28:20.843373429 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":30140,"kvm_collect_ns":9010,"kvm_ioctls":1,"vmm_collect_ns":15740,"vmm_words":512,"pagemap_ns":260,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":135,"kernel_vmm_pages":135,"pagemap_only_pages":0}
+2026-10-30T14:28:20.843384499 [anonymous-instance:main] 'get dirty memory' VMM action took 44 us.
+2026-10-30T14:28:20.843393889 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:28:20.851153056 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:28:20.851411636 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":28720,"kvm_collect_ns":8510,"kvm_ioctls":1,"vmm_collect_ns":15080,"vmm_words":512,"pagemap_ns":260,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":135,"kernel_vmm_pages":135,"pagemap_only_pages":0}
+2026-10-30T14:28:20.851421986 [anonymous-instance:main] 'get dirty memory' VMM action took 41 us.
+2026-10-30T14:28:20.851431236 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:28:20.892694208 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/C.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/C.native.ram\"}".
+2026-10-30T14:28:20.892945498 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:28:20.959634348 [anonymous-instance:main] 'create full snapshot' VMM action took 66673 us.
+2026-10-30T14:28:20.959893188 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:20.959906988 [anonymous-instance:fc_api] 'create full snapshot' API request took 67217 us.

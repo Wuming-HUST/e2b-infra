@@ -1,0 +1,18 @@
+   Compiling seccompiler v1.12.1 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/fc/src/seccompiler)
+   Compiling vmm v0.1.0 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/fc/src/vmm)
+   Compiling firecracker v1.12.1 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/fc/src/firecracker)
+warning: firecracker@1.12.1: No default seccomp policy for target: aarch64-unknown-linux-gnu. Defaulting to `resources/seccomp/unimplemented.json`.
+error[E0599]: no method named `mark_dirty` found for reference `&vm_memory::GuestMemoryMmap<std::option::Option<AtomicBitmap>>` in the current scope
+  --> src/vmm/src/devices/virtio/balloon/util.rs:97:22
+   |
+97 |         guest_memory.mark_dirty(guest_address, u64_to_usize(range_len));
+   |                      ^^^^^^^^^^ method not found in `&GuestMemoryMmap<Option<AtomicBitmap>>`
+   |
+   = help: items from traits can only be used if the trait is in scope
+help: trait `GuestMemoryExtension` which provides `mark_dirty` is implemented but not in scope; perhaps you want to import it
+   |
+4  + use crate::vstate::memory::GuestMemoryExtension;
+   |
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `vmm` (lib) due to 1 previous error

@@ -1,0 +1,38 @@
+2026-10-30T14:42:46.323031026 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T14:42:46.323157476 [anonymous-instance:main] Listening on API socket ("/tmp/psg-m1yarwhy/fc.sock").
+2026-10-30T14:42:46.327029830 [anonymous-instance:fc_api] API server started.
+2026-10-30T14:42:46.327077100 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/A.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/A.ram\"}, \"enable_diff_snapshots\": true, \"resume_vm\": false}".
+2026-10-30T14:42:46.327291390 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:42:46.327405250 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T14:42:46.327408000 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T14:42:46.331637173 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 4334 us.
+2026-10-30T14:42:46.331841013 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:42:46.331853953 [anonymous-instance:fc_api] 'load snapshot' API request took 4781 us.
+2026-10-30T14:42:46.332596072 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T14:42:46.333002121 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:42:46.334552309 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:42:46.334806429 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":30570,"kvm_collect_ns":16750,"kvm_ioctls":1,"vmm_collect_ns":8800,"vmm_words":512,"pagemap_ns":270,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":1,"kernel_vmm_pages":1,"pagemap_only_pages":0}
+2026-10-30T14:42:46.334816899 [anonymous-instance:main] 'get dirty memory' VMM action took 43 us.
+2026-10-30T14:42:46.335017428 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:42:46.336751886 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/B.state\"}".
+2026-10-30T14:42:46.337007976 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:42:46.340384921 [anonymous-instance:main] 'create full snapshot' VMM action took 3362 us.
+2026-10-30T14:42:46.340621670 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:42:46.340634090 [anonymous-instance:fc_api] 'create full snapshot' API request took 3885 us.
+2026-10-30T14:42:46.341240529 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:42:46.341507249 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":27680,"kvm_collect_ns":9260,"kvm_ioctls":1,"vmm_collect_ns":7980,"vmm_words":512,"pagemap_ns":210,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":1,"kernel_vmm_pages":1,"pagemap_only_pages":0}
+2026-10-30T14:42:46.341518449 [anonymous-instance:main] 'get dirty memory' VMM action took 41 us.
+2026-10-30T14:42:46.341727089 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:42:46.342425708 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:42:46.342686697 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":26300,"kvm_collect_ns":7150,"kvm_ioctls":1,"vmm_collect_ns":9290,"vmm_words":512,"pagemap_ns":230,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":1,"kernel_vmm_pages":1,"pagemap_only_pages":0}
+2026-10-30T14:42:46.342698217 [anonymous-instance:main] 'get dirty memory' VMM action took 40 us.
+2026-10-30T14:42:46.342906407 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:42:46.349725127 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:42:46.350004077 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":29310,"kvm_collect_ns":8340,"kvm_ioctls":1,"vmm_collect_ns":8680,"vmm_words":512,"pagemap_ns":210,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":1,"kernel_vmm_pages":1,"pagemap_only_pages":0}
+2026-10-30T14:42:46.350016536 [anonymous-instance:main] 'get dirty memory' VMM action took 44 us.
+2026-10-30T14:42:46.350030216 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:42:46.390772637 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/B.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/B.native.ram\"}".
+2026-10-30T14:42:46.391034516 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:42:46.457172180 [anonymous-instance:main] 'create full snapshot' VMM action took 66120 us.
+2026-10-30T14:42:46.457415369 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:42:46.457433429 [anonymous-instance:fc_api] 'create full snapshot' API request took 66666 us.

@@ -1,0 +1,17 @@
+2026-10-30T14:28:21.157251784 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T14:28:21.157357774 [anonymous-instance:main] Listening on API socket ("/tmp/psg-5hhp77i8/fc.sock").
+2026-10-30T14:28:21.161368767 [anonymous-instance:fc_api] API server started.
+2026-10-30T14:28:21.161420437 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/C.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-01/C.ram\"}, \"enable_diff_snapshots\": true, \"resume_vm\": false}".
+2026-10-30T14:28:21.161657517 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:28:21.161771696 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T14:28:21.161774606 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T14:28:21.166393909 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 4718 us.
+2026-10-30T14:28:21.166615988 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:21.166628888 [anonymous-instance:fc_api] 'load snapshot' API request took 5213 us.
+2026-10-30T14:28:21.167335417 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T14:28:21.167546037 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T14:28:21.167584757 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T14:28:21.167606287 [anonymous-instance:main] 'resume vm' VMM action took 63 us.
+2026-10-30T14:28:21.167621327 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:28:21.167627547 [anonymous-instance:fc_api] 'resume vm' API request took 295 us.
+PSG {"event":"read","sha256":["4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd","f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8","ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7","ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"]}

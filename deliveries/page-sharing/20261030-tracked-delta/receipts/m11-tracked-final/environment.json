@@ -1,0 +1,18 @@
+{
+  "uname": [
+    "Linux",
+    "agent03",
+    "6.6.0-95.0.0.99.oe2403sp2.aarch64",
+    "#1 SMP Thu Jun  5 23:21:14 CST 2025",
+    "aarch64",
+    "aarch64"
+  ],
+  "page_size": 4096,
+  "tap": "m11154093",
+  "fc_sha256": "dd982ad1d053b025f625c7a0a6bc85ca495f46a4b9c397220e8ddad216ac6f43",
+  "guest_sha256": "e7ccd998aaa67b6a172f839a5b6fe952118bf9664502792ce82472e3388e0cf0",
+  "kernel_sha256": "84b9c190bb4589c4a9527e3191fec051f9f115e88f0a3e8afae96ba0dfb4dfef",
+  "requested_io_engine": "Async",
+  "ram_mib": 128,
+  "vcpus": 2
+}

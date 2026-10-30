@@ -1,0 +1,1352 @@
+From 07ba5a4deb3f8b4a5db623cb794baa5303620600 Mon Sep 17 00:00:00 2001
+From: yangshengxin <yangshengxin@yangshengxindeMacBook-Air.local>
+Date: Fri, 30 Oct 2026 22:54:52 +0800
+Subject: [PATCH] feat(snapshot): add guarded candidate-only RAM deltas with
+ layered restore
+
+---
+ packages/orchestrator/internal/cfg/model.go   |  13 ++
+ .../internal/cfg/ram_export_test.go           |  13 ++
+ .../internal/sandbox/block/cache.go           |   2 +
+ .../sandbox/block/process_memory_test.go      |  36 +++
+ .../internal/sandbox/checkpoint.go            |  30 +++
+ .../internal/sandbox/checkpoint_test.go       |  59 +++++
+ .../internal/sandbox/fc/client.go             |   2 +-
+ .../internal/sandbox/fc/script_builder.go     |   4 +
+ .../sandbox/fc/script_builder_test.go         |   8 +
+ .../sandbox/fc/snapshot_memory_backend.go     |   7 +-
+ .../internal/sandbox/fc/tracked_memory.go     |  44 ++++
+ .../sandbox/fc/tracked_memory_test.go         |  93 ++++++++
+ .../orchestrator/internal/sandbox/sandbox.go  |  29 ++-
+ .../internal/sandbox/shared_memory.go         |   8 +-
+ .../sandbox/sharing_integration_linux_test.go |  55 ++++-
+ .../orchestrator/internal/sandbox/snapshot.go |   1 +
+ .../sandbox/template/checkpoint_test.go       |  52 +++++
+ .../sandbox/template/restore_memory.go        |  42 +++-
+ .../internal/sandbox/uffd/tracked_file.go     |  22 ++
+ .../template/metadata/template_metadata.go    |   3 +
+ packages/shared/pkg/fc/firecracker.yml        |  21 ++
+ packages/shared/pkg/fc/models/dirty_memory.go |   9 +
+ .../pkg/storage/header/tracked_delta_test.go  |  55 +++++
+ scripts/memory-lab/page-sharing/kvm_check.py  |   8 +-
+ scripts/memory-lab/page-sharing/m10_check.py  |   4 +
+ scripts/memory-lab/page-sharing/m11_check.py  |   9 +-
+ .../memory-lab/page-sharing/tracked-delta.md  |  61 +++++
+ .../page-sharing/tracked_delta_check.py       | 216 ++++++++++++++++++
+ 28 files changed, 890 insertions(+), 16 deletions(-)
+ create mode 100644 packages/orchestrator/internal/cfg/ram_export_test.go
+ create mode 100644 packages/orchestrator/internal/sandbox/fc/tracked_memory.go
+ create mode 100644 packages/orchestrator/internal/sandbox/fc/tracked_memory_test.go
+ create mode 100644 packages/orchestrator/internal/sandbox/uffd/tracked_file.go
+ create mode 100644 packages/shared/pkg/storage/header/tracked_delta_test.go
+ create mode 100644 scripts/memory-lab/page-sharing/tracked-delta.md
+ create mode 100644 scripts/memory-lab/page-sharing/tracked_delta_check.py
+
+diff --git a/packages/orchestrator/internal/cfg/model.go b/packages/orchestrator/internal/cfg/model.go
+index 6970058b6..36814e9df 100644
+--- a/packages/orchestrator/internal/cfg/model.go
++++ b/packages/orchestrator/internal/cfg/model.go
+@@ -27,6 +27,7 @@ type BuilderConfig struct {
+ 	TemplatesDir               string        `env:"TEMPLATES_DIR,expand"     envDefault:"${ORCHESTRATOR_BASE_PATH}/build-templates"`
+ 	SharedNBDMemoryEnabled     bool          `env:"SHARED_NBD_MEMORY_ENABLED" envDefault:"false"`
+ 	FileMemoryBackendEnabled   bool          `env:"FILE_MEMORY_BACKEND_ENABLED" envDefault:"false"`
++	RAMExportMode              string        `env:"RAM_EXPORT_MODE" envDefault:"full_logical"`
+ 	FileMemoryBackendDir       string        `env:"FILE_MEMORY_BACKEND_DIR,expand" envDefault:"${ORCHESTRATOR_BASE_PATH}/template-memory"`
+ 
+ 	DefaultCacheDir string `env:"DEFAULT_CACHE_DIR,expand" envDefault:"${ORCHESTRATOR_BASE_PATH}/build"`
+@@ -36,6 +37,9 @@ type BuilderConfig struct {
+ }
+ 
+ func makePathsAbsolute(c *BuilderConfig) error {
++	if err := c.ValidateRAMExportMode(); err != nil {
++		return err
++	}
+ 	for _, item := range []*string{
+ 		&c.DefaultCacheDir,
+ 		&c.FirecrackerNetnsExecHelper,
+@@ -72,6 +76,15 @@ func makePathsAbsolute(c *BuilderConfig) error {
+ 	return nil
+ }
+ 
++func (c BuilderConfig) ValidateRAMExportMode() error {
++	switch c.RAMExportMode {
++	case "", "full_logical", "tracked_delta":
++		return nil
++	default:
++		return fmt.Errorf("unsupported RAM_EXPORT_MODE %q", c.RAMExportMode)
++	}
++}
++
+ type Config struct {
+ 	BuilderConfig
+ 
+diff --git a/packages/orchestrator/internal/cfg/ram_export_test.go b/packages/orchestrator/internal/cfg/ram_export_test.go
+new file mode 100644
+index 000000000..41d265741
+--- /dev/null
++++ b/packages/orchestrator/internal/cfg/ram_export_test.go
+@@ -0,0 +1,13 @@
++package cfg
++
++import "testing"
++
++func TestRAMExportModeValidation(t *testing.T) {
++	for _, mode := range []string{"", "full_logical", "tracked_delta", "mincore", "tracked"} {
++		err := (BuilderConfig{RAMExportMode: mode}).ValidateRAMExportMode()
++		valid := mode == "" || mode == "full_logical" || mode == "tracked_delta"
++		if (err == nil) != valid {
++			t.Fatalf("mode %q: %v", mode, err)
++		}
++	}
++}
+diff --git a/packages/orchestrator/internal/sandbox/block/cache.go b/packages/orchestrator/internal/sandbox/block/cache.go
+index 7706bbd3a..634b6c165 100644
+--- a/packages/orchestrator/internal/sandbox/block/cache.go
++++ b/packages/orchestrator/internal/sandbox/block/cache.go
+@@ -452,6 +452,8 @@ func NewCacheFromProcessMemory(
+ 	}
+ 
+ 	if size == 0 {
++		digest := sha256.Sum256(nil)
++		cache.processMemoryDigest = &digest
+ 		return cache, nil
+ 	}
+ 
+diff --git a/packages/orchestrator/internal/sandbox/block/process_memory_test.go b/packages/orchestrator/internal/sandbox/block/process_memory_test.go
+index 6b92241fb..8fa9fc122 100644
+--- a/packages/orchestrator/internal/sandbox/block/process_memory_test.go
++++ b/packages/orchestrator/internal/sandbox/block/process_memory_test.go
+@@ -143,3 +143,39 @@ func TestProcessMemoryRejectsInvalidRangesBeforeCreatingArtifact(t *testing.T) {
+ 		require.ErrorIs(t, err, os.ErrNotExist)
+ 	}
+ }
++
++func TestProcessMemoryEmptyCandidateCaptureHasDigestWithoutReadingPID(t *testing.T) {
++	cache, err := NewCacheFromProcessMemory(t.Context(), 4096, t.TempDir()+"/empty", -1, nil)
++	require.NoError(t, err)
++	defer cache.Close()
++	digest, ok := cache.ProcessMemorySHA256()
++	require.True(t, ok)
++	require.Equal(t, sha256.Sum256(nil), digest)
++	require.Empty(t, cache.dirtySortedKeys())
++	info, err := os.Stat(cache.Path())
++	require.NoError(t, err)
++	require.Zero(t, info.Size())
++}
++
++func TestProcessMemoryInterruptedReadRetriesWithoutLosingBytes(t *testing.T) {
++	cache, err := NewCache(4096, 4096, t.TempDir()+"/cache", false)
++	require.NoError(t, err)
++	defer cache.Close()
++	calls := 0
++	want := bytes.Repeat([]byte{0x5a}, 4096)
++	err = cache.copyProcessMemoryWithReader(t.Context(), 1, []Range{{Start: 0x10000, Size: 4096}},
++		func(_ int, local []unix.Iovec, remote []unix.RemoteIovec, _ uint) (int, error) {
++			calls++
++			if calls == 1 {
++				return 0, unix.EINTR
++			}
++			require.Equal(t, uintptr(0x10000), remote[0].Base)
++			copy(unsafe.Slice(local[0].Base, len(want)), want)
++			return len(want), nil
++		})
++	require.NoError(t, err)
++	require.Equal(t, 2, calls)
++	digest, ok := cache.ProcessMemorySHA256()
++	require.True(t, ok)
++	require.Equal(t, sha256.Sum256(want), digest)
++}
+diff --git a/packages/orchestrator/internal/sandbox/checkpoint.go b/packages/orchestrator/internal/sandbox/checkpoint.go
+index 61caa0b0d..29b865ed1 100644
+--- a/packages/orchestrator/internal/sandbox/checkpoint.go
++++ b/packages/orchestrator/internal/sandbox/checkpoint.go
+@@ -11,6 +11,7 @@ import (
+ 	"path/filepath"
+ 
+ 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
+ 	"github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata"
+ 	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
+ )
+@@ -103,6 +104,35 @@ func sealSnapshotMetadata(ctx context.Context, s *Snapshot, m metadata.Template)
+ 	}
+ 	h := s.MemfileDiffHeader
+ 	checkpoint.LogicalRAMSize = h.Metadata.Size
++	if s.RAMExportMode == "tracked_delta" {
++		checkpoint.FormatVersion = 2
++		checkpoint.RAMExportMode = "tracked_delta"
++		checkpoint.RAMTrackingVersion = 1
++		size, err := s.MemfileDiff.Size(ctx)
++		if err != nil {
++			return fmt.Errorf("read tracked RAM payload size: %w", err)
++		}
++		if size < 0 {
++			return errors.New("negative tracked RAM payload size")
++		}
++		checkpoint.RAMPayloadSize = uint64(size)
++		if err := template.ValidateTrackedPayloadLayout(h, checkpoint.RAMPayloadSize); err != nil {
++			return err
++		}
++		captured, ok := s.MemfileDiff.(interface {
++			ProcessMemorySHA256() ([sha256.Size]byte, bool)
++		})
++		if !ok {
++			return errors.New("tracked checkpoint has no captured payload digest")
++		}
++		digest, ok := captured.ProcessMemorySHA256()
++		if !ok {
++			return errors.New("tracked checkpoint has no captured payload digest")
++		}
++		checkpoint.RAMPayloadSHA256 = hex.EncodeToString(digest[:])
++		m.Checkpoint = checkpoint
++		return publishCheckpointMetadata(ctx, m, s.Metafile.Path())
++	}
+ 	var covered uint64
+ 	full := true
+ 	for _, part := range h.Mapping {
+diff --git a/packages/orchestrator/internal/sandbox/checkpoint_test.go b/packages/orchestrator/internal/sandbox/checkpoint_test.go
+index bac51778d..bdebbd0cb 100644
+--- a/packages/orchestrator/internal/sandbox/checkpoint_test.go
++++ b/packages/orchestrator/internal/sandbox/checkpoint_test.go
+@@ -251,6 +251,65 @@ func TestCheckpointSealFullLogicalUsesRealCaptureDigestAndEmptyRootfs(t *testing
+ 	}
+ }
+ 
++func TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash(t *testing.T) {
++	for _, empty := range []bool{false, true} {
++		t.Run(map[bool]string{false: "nonempty", true: "empty"}[empty], func(t *testing.T) {
++			s, data := newCheckpointSnapshot(t)
++			s.RAMExportMode = "tracked_delta"
++			if empty {
++				data = nil
++				s.MemfileDiffHeader.Mapping[0].BuildId = uuid.New()
++				path, _ := s.MemfileDiff.CachePath()
++				if err := os.WriteFile(path, nil, 0o600); err != nil {
++					t.Fatal(err)
++				}
++			}
++			path, _ := s.MemfileDiff.CachePath()
++			s.MemfileDiff = checkpointDigestDiff{checkpointPathDiff: checkpointPathDiff{path: path}, digest: sha256.Sum256(data), valid: true}
++			if err := sealSnapshotMetadata(t.Context(), s, metadata.Template{Version: metadata.CurrentVersion}); err != nil {
++				t.Fatal(err)
++			}
++			m, err := metadata.FromFile(s.Metafile.Path())
++			if err != nil {
++				t.Fatal(err)
++			}
++			c := m.Checkpoint
++			want := sha256.Sum256(data)
++			if c.FormatVersion != 2 || c.RAMExportMode != "tracked_delta" || c.RAMTrackingVersion != 1 ||
++				c.LogicalRAMSHA256 != "" || c.RAMPayloadSHA256 != hex.EncodeToString(want[:]) || c.RAMPayloadSize != uint64(len(data)) {
++				t.Fatalf("invalid tracked manifest: %+v", c)
++			}
++		})
++	}
++}
++
++func TestCheckpointSealTrackedRejectsIncompletePayloadBeforePublish(t *testing.T) {
++	for _, change := range []string{"missing_digest", "wrong_digest_state", "wrong_length"} {
++		t.Run(change, func(t *testing.T) {
++			s, data := newCheckpointSnapshot(t)
++			s.RAMExportMode = "tracked_delta"
++			path, _ := s.MemfileDiff.CachePath()
++			s.MemfileDiff = checkpointDigestDiff{checkpointPathDiff: checkpointPathDiff{path: path}, digest: sha256.Sum256(data), valid: true}
++			switch change {
++			case "missing_digest":
++				s.MemfileDiff = checkpointPathDiff{path: path}
++			case "wrong_digest_state":
++				s.MemfileDiff = checkpointDigestDiff{checkpointPathDiff: checkpointPathDiff{path: path}}
++			case "wrong_length":
++				if err := os.Truncate(path, 0); err != nil {
++					t.Fatal(err)
++				}
++			}
++			if err := sealSnapshotMetadata(t.Context(), s, metadata.Template{Version: metadata.CurrentVersion}); err == nil {
++				t.Fatal("published incomplete tracked payload")
++			}
++			if _, err := os.Stat(s.Metafile.Path()); !errors.Is(err, os.ErrNotExist) {
++				t.Fatalf("metadata became visible: %v", err)
++			}
++		})
++	}
++}
++
+ func TestCheckpointSealFullLogicalRequiresCapturedDigest(t *testing.T) {
+ 	for _, validMethod := range []bool{false, true} {
+ 		t.Run(map[bool]string{false: "no-capture-method", true: "capture-not-valid"}[validMethod], func(t *testing.T) {
+diff --git a/packages/orchestrator/internal/sandbox/fc/client.go b/packages/orchestrator/internal/sandbox/fc/client.go
+index db7fedf71..84c2969fd 100644
+--- a/packages/orchestrator/internal/sandbox/fc/client.go
++++ b/packages/orchestrator/internal/sandbox/fc/client.go
+@@ -59,7 +59,7 @@ func (c *apiClient) loadSnapshot(
+ 		Context: ctx,
+ 		Body: &models.SnapshotLoadParams{
+ 			ResumeVM:            false,
+-			EnableDiffSnapshots: false,
++			EnableDiffSnapshots: memoryBackend.TrackDirty,
+ 			MemBackend:          backend,
+ 			SnapshotPath:        &snapfilePath,
+ 		},
+diff --git a/packages/orchestrator/internal/sandbox/fc/script_builder.go b/packages/orchestrator/internal/sandbox/fc/script_builder.go
+index 6254abb4b..891c96ab1 100644
+--- a/packages/orchestrator/internal/sandbox/fc/script_builder.go
++++ b/packages/orchestrator/internal/sandbox/fc/script_builder.go
+@@ -118,6 +118,10 @@ func (sb *StartScriptBuilder) firecrackerCommand(args startScriptArgs, rootfsPat
+ 		args.FirecrackerSocket,
+ 	)
+ 
++	if sb.builderConfig.RAMExportMode == "tracked_delta" {
++		firecrackerArgs += " --kvm-dirty-bitmap --dirty-export-policy bitmap"
++	}
++
+ 	helper := strings.TrimSpace(sb.builderConfig.FirecrackerNetnsExecHelper)
+ 	if helper == "" || helper == "disabled" || helper == "ip-netns-exec" {
+ 		return fmt.Sprintf("ip netns exec %s %s", args.NamespaceID, firecrackerArgs)
+diff --git a/packages/orchestrator/internal/sandbox/fc/script_builder_test.go b/packages/orchestrator/internal/sandbox/fc/script_builder_test.go
+index 8fc6b2c6f..e3f57f11e 100644
+--- a/packages/orchestrator/internal/sandbox/fc/script_builder_test.go
++++ b/packages/orchestrator/internal/sandbox/fc/script_builder_test.go
+@@ -11,6 +11,14 @@ import (
+ 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
+ )
+ 
++func TestTrackedMemoryStartCommand(t *testing.T) {
++	for _, mode := range []string{"", "full_logical", "tracked_delta"} {
++		builder := NewStartScriptBuilder(cfg.BuilderConfig{RAMExportMode: mode})
++		command := builder.firecrackerCommand(startScriptArgs{FirecrackerPath: "/fc", FirecrackerSocket: "/sock"}, ConstantRootfsPaths)
++		require.Equal(t, mode == "tracked_delta", strings.Contains(command, "--kvm-dirty-bitmap --dirty-export-policy bitmap"))
++	}
++}
++
+ func TestStartScriptBuilder_Build(t *testing.T) {
+ 	t.Parallel()
+ 	config, err := cfg.ParseBuilder()
+diff --git a/packages/orchestrator/internal/sandbox/fc/snapshot_memory_backend.go b/packages/orchestrator/internal/sandbox/fc/snapshot_memory_backend.go
+index 622d70853..12fdf43ce 100644
+--- a/packages/orchestrator/internal/sandbox/fc/snapshot_memory_backend.go
++++ b/packages/orchestrator/internal/sandbox/fc/snapshot_memory_backend.go
+@@ -8,9 +8,10 @@ const (
+ )
+ 
+ type SnapshotMemoryBackend struct {
+-	Type  SnapshotMemoryBackendType
+-	Path  string
+-	Ready <-chan struct{}
++	Type       SnapshotMemoryBackendType
++	Path       string
++	Ready      <-chan struct{}
++	TrackDirty bool
+ }
+ 
+ func NewUffdSnapshotMemoryBackend(path string, ready <-chan struct{}) SnapshotMemoryBackend {
+diff --git a/packages/orchestrator/internal/sandbox/fc/tracked_memory.go b/packages/orchestrator/internal/sandbox/fc/tracked_memory.go
+new file mode 100644
+index 000000000..923fd66cd
+--- /dev/null
++++ b/packages/orchestrator/internal/sandbox/fc/tracked_memory.go
+@@ -0,0 +1,44 @@
++package fc
++
++import (
++	"context"
++	"fmt"
++
++	"github.com/bits-and-blooms/bitset"
++	"github.com/e2b-dev/infra/packages/shared/pkg/fc/client/operations"
++	"github.com/e2b-dev/infra/packages/shared/pkg/fc/models"
++	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
++)
++
++// TrackedDirtyMemory accepts only the versioned, frozen KVM/VMM contract.
++// In particular an older FC's empty bitmap must never mean safe inheritance.
++func (p *Process) TrackedDirtyMemory(ctx context.Context, size, blockSize int64) (*header.DiffMetadata, error) {
++	res, err := p.client.client.Operations.GetDirtyMemory(&operations.GetDirtyMemoryParams{Context: ctx})
++	if err != nil {
++		return nil, fmt.Errorf("get tracked RAM candidates: %w", err)
++	}
++	return validateTrackedMemory(res.Payload, size, blockSize)
++}
++
++func validateTrackedMemory(m *models.DirtyMemory, size, blockSize int64) (*header.DiffMetadata, error) {
++	if m == nil || size <= 0 || blockSize != 4096 || size%blockSize != 0 {
++		return nil, fmt.Errorf("invalid tracked RAM response or layout")
++	}
++	if m.TrackingVersion != 1 || m.TrackingMode != "bitmap" || !m.TrackingComplete || !m.CaptureReady ||
++		m.LogicalSize != uint64(size) || m.PageSize != uint64(blockSize) {
++		return nil, fmt.Errorf("FC does not provide a complete frozen tracked RAM contract: %+v", struct {
++			Version         uint32
++			Mode            string
++			Complete, Ready bool
++			Size, Page      uint64
++		}{m.TrackingVersion, m.TrackingMode, m.TrackingComplete, m.CaptureReady, m.LogicalSize, m.PageSize})
++	}
++	pages := uint64(size / blockSize)
++	if uint64(len(m.Bitmap)) != (pages+63)/64 {
++		return nil, fmt.Errorf("tracked RAM bitmap length differs from logical layout")
++	}
++	if tail := pages % 64; tail != 0 && m.Bitmap[len(m.Bitmap)-1]>>tail != 0 {
++		return nil, fmt.Errorf("tracked RAM bitmap has out-of-range bits")
++	}
++	return &header.DiffMetadata{Dirty: bitset.From(m.Bitmap), Empty: bitset.New(0), BlockSize: blockSize}, nil
++}
+diff --git a/packages/orchestrator/internal/sandbox/fc/tracked_memory_test.go b/packages/orchestrator/internal/sandbox/fc/tracked_memory_test.go
+new file mode 100644
+index 000000000..c4f9a397e
+--- /dev/null
++++ b/packages/orchestrator/internal/sandbox/fc/tracked_memory_test.go
+@@ -0,0 +1,93 @@
++package fc
++
++import (
++	"context"
++	"encoding/json"
++	"net"
++	"net/http"
++	"path/filepath"
++	"testing"
++
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
++	"github.com/e2b-dev/infra/packages/shared/pkg/fc/models"
++	"github.com/stretchr/testify/require"
++)
++
++func trackedResponse() *models.DirtyMemory {
++	return &models.DirtyMemory{Bitmap: []uint64{1, 1}, TrackingVersion: 1, TrackingMode: "bitmap",
++		TrackingComplete: true, CaptureReady: true, LogicalSize: 65 * 4096, PageSize: 4096}
++}
++
++func TestTrackedMemoryContractRejectsIncompleteCandidates(t *testing.T) {
++	tests := map[string]func(*models.DirtyMemory){
++		"old_fc":          func(m *models.DirtyMemory) { *m = models.DirtyMemory{Bitmap: m.Bitmap} },
++		"wrong_version":   func(m *models.DirtyMemory) { m.TrackingVersion = 2 },
++		"resident_policy": func(m *models.DirtyMemory) { m.TrackingMode = "hybrid" },
++		"untracked":       func(m *models.DirtyMemory) { m.TrackingComplete = false },
++		"not_frozen":      func(m *models.DirtyMemory) { m.CaptureReady = false },
++		"wrong_size":      func(m *models.DirtyMemory) { m.LogicalSize++ },
++		"wrong_page":      func(m *models.DirtyMemory) { m.PageSize = 2 << 20 },
++		"truncated":       func(m *models.DirtyMemory) { m.Bitmap = m.Bitmap[:1] },
++		"extra_word":      func(m *models.DirtyMemory) { m.Bitmap = append(m.Bitmap, 0) },
++		"tail_bits":       func(m *models.DirtyMemory) { m.Bitmap[1] = 2 },
++	}
++	for name, mutate := range tests {
++		t.Run(name, func(t *testing.T) {
++			m := trackedResponse()
++			mutate(m)
++			_, err := validateTrackedMemory(m, 65*4096, 4096)
++			require.Error(t, err)
++		})
++	}
++	_, err := validateTrackedMemory(nil, 4096, 4096)
++	require.Error(t, err)
++	_, err = validateTrackedMemory(trackedResponse(), 65*4096, 8192)
++	require.Error(t, err)
++}
++
++func TestTrackedMemoryPreservesColdAndSwappedCandidateBits(t *testing.T) {
++	// Selection consumes only the FC contract, never host residency. Bits at
++	// both ends survive; unset cold parent pages remain inherited, not Empty.
++	m := trackedResponse()
++	d, err := validateTrackedMemory(m, 65*4096, 4096)
++	require.NoError(t, err)
++	require.EqualValues(t, 2, d.Dirty.Count())
++	require.True(t, d.Dirty.Test(64))
++	require.Zero(t, d.Empty.Count())
++	m.Bitmap = []uint64{0, 0}
++	d, err = validateTrackedMemory(m, 65*4096, 4096)
++	require.NoError(t, err)
++	require.Zero(t, d.Dirty.Count())
++}
++
++func TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested(t *testing.T) {
++	for _, track := range []bool{false, true} {
++		t.Run(map[bool]string{true: "tracked", false: "full"}[track], func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "fc.sock")
++			listener, err := net.Listen("unix", path)
++			require.NoError(t, err)
++			bodies := make(chan map[string]any, 1)
++			server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				if r.Method != "PUT" || r.URL.Path != "/snapshot/load" {
++					http.Error(w, "unexpected API", 404)
++					return
++				}
++				var body map[string]any
++				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
++					http.Error(w, err.Error(), 400)
++					return
++				}
++				bodies <- body
++				w.WriteHeader(204)
++			})}
++			go server.Serve(listener)
++			defer server.Close()
++			backend := NewFileSnapshotMemoryBackend("/dev/nbd42")
++			backend.TrackDirty = track
++			require.NoError(t, newApiClient(path).loadSnapshot(context.Background(), backend, template.NewLocalFileLink("/state")))
++			body := <-bodies
++			require.Equal(t, track, body["enable_diff_snapshots"] == true)
++			require.NotEqual(t, true, body["resume_vm"])
++		})
++	}
++}
+diff --git a/packages/orchestrator/internal/sandbox/sandbox.go b/packages/orchestrator/internal/sandbox/sandbox.go
+index 3378706dc..96bcd37ef 100644
+--- a/packages/orchestrator/internal/sandbox/sandbox.go
++++ b/packages/orchestrator/internal/sandbox/sandbox.go
+@@ -380,10 +380,16 @@ func (f *Factory) CreateSandbox(
+ 	zap.L().Sugar().Errorf("[NUMA][CreateSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
+ 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
+ 
++	// Cold boot has no parent RAM baseline; always use full logical export.
++	if err := f.config.ValidateRAMExportMode(); err != nil {
++		return nil, err
++	}
++	processConfig := f.config
++	processConfig.RAMExportMode = "full_logical"
+ 	fcHandle, err := fc.NewProcess(
+ 		ctx,
+ 		execCtx,
+-		f.config,
++		processConfig,
+ 		ips,
+ 		sandboxFiles,
+ 		config.FirecrackerConfig,
+@@ -784,10 +790,22 @@ func (f *Factory) ResumeSandbox(
+ 
+ 	zap.L().Sugar().Errorf("[NUMA][ResumeSandbox] config.Envd.Vars=%#v, FC_BIND numaNode=%d",
+ 		config.Envd.Vars, fc.NumaNodeFromEnv(config.Envd.Vars))
++	if err := f.config.ValidateRAMExportMode(); err != nil {
++		return nil, err
++	}
++	trackFileMemory := f.config.RAMExportMode == "tracked_delta" && useFileMemoryBackend &&
++		!config.HugePages && os.Getpagesize() == 4096 && resumeMemfile.BlockSize() == 4096 &&
++		resumeMemfileSize > 0 && resumeMemfile.Header() != nil && resumeMemfile.Header().Metadata != nil
++	processConfig := f.config
++	processConfig.RAMExportMode = "full_logical"
++	if trackFileMemory {
++		processConfig.RAMExportMode = "tracked_delta"
++	}
++	telemetry.ReportEvent(ctx, "selected RAM export mode: "+processConfig.RAMExportMode)
+ 	fcHandle, fcErr := fc.NewProcess(
+ 		ctx,
+ 		execCtx,
+-		f.config,
++		processConfig,
+ 		ips,
+ 		sandboxFiles,
+ 		// The versions need to base exactly the same as the paused sandbox template because of the FC compatibility.
+@@ -829,6 +847,10 @@ func (f *Factory) ResumeSandbox(
+ 	if useFileMemoryBackend {
+ 		sandboxMemory = uffd.NewNoopMemory(resumeMemfileSize, resumeMemfile.BlockSize())
+ 		snapshotMemoryBackend = fc.NewFileSnapshotMemoryBackend(fileMemoryBackendPath)
++		if trackFileMemory {
++			sandboxMemory = uffd.NewTrackedFileMemory(resumeMemfileSize, resumeMemfile.BlockSize())
++			snapshotMemoryBackend.TrackDirty = true
++		}
+ 		if memoryLease != nil {
+ 			leased := newLeasedMemory(sandboxMemory, memoryLease)
+ 			sandboxMemory = leased
+@@ -1223,6 +1245,9 @@ func (s *Sandbox) Pause(
+ 
+ 		cleanup: cleanup,
+ 	}
++	if backend, ok := s.Resources.memory.(interface{ RAMExportMode() string }); ok {
++		result.RAMExportMode = backend.RAMExportMode()
++	}
+ 	if err := sealSnapshotMetadata(ctx, result, m); err != nil {
+ 		return nil, err
+ 	}
+diff --git a/packages/orchestrator/internal/sandbox/shared_memory.go b/packages/orchestrator/internal/sandbox/shared_memory.go
+index e033a1df3..174e5b004 100644
+--- a/packages/orchestrator/internal/sandbox/shared_memory.go
++++ b/packages/orchestrator/internal/sandbox/shared_memory.go
+@@ -73,7 +73,13 @@ type leasedMemory struct {
+ func newLeasedMemory(backend uffd.MemoryBackend, lease *memorybacking.Lease) *leasedMemory {
+ 	return &leasedMemory{MemoryBackend: backend, lease: lease, exit: utils.NewErrorOnce(), stop: make(chan struct{})}
+ }
+-func (m *leasedMemory) Ready() chan struct{}   { return m.MemoryBackend.Ready() }
++func (m *leasedMemory) Ready() chan struct{} { return m.MemoryBackend.Ready() }
++func (m *leasedMemory) RAMExportMode() string {
++	if backend, ok := m.MemoryBackend.(interface{ RAMExportMode() string }); ok {
++		return backend.RAMExportMode()
++	}
++	return ""
++}
+ func (m *leasedMemory) Exit() *utils.ErrorOnce { return m.exit }
+ func (m *leasedMemory) Start(ctx context.Context, path string) error {
+ 	if err := m.MemoryBackend.Start(ctx, path); err != nil {
+diff --git a/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go b/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go
+index 71d65c95d..66fc2df59 100644
+--- a/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go
++++ b/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go
+@@ -134,6 +134,8 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
+ 			t.Errorf("NBD cleanup: %v", err)
+ 		}
+ 	})
++	exportMode := os.Getenv("E2B_SHARING_RAM_EXPORT_MODE")
++	require.NoError(t, (cfg.BuilderConfig{RAMExportMode: exportMode}).ValidateRAMExportMode())
+ 	configFor := func(mode string) cfg.Config {
+ 		base := filepath.Join(runDir, mode)
+ 		config := cfg.Config{BuilderConfig: cfg.BuilderConfig{
+@@ -142,7 +144,7 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
+ 			OrchestratorBaseDir: base, DefaultCacheDir: filepath.Join(base, "build-cache"),
+ 			TemplatesDir: filepath.Join(base, "templates"), EnvdTimeout: 30 * time.Second,
+ 			FileMemoryBackendEnabled: true, FileMemoryBackendDir: filepath.Join(base, "file-memory"),
+-			SharedNBDMemoryEnabled: mode == "B1", NetworkConfig: netConfig,
++			SharedNBDMemoryEnabled: mode == "B1", RAMExportMode: exportMode, NetworkConfig: netConfig,
+ 			StorageConfig: storage.Config{SandboxCacheDir: filepath.Join(base, "rootfs-cow"),
+ 				SnapshotCacheDir: filepath.Join(base, "snapshot-cache"), TemplateCacheDir: filepath.Join(base, "template-cache")},
+ 		}}
+@@ -218,6 +220,21 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
+ 		// External checkpoint freezes every device writer. The native full dump
+ 		// and production Pause export below observe this same frozen RAM state.
+ 		require.NoError(t, sbx.process.CreateSnapshot(ctx, prefix+"-freeze.snap"))
++		tracked := false
++		var candidateHash string
++		var candidateSize int64
++		var candidatePages uint
++		if backend, ok := sbx.Resources.memory.(interface{ RAMExportMode() string }); ok && backend.RAMExportMode() == "tracked_delta" {
++			tracked = true
++			// Select and capture BEFORE the full oracle faults in cold RAM.
++			candidates, err := sbx.Resources.memory.DiffMetadata(ctx, sbx.process)
++			require.NoError(t, err)
++			candidatePages = candidates.Dirty.Count()
++			capture, err := sbx.process.ExportMemory(ctx, candidates.Dirty, prefix+"-candidates.ram", 4096)
++			require.NoError(t, err)
++			candidateHash, candidateSize = sharingHashFile(t, prefix+"-candidates.ram")
++			require.NoError(t, capture.Close())
++		}
+ 		require.NoError(t, sharingFCRequest(ctx, sbx, "/snapshot/create", map[string]any{
+ 			"snapshot_type": "Full", "snapshot_path": prefix + "-native.snap", "mem_file_path": prefix + "-native.ram"}))
+ 		buildID := uuid.NewString()
+@@ -230,11 +247,39 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
+ 		require.NoError(t, err)
+ 		nativeHash, nativeSize := sharingHashFile(t, prefix+"-native.ram")
+ 		exportedHash, exportedSize := sharingHashFile(t, memPath)
+-		require.Equal(t, nativeSize, exportedSize)
+-		require.Equal(t, nativeHash, exportedHash, "native and production full_logical export differ")
++		if tracked {
++			require.Equal(t, "tracked_delta", snapshot.RAMExportMode)
++			require.Equal(t, int64(candidatePages)*4096, exportedSize)
++			require.Equal(t, candidateSize, exportedSize)
++			require.Equal(t, candidateHash, exportedHash, "production candidates changed after the full oracle read")
++		} else {
++			require.Equal(t, nativeSize, exportedSize)
++			require.Equal(t, nativeHash, exportedHash, "native and production full_logical export differ")
++		}
+ 		require.NoError(t, snapshot.Upload(ctx, persistence, storage.TemplateFiles{BuildID: buildID}))
++		if tracked {
++			// Resolve through the production layered source: this reads both the
++			// new packed payload and every inherited historical BuildID as needed.
++			resolved, err := b1Cache.GetTemplate(ctx, buildID, false, false)
++			require.NoError(t, err)
++			require.NoError(t, template.ValidateCheckpoint(ctx, resolved))
++			logical, err := resolved.Memfile(ctx)
++			require.NoError(t, err)
++			digest := sha256.New()
++			buffer := make([]byte, 1<<20)
++			for off := int64(0); off < nativeSize; off += int64(len(buffer)) {
++				chunk := buffer[:min(int64(len(buffer)), nativeSize-off)]
++				n, err := logical.ReadAt(ctx, chunk, off)
++				require.NoError(t, err)
++				require.Equal(t, len(chunk), n)
++				_, _ = digest.Write(chunk)
++			}
++			require.Equal(t, nativeHash, hex.EncodeToString(digest.Sum(nil)), "parent + production delta differs from complete frozen RAM")
++			require.Less(t, exportedSize, nativeSize, "test workload must demonstrate a real partial capture")
++		}
+ 		sharingReceipt(t, prefix+"-checkpoint.json", map[string]any{"build_id": buildID,
+-			"ram_sha256": exportedHash, "ram_size": exportedSize, "native_same_frozen_state": true})
++			"payload_sha256": exportedHash, "payload_size": exportedSize, "ram_sha256": nativeHash, "ram_size": nativeSize,
++			"candidate_pages": candidatePages, "tracked_delta": tracked, "native_same_frozen_state": true})
+ 		return buildID
+ 	}
+ 	aID := pauseUpload("A", cold)
+@@ -313,7 +358,7 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
+ 		sharingCheckFiles(t, ctx, third, fixture.Checkpoints["after_edits"].ExpectedFiles)
+ 		require.NoError(t, third.Close(ctx))
+ 		sharingReceipt(t, filepath.Join(runDir, mode+"-result.json"), map[string]any{
+-			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true,
++			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true, "requested_ram_export_mode": exportMode,
+ 			"trace_derived_source_edit_fixture": true, "complete_original_trace": false})
+ 	}
+ 	sharingReceipt(t, filepath.Join(runDir, "result.json"), map[string]any{
+diff --git a/packages/orchestrator/internal/sandbox/snapshot.go b/packages/orchestrator/internal/sandbox/snapshot.go
+index b4d7330fc..d7569de38 100644
+--- a/packages/orchestrator/internal/sandbox/snapshot.go
++++ b/packages/orchestrator/internal/sandbox/snapshot.go
+@@ -11,6 +11,7 @@ import (
+ )
+ 
+ type Snapshot struct {
++	RAMExportMode     string
+ 	MemfileDiff       build.Diff
+ 	MemfileDiffHeader *header.Header
+ 	RootfsDiff        build.Diff
+diff --git a/packages/orchestrator/internal/sandbox/template/checkpoint_test.go b/packages/orchestrator/internal/sandbox/template/checkpoint_test.go
+index 1c33117de..c587df9d0 100644
+--- a/packages/orchestrator/internal/sandbox/template/checkpoint_test.go
++++ b/packages/orchestrator/internal/sandbox/template/checkpoint_test.go
+@@ -108,6 +108,58 @@ func TestCheckpointValidateAcceptsSealedFullAndDelta(t *testing.T) {
+ 	}
+ }
+ 
++func TestCheckpointValidateTrackedContractAndPayloadLayout(t *testing.T) {
++	for _, change := range []string{"valid", "old_version", "wrong_tracking", "missing_digest", "logical_hash", "wrong_length"} {
++		t.Run(change, func(t *testing.T) {
++			fixture := newCheckpointTemplate(t)
++			c := fixture.meta.Checkpoint
++			c.FormatVersion, c.RAMExportMode, c.RAMTrackingVersion = 2, "tracked_delta", 1
++			c.RAMPayloadSHA256, c.RAMPayloadSize, c.LogicalRAMSHA256 = checkpointTestSHA([]byte("payload")), 4096, ""
++			switch change {
++			case "old_version":
++				c.FormatVersion = 1
++			case "wrong_tracking":
++				c.RAMTrackingVersion = 2
++			case "missing_digest":
++				c.RAMPayloadSHA256 = ""
++			case "logical_hash":
++				c.LogicalRAMSHA256 = checkpointTestSHA(nil)
++			case "wrong_length":
++				c.RAMPayloadSize = 0
++			}
++			err := ValidateCheckpoint(t.Context(), fixture)
++			if (err == nil) != (change == "valid") {
++				t.Fatalf("%s: %v", change, err)
++			}
++		})
++	}
++}
++
++func TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles(t *testing.T) {
++	current, parent := uuid.New(), uuid.New()
++	h, err := header.NewHeader(header.NewTemplateMetadata(current, 4096, 3*4096), []*header.BuildMap{
++		{Offset: 0, Length: 3 * 4096, BuildId: parent},
++	})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := ValidateTrackedPayloadLayout(h, 0); err != nil {
++		t.Fatal(err)
++	}
++	h.Mapping = []*header.BuildMap{
++		{Offset: 0, Length: 4096, BuildId: current, BuildStorageOffset: 0},
++		{Offset: 4096, Length: 4096, BuildId: parent, BuildStorageOffset: 4096},
++		{Offset: 8192, Length: 4096, BuildId: current, BuildStorageOffset: 4096},
++	}
++	if err := ValidateTrackedPayloadLayout(h, 8192); err != nil {
++		t.Fatal(err)
++	}
++	h.Mapping[2].BuildStorageOffset = 8192
++	if err := ValidateTrackedPayloadLayout(h, 8192); err == nil {
++		t.Fatal("accepted payload hole")
++	}
++}
++
+ func TestCheckpointValidateRejectsStateHeaderAndSizeMismatch(t *testing.T) {
+ 	for _, tc := range []struct {
+ 		name   string
+diff --git a/packages/orchestrator/internal/sandbox/template/restore_memory.go b/packages/orchestrator/internal/sandbox/template/restore_memory.go
+index 963aa1101..e76ab70f7 100644
+--- a/packages/orchestrator/internal/sandbox/template/restore_memory.go
++++ b/packages/orchestrator/internal/sandbox/template/restore_memory.go
+@@ -119,9 +119,17 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
+ 	if c == nil {
+ 		return nil
+ 	}
+-	if c.FormatVersion != 1 || (c.RAMExportMode != "full_logical" && c.RAMExportMode != "uffd_delta") {
++	legacy := c.FormatVersion == 1 && (c.RAMExportMode == "full_logical" || c.RAMExportMode == "uffd_delta")
++	tracked := c.FormatVersion == 2 && c.RAMExportMode == "tracked_delta"
++	if !legacy && !tracked {
+ 		return fmt.Errorf("unsupported checkpoint format or RAM export mode")
+ 	}
++	if tracked {
++		digest, err := hex.DecodeString(c.RAMPayloadSHA256)
++		if err != nil || len(digest) != sha256.Size || c.RAMTrackingVersion != 1 || c.LogicalRAMSHA256 != "" {
++			return fmt.Errorf("invalid tracked checkpoint contract or payload checksum")
++		}
++	}
+ 	if c.RAMExportMode == "full_logical" {
+ 		digest, err := hex.DecodeString(c.LogicalRAMSHA256)
+ 		if err != nil || len(digest) != sha256.Size {
+@@ -132,6 +140,11 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
+ 	if err != nil {
+ 		return err
+ 	}
++	if tracked {
++		if err := ValidateTrackedPayloadLayout(mem.Header(), c.RAMPayloadSize); err != nil {
++			return err
++		}
++	}
+ 	root, err := t.Rootfs()
+ 	if err != nil {
+ 		return err
+@@ -173,3 +186,30 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
+ 	}
+ 	return nil
+ }
++
++// ValidateTrackedPayloadLayout binds the packed payload length to the extents
++// supplied by this generation. Inherited extents require their original objects.
++func ValidateTrackedPayloadLayout(h *header.Header, payloadSize uint64) error {
++	if h == nil || h.Metadata == nil || h.Metadata.BlockSize != 4096 || h.Metadata.Size == 0 || h.Metadata.Size%4096 != 0 {
++		return fmt.Errorf("invalid tracked checkpoint RAM header")
++	}
++	var packed, covered uint64
++	for _, part := range h.Mapping {
++		if part == nil || part.Offset != covered || covered > h.Metadata.Size || part.Length == 0 ||
++			part.Length > h.Metadata.Size-covered || part.Length%4096 != 0 || part.BuildStorageOffset%4096 != 0 {
++			return fmt.Errorf("invalid tracked checkpoint logical extent")
++		}
++		covered += part.Length
++		if part.BuildId != h.Metadata.BuildId {
++			continue
++		}
++		if part.BuildStorageOffset != packed || packed > payloadSize || part.Length > payloadSize-packed {
++			return fmt.Errorf("tracked RAM payload extent does not match packed capture")
++		}
++		packed += part.Length
++	}
++	if covered != h.Metadata.Size || packed != payloadSize || payloadSize > h.Metadata.Size {
++		return fmt.Errorf("tracked RAM payload length differs from header")
++	}
++	return nil
++}
+diff --git a/packages/orchestrator/internal/sandbox/uffd/tracked_file.go b/packages/orchestrator/internal/sandbox/uffd/tracked_file.go
+new file mode 100644
+index 000000000..4bfb38039
+--- /dev/null
++++ b/packages/orchestrator/internal/sandbox/uffd/tracked_file.go
+@@ -0,0 +1,22 @@
++package uffd
++
++import (
++	"context"
++
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc"
++	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
++)
++
++// TrackedFileMemory has no missing-page pager: File/MAP_PRIVATE still faults
++// through its backing. Only snapshot candidate selection differs from Noop.
++type TrackedFileMemory struct{ *NoopMemory }
++
++func NewTrackedFileMemory(size, blockSize int64) *TrackedFileMemory {
++	return &TrackedFileMemory{NewNoopMemory(size, blockSize)}
++}
++
++func (*TrackedFileMemory) RAMExportMode() string { return "tracked_delta" }
++
++func (m *TrackedFileMemory) DiffMetadata(ctx context.Context, p *fc.Process) (*header.DiffMetadata, error) {
++	return p.TrackedDirtyMemory(ctx, m.size, m.blockSize)
++}
+diff --git a/packages/orchestrator/internal/template/metadata/template_metadata.go b/packages/orchestrator/internal/template/metadata/template_metadata.go
+index 06a55a9be..d89bdc84a 100644
+--- a/packages/orchestrator/internal/template/metadata/template_metadata.go
++++ b/packages/orchestrator/internal/template/metadata/template_metadata.go
+@@ -108,6 +108,9 @@ type Checkpoint struct {
+ 	RAMExportMode      string `json:"ram_export_mode"`
+ 	LogicalRAMSize     uint64 `json:"logical_ram_size"`
+ 	LogicalRAMSHA256   string `json:"logical_ram_sha256,omitempty"`
++	RAMPayloadSHA256   string `json:"ram_payload_sha256,omitempty"`
++	RAMPayloadSize     uint64 `json:"ram_payload_size,omitempty"`
++	RAMTrackingVersion uint32 `json:"ram_tracking_version,omitempty"`
+ 	RAMHeaderSHA256    string `json:"ram_header_sha256"`
+ 	RootfsHeaderSHA256 string `json:"rootfs_header_sha256"`
+ 	RootfsDiffSHA256   string `json:"rootfs_diff_sha256"`
+diff --git a/packages/shared/pkg/fc/firecracker.yml b/packages/shared/pkg/fc/firecracker.yml
+index b9c428a8d..17a6a77c9 100644
+--- a/packages/shared/pkg/fc/firecracker.yml
++++ b/packages/shared/pkg/fc/firecracker.yml
+@@ -1107,6 +1107,27 @@ definitions:
+     required:
+       - bitmap
+     properties:
++      tracking_version:
++        type: integer
++        format: uint32
++        description: Version 1 tracks cumulative KVM and VMM changes since restore.
++      tracking_mode:
++        type: string
++        description: Dirty selection policy. File deltas require bitmap.
++      tracking_complete:
++        type: boolean
++        description: Logging and software bitmaps are enabled on every RAM region.
++      capture_ready:
++        type: boolean
++        description: A successful state-only save has frozen CPU and device writers.
++      logical_size:
++        type: integer
++        format: uint64
++        description: Total logical RAM bytes, excluding GPA holes.
++      page_size:
++        type: integer
++        format: uint64
++        description: Bitmap granularity in bytes.
+       bitmap:
+         type: array
+         description: Bitmap for dirty pages. Each bit represents whether a page has been written since write-protection was enabled.
+diff --git a/packages/shared/pkg/fc/models/dirty_memory.go b/packages/shared/pkg/fc/models/dirty_memory.go
+index 3e6755459..3c3e1e6ba 100644
+--- a/packages/shared/pkg/fc/models/dirty_memory.go
++++ b/packages/shared/pkg/fc/models/dirty_memory.go
+@@ -19,6 +19,15 @@ type DirtyMemory struct {
+ 	// Bitmap for dirty pages. Each bit represents whether a page has been written since write-protection was enabled.
+ 	// Required: true
+ 	Bitmap []uint64 `json:"bitmap"`
++
++	// Optional versioned contract. Missing fields from older FCs fail closed
++	// in the tracked File backend; legacy UFFD consumers still use Bitmap.
++	TrackingVersion  uint32 `json:"tracking_version,omitempty"`
++	TrackingMode     string `json:"tracking_mode,omitempty"`
++	TrackingComplete bool   `json:"tracking_complete,omitempty"`
++	CaptureReady     bool   `json:"capture_ready,omitempty"`
++	LogicalSize      uint64 `json:"logical_size,omitempty"`
++	PageSize         uint64 `json:"page_size,omitempty"`
+ }
+ 
+ // Validate validates this dirty memory
+diff --git a/packages/shared/pkg/storage/header/tracked_delta_test.go b/packages/shared/pkg/storage/header/tracked_delta_test.go
+new file mode 100644
+index 000000000..9e11dd536
+--- /dev/null
++++ b/packages/shared/pkg/storage/header/tracked_delta_test.go
+@@ -0,0 +1,55 @@
++package header
++
++import (
++	"bytes"
++	"context"
++	"math/rand"
++	"testing"
++
++	"github.com/bits-and-blooms/bitset"
++	"github.com/google/uuid"
++	"github.com/stretchr/testify/require"
++)
++
++func TestTrackedDeltaGenerationsInheritColdZeroAndEmptyRounds(t *testing.T) {
++	const page, pages = 4096, 17
++	rng := rand.New(rand.NewSource(20261030))
++	base := make([]byte, page*pages)
++	_, _ = rng.Read(base)
++	id := uuid.New()
++	h, err := NewHeader(NewTemplateMetadata(id, page, uint64(len(base))), nil)
++	require.NoError(t, err)
++	objects := map[uuid.UUID][]byte{id: bytes.Clone(base)}
++	want := bytes.Clone(base)
++	for generation := 0; generation < 12; generation++ {
++		candidates := bitset.New(pages)
++		for i := 1; i < pages; i++ { // page zero stays cold and nonzero in every generation.
++			if generation%3 != 2 && rng.Intn(3) == 0 {
++				candidates.Set(uint(i))
++				if i%2 == 0 {
++					clear(want[i*page : (i+1)*page])
++				} else {
++					_, _ = rng.Read(want[i*page : (i+1)*page])
++				}
++			}
++		}
++		var packed []byte
++		for i, ok := candidates.NextSet(0); ok; i, ok = candidates.NextSet(i + 1) {
++			packed = append(packed, want[int(i)*page:(int(i)+1)*page]...)
++		}
++		id = uuid.New()
++		objects[id] = packed
++		h, err = (&DiffMetadata{Dirty: candidates, Empty: bitset.New(0), BlockSize: page}).ToDiffHeader(context.Background(), h, id)
++		require.NoError(t, err)
++		var restored []byte
++		for off := int64(0); off < int64(len(want)); off += page {
++			mapped, length, build, err := h.GetShiftedMapping(context.Background(), off)
++			require.NoError(t, err)
++			require.GreaterOrEqual(t, length, int64(page))
++			payload, exists := objects[*build]
++			require.True(t, exists, "referenced history must exist")
++			restored = append(restored, payload[mapped:mapped+page]...)
++		}
++		require.Equal(t, want, restored, "generation %d", generation)
++	}
++}
+diff --git a/scripts/memory-lab/page-sharing/kvm_check.py b/scripts/memory-lab/page-sharing/kvm_check.py
+index 05350a6a4..a39401219 100644
+--- a/scripts/memory-lab/page-sharing/kvm_check.py
++++ b/scripts/memory-lab/page-sharing/kvm_check.py
+@@ -82,8 +82,11 @@ class VM:
+         tty.setraw(slave)
+         self.buffer = bytearray()
+         self.log = (self.directory / "serial.log").open("ab", buffering=0)
++
++        self.track_dirty = bool(getattr(args, "tracked_delta", False)) and name not in ("initial", "seed")
++        flags = ["--kvm-dirty-bitmap", "--dirty-export-policy", "bitmap"] if self.track_dirty else []
+         self.process = subprocess.Popen(
+-            [str(args.firecracker), "--api-sock", str(self.api_path)],
++            [str(args.firecracker), "--api-sock", str(self.api_path)] + flags,
+             stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+         os.close(slave)
+         save_json(self.directory / "pid.json", {"pid": self.process.pid, "api_socket": str(self.api_path)})
+@@ -150,9 +153,10 @@ class VM:
+         return self.event(command.split()[0])
+ 
+     def restore(self, state, backing):
++        self.parent_backing = Path(backing)
+         self.api("PUT", "/snapshot/load", {
+             "snapshot_path": str(state), "mem_backend": {"backend_type": "File", "backend_path": str(backing)},
+-            "enable_diff_snapshots": False, "resume_vm": False})
++            "enable_diff_snapshots": self.track_dirty, "resume_vm": False})
+ 
+     def snapshot(self, state, ram=None):
+         body = {"snapshot_type": "Full", "snapshot_path": str(state)}
+diff --git a/scripts/memory-lab/page-sharing/m10_check.py b/scripts/memory-lab/page-sharing/m10_check.py
+index 1d59a0f45..f41e408df 100644
+--- a/scripts/memory-lab/page-sharing/m10_check.py
++++ b/scripts/memory-lab/page-sharing/m10_check.py
+@@ -30,6 +30,9 @@ def wait_balloon(vm, target, path):
+ 
+ 
+ def checkpoint(vm, regions, run, name):
++    if vm.track_dirty:
++        from tracked_delta_check import capture_checkpoint
++        return capture_checkpoint(vm, regions, run / (name + '.ram'))
+     receipt = k.export_memory(vm, regions, run / (name + '.ram'))
+     vm.snapshot(run / (name + '.native.state'), run / (name + '.native.ram'))
+     if k.sha256_file(run / (name + '.native.ram')) != receipt['sha256']:
+@@ -161,6 +164,7 @@ def main():
+     p.add_argument('--free-page-reporting', action='store_true', help='exercise natural FPR with balloon target held at zero')
+     p.add_argument('--probe-only', action='store_true')
+     p.add_argument('--cleanup-failed', action='store_true')
++    p.add_argument('--tracked-delta', action='store_true', help='select KVM/VMM candidates before reading RAM; compare reconstructed delta with native full RAM')
+     a = p.parse_args()
+     for n in ('firecracker', 'kernel', 'guest_binary', 'nbd_helper'):
+         setattr(a, n, getattr(a, n).resolve(strict=True))
+diff --git a/scripts/memory-lab/page-sharing/m11_check.py b/scripts/memory-lab/page-sharing/m11_check.py
+index 9a1d9d251..bad3a49c4 100644
+--- a/scripts/memory-lab/page-sharing/m11_check.py
++++ b/scripts/memory-lab/page-sharing/m11_check.py
+@@ -122,6 +122,10 @@ def frozen(vm, run, name, disk, sender):
+     vm.api('PATCH', '/vm', {'state': 'Paused'})
+     vm.snapshot(state)
+     regions = vm.mappings()
++    delta = None
++    if vm.track_dirty:
++        from tracked_delta_check import capture_checkpoint
++        delta = capture_checkpoint(vm, regions, run / f'{name}.tracked.ram')
+     samples = []
+     ram = None
+     for index in range(3):
+@@ -131,6 +135,8 @@ def frozen(vm, run, name, disk, sender):
+         time.sleep(0.15)
+     if len({s['ram_sha256'] for s in samples}) != 1 or len({s['disk_sha256'] for s in samples}) != 1:
+         raise AssertionError(f'RAM/disk mutated after external checkpoint freeze: {samples}')
++    if delta and delta['sha256'] != samples[0]['ram_sha256']:
++        raise AssertionError('device-write candidate reconstruction differs from frozen full RAM')
+     if sender.count <= before_packets + 10:
+         raise AssertionError('network injector did not remain active during freeze')
+     native = not os.environ.get('M11_DIAGNOSTIC_SKIP_NATIVE')
+@@ -143,7 +149,7 @@ def frozen(vm, run, name, disk, sender):
+     shutil.copyfile(disk, disk_copy)
+     if k.sha256_file(disk_copy) != disk_receipt['sha256']:
+         raise AssertionError('frozen block image copy mismatch')
+-    receipt = {'samples': samples, 'injected_during_freeze': sender.count - before_packets, 'disk_oracle': disk_receipt,
++    receipt = {'samples': samples, 'tracked_delta': delta, 'injected_during_freeze': sender.count - before_packets, 'disk_oracle': disk_receipt,
+                'state_sha256': k.sha256_file(state), 'external_equals_native': True if native else None, 'ram': str(ram), 'state': str(state), 'disk': str(disk_copy)}
+     k.save_json(run / f'{name}-freeze.json', receipt)
+     return state, ram, disk_copy
+@@ -154,6 +160,7 @@ def main():
+     for name in ('firecracker','kernel','guest-binary','nbd-helper','module-dir','output'):
+         p.add_argument('--'+name, required=True, type=Path)
+     p.add_argument('--cleanup-failed', action='store_true')
++    p.add_argument('--tracked-delta', action='store_true', help='add candidate-only capture versus full RAM, including async block and TAP RX writes')
+     args = p.parse_args()
+     for name in ('firecracker','kernel','guest_binary','nbd_helper'):
+         setattr(args, name, getattr(args,name).resolve(strict=True))
+diff --git a/scripts/memory-lab/page-sharing/tracked-delta.md b/scripts/memory-lab/page-sharing/tracked-delta.md
+new file mode 100644
+index 000000000..f1c5bc8a4
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/tracked-delta.md
+@@ -0,0 +1,61 @@
++# File / shared NBD RAM 增量快照
++
++`RAM_EXPORT_MODE=tracked_delta` 是实验开关，默认 `full_logical`。本轮只为 File/MAP_PRIVATE（普通文件或共享只读 NBD）、4 KiB host/snapshot 页、有完整父逻辑映射的恢复实例开启追踪。冷启动及不符合条件的恢复保留原导出路线。UFFD 后端不使用这个新增追踪器。
++
++需要本轮配套 FC：恢复前启动参数加入 `--kvm-dirty-bitmap --dirty-export-policy bitmap`，snapshot load 开启 `enable_diff_snapshots`。不依赖 HDBSS 或 UFFD WP_ASYNC。实际 CLI/API 不兼容、追踪不完整、没有成功的 state-only 冻结均明确报错，不保存空增量。
++
++## 保存与恢复合同
++
++CPU 写使用 KVM dirty log；用户态设备写使用 vm-memory 软件 bitmap。异步 block 完成、可写 IOVec、队列以及 balloon/FPR 匿名重映射都属于覆盖范围。discard 在第一次修改前标记；后续 madvise 失败不丢标记。逐 slot 收集立即累计到 ledger，后续 slot 失败不丢之前已清出内核的位；位图不按 present/mincore 筛选。
++
++Pause 先停止 vCPU，再创建 state-only snapshot，排空并冻结设备写入，最后收集位图并只读取候选。首版 `Dirty=候选`、`Empty=空`；零页同样保存字节，其余继承父 header。保存后关闭 FC，不提供保存成功后清位并原地继续运行的接口。多次恢复自然建立新的父快照与追踪实例。
++
++新快照使用 checkpoint version 2 / `tracked_delta`，记录载荷长度/SHA256、追踪合同版本、RAM/rootfs header 摘要和 FC state 摘要；不会把增量摘要当完整逻辑 RAM 摘要。metadata 仍最后持久发布。旧 version 1 full_logical/uffd_delta 保持可读；旧 reader 明确拒绝 version 2。
++
++恢复通过合并后的 header 中的 BuildID/offset 读取历史对象。运行期 pin 不替代持久化 GC 的引用保留。缺失历史对象、源错误或读取失败不能补零。restore 的结构/摘要检查不表示已经扫描校验全部未读取远程 RAM。
++
++## 验证
++
++先在 Linux checkout 用仓库 Go 版本执行（集成测试默认跳过）：
++
++```sh
++cd packages/orchestrator
++go test ./internal/cfg ./internal/sandbox/fc ./internal/sandbox/block \
++  ./internal/sandbox/template ./internal/sandbox ./internal/sandbox/uffd \
++  ../shared/pkg/storage/header -run 'Test(Tracked|RAMExport|ProcessMemory|Checkpoint)' -count=1
++go test -race ./internal/sandbox ./internal/sandbox/fc ./internal/sandbox/template \
++  -run 'Test(Tracked|Checkpoint)' -count=1
++go build .
++go test -c -o /absolute/new/factory-integration.test ./internal/sandbox
++```
++
++FC 使用固定 Rust 工具链，执行 `utils::dirty_tracking`、`devices::virtio::balloon::util`、`devices::virtio::iovec`、API 响应测试，编译 release；有权限的隔离节点还应执行已有 `test_external_snapshot` 设备冻结测试和 block `test_prepare_save`。完整源码命令与退出码应随交付保存，不把 filtered-out 的零测试输出算通过项。
++
++真实 CPU/换出候选验证使用独立 128 MiB VM（guest.go 是单独文件编译，不能将目录中多个 main 一起编译）：
++
++```sh
++CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /absolute/new/guest-init \
++  scripts/memory-lab/page-sharing/guest.go
++sudo python3 scripts/memory-lab/page-sharing/tracked_delta_check.py \
++  --firecracker /absolute/matching/firecracker \
++  --kernel /absolute/matching/vmlinuz \
++  --guest-binary /absolute/new/guest-init --output /absolute/new/native-run
++```
++
++它在读取任何候选内容或完整 oracle 前选择位图；验证冷非零父页缺 PTE、未入选仍正确继承，实际 CPU 写/归零入选，重复 harvest 不丢位，增量重建与 FC native full RAM 一致，以及 A→B→C 的 guest 内容。只对本轮冻结子进程的一页非零私有 COW 发起 MADV_PAGEOUT；以 pagemap 的真实 swapped 状态决定是否满足换出前提，不修改全局 swap/cache/pressure 配置。候选路径和完整对照耗时分开记录。
++
++在既有 [M10](m10.md) 命令增加 `--tracked-delta`，分别运行 balloon 与 `--free-page-reporting`，验证实际非零父页 discard 未写、重用后重写、另一 VM/source 隔离及恢复。新的候选捕获在完整 RAM 导出前进行。提供的 `--cleanup-failed` 仅清理本轮自有资源；未知映射退出状态按原隔离/保留合同处理。
++
++在既有 M11 命令增加 `--tracked-delta`，验证实际 Async virtio-blk 与持续 TAP RX 的候选覆盖；每个冻结点先捕获候选，再做三次完整 RAM/disk 稳定性和 native 对照。此 fixture 中同一 FC 的多次采样始终相对最初 backing 累计，属于候选诊断，不代表生产已支持原地 checkpoint epoch 切换。
++
++生产 Factory 验证沿用 [README](README.md) 的显式输入，在全新目录设置：
++
++```sh
++E2B_SHARING_RAM_EXPORT_MODE=tracked_delta
++```
++
++结合 `E2B_SHARING_INTEGRATION_DIR` 等已有必填参数运行 `TestSharingFactoryIntegration`。B0 普通文件与 B1 共享只读 NBD 使用同一输入和追踪模式；冷启动 A 完整导出，B/C 检查实际候选载荷、上传与历史对象解析后的完整 RAM，与同一冻结点 native oracle 比较，然后通过 envd 恢复验证文件内容。原 trace 五工具片段的通过不等于完整原 trace。
++
++回退时关闭实验开关，后续 File 快照恢复完整导出；已发布的 version 2 增量仍需新版 reader。回退 reader 前必须先恢复并重新导出兼容的完整快照，不能改写 version 字段。
++
++工具生成注意：DirtyMemory 新字段与 `packages/shared/pkg/fc/firecracker.yml` 同步；节点离线缓存没有固定 go-swagger 模块时，`go generate` 会失败。该失败应保留，不能称作生成校验通过；编译、JSON 接口合同及真实 Factory 另行验证。
+diff --git a/scripts/memory-lab/page-sharing/tracked_delta_check.py b/scripts/memory-lab/page-sharing/tracked_delta_check.py
+new file mode 100644
+index 000000000..270317a1e
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/tracked_delta_check.py
+@@ -0,0 +1,216 @@
++#!/usr/bin/env python3
++"""Small KVM candidate-coverage oracle, separate from the E2B Factory test.
++
++Candidate reads happen before the full parent/oracle reads. Reconstructed raw
++files are diagnostic artifacts; production E2B header packing is tested by the
++Factory integration. No global cache, swap or pressure settings are changed.
++"""
++import argparse
++import ctypes
++import os
++import platform
++import time
++from pathlib import Path
++
++import kvm_check as k
++
++
++def candidate_ranges(response, regions):
++    size = sum(r['size'] for r in regions)
++    if (response.get('tracking_version') != 1 or response.get('tracking_mode') != 'bitmap'
++            or response.get('tracking_complete') is not True or response.get('capture_ready') is not True
++            or response.get('logical_size') != size or response.get('page_size') != 4096):
++        raise AssertionError('missing complete frozen tracking contract')
++    words = response['bitmap']
++    pages = size // 4096
++    if size % 4096 or len(words) != (pages + 63) // 64:
++        raise AssertionError('bitmap geometry differs from RAM')
++    if pages % 64 and words[-1] >> (pages % 64):
++        raise AssertionError('bitmap tail exceeds RAM')
++    ranges = []
++    for page in range(pages):
++        if not (words[page // 64] >> (page % 64)) & 1:
++            continue
++        offset = page * 4096
++        address = k.host_address(regions, offset)
++        if ranges and ranges[-1]['offset'] + ranges[-1]['size'] == offset and ranges[-1]['base_host_virt_addr'] + ranges[-1]['size'] == address:
++            ranges[-1]['size'] += 4096
++        else:
++            ranges.append({'offset': offset, 'size': 4096, 'base_host_virt_addr': address})
++    return ranges
++
++
++def capture_checkpoint(vm, regions, destination):
++    response = vm.api('GET', '/memory/dirty')
++    ranges = candidate_ranges(response, regions)
++    k.save_json(destination.with_suffix('.candidates.json'), response)
++    payload = destination.with_suffix('.delta.ram')
++    capture = k.export_memory(vm, ranges, payload)
++    # A repeated harvest must preserve earlier CPU/VMM writes even when the
++    # first ioctl cleared KVM's kernel bitmap. Do this before full RAM reads.
++    repeated = vm.api('GET', '/memory/dirty')
++    if response != repeated:
++        raise AssertionError('repeated frozen harvest changed the cumulative contract/bitmap')
++    size = response['logical_size']
++    started = time.monotonic()
++    with destination.open('xb', buffering=0) as output, vm.parent_backing.open('rb', buffering=0) as parent:
++        remaining = size
++        while remaining:
++            data = parent.read(min(1 << 20, remaining))
++            if not data:
++                raise AssertionError('parent source ended early')
++            view = memoryview(data)
++            while view:
++                n = output.write(view)
++                if not n:
++                    raise OSError('parent reconstruction write made no progress')
++                view = view[n:]
++            remaining -= len(data)
++        with payload.open('rb', buffering=0) as changes:
++            for r in ranges:
++                output.seek(r['offset'])
++                remaining = r['size']
++                while remaining:
++                    data = changes.read(min(1 << 20, remaining))
++                    if not data:
++                        raise AssertionError('candidate payload ended early')
++                    view = memoryview(data)
++                    while view:
++                        n = output.write(view)
++                        if not n:
++                            raise OSError('candidate reconstruction write made no progress')
++                        view = view[n:]
++                    remaining -= len(data)
++            if changes.read(1):
++                raise AssertionError('candidate payload has unreferenced bytes')
++        os.fsync(output.fileno())
++    native = destination.with_suffix('.native.ram')
++    vm.snapshot(destination.with_suffix('.native.state'), native)
++    digest = k.sha256_file(destination)
++    if k.sha256_file(native) != digest:
++        raise AssertionError('parent + candidate delta differs from native full frozen RAM')
++    receipt = {'mode': 'tracked_delta', 'sha256': digest, 'bytes': size, 'payload_sha256': capture['sha256'],
++               'candidate_bytes': capture['bytes'], 'candidate_seconds': capture['seconds'],
++               'oracle_seconds': time.monotonic() - started, 'native_full_equal': True,
++               'repeated_harvest_equal': True, 'pid': vm.process.pid}
++    k.save_json(destination.with_suffix('.json'), receipt)
++    return receipt
++
++
++def pageout_one(vm, regions, offset, destination):
++    address = k.host_address(regions, offset)
++    before = k.host_page_entry(vm.process.pid, address)
++    receipt = {'status': 'unaccepted', 'pid': vm.process.pid, 'logical_offset': offset, 'before': before, 'samples': []}
++    if not (before['present'] and before['exclusive'] and not before['file_or_shared_anon'] and not before['swapped']):
++        receipt['reason'] = 'private anonymous COW precondition absent'
++    elif not hasattr(os, 'pidfd_open') or platform.machine() not in ('aarch64', 'arm64', 'x86_64'):
++        receipt['reason'] = 'pidfd/syscall ABI unavailable'
++    else:
++        # Frozen Popen child identity is retained until all reads/teardown end.
++        pidfd = os.pidfd_open(vm.process.pid)
++        try:
++            libc = ctypes.CDLL(None, use_errno=True)
++            libc.syscall.restype = ctypes.c_ssize_t
++            vector = k.IOVec(address, 4096)
++            n = libc.syscall(ctypes.c_long(440), ctypes.c_int(pidfd), ctypes.byref(vector), ctypes.c_size_t(1), ctypes.c_int(0x15), ctypes.c_ulong(0))
++            receipt.update(returned_bytes=n, errno=ctypes.get_errno() if n < 0 else 0)
++            deadline = time.monotonic() + 2
++            while n >= 0:
++                sample = k.host_page_entry(vm.process.pid, address)
++                receipt['samples'].append(sample)
++                if sample['swapped'] and not sample['present']:
++                    receipt['status'] = 'swapped_pending_oracles'
++                    break
++                if time.monotonic() >= deadline:
++                    break
++                time.sleep(0.05)
++        finally:
++            os.close(pidfd)
++    k.save_json(destination, receipt)
++    return receipt
++
++
++def main():
++    p = argparse.ArgumentParser(description=__doc__)
++    for name in ('firecracker', 'kernel', 'guest-binary', 'output'):
++        p.add_argument('--' + name, type=Path, required=True)
++    a = p.parse_args()
++    for name in ('firecracker', 'kernel', 'guest_binary'):
++        setattr(a, name, getattr(a, name).resolve(strict=True))
++    a.tracked_delta = True
++    run = a.output.resolve()
++    run.mkdir(parents=True, exist_ok=False)
++    if os.sysconf('SC_PAGE_SIZE') != 4096:
++        p.error('requires 4096-byte host pages')
++    k.save_json(run / 'environment.json', {'uname': list(platform.uname()), 'page_size': 4096,
++        'fc_sha256': k.sha256_file(a.firecracker), 'kernel_sha256': k.sha256_file(a.kernel), 'guest_sha256': k.sha256_file(a.guest_binary)})
++    k.make_initrd(a.guest_binary, run / 'initrd.gz')
++    vms, success = [], False
++    try:
++        initial = k.VM(a, 'initial', run); vms.append(initial)
++        initial.api('PUT', '/machine-config', {'vcpu_count': 1, 'mem_size_mib': 128})
++        initial.api('PUT', '/boot-source', {'kernel_image_path': str(a.kernel), 'initrd_path': str(run/'initrd.gz'), 'boot_args': 'console=ttyS0 reboot=k panic=1 pci=off'})
++        initial.api('PUT', '/actions', {'action_type': 'InstanceStart'})
++        ready = initial.event('ready')
++        base = 0x80000000 if platform.machine() in ('aarch64', 'arm64') else 0
++        offsets = [gpa-base for gpa in ready['gpas']]
++        initial.api('PATCH', '/vm', {'state': 'Paused'})
++        initial.snapshot(run/'A.state', run/'A.ram')
++        initial.close(); vms.remove(initial)
++        cold = k.VM(a, 'cold-restore', run); vms.append(cold)
++        cold.restore(run/'A.state', run/'A.ram')
++        regions = cold.mappings()
++        if cold.api('GET', '/memory/dirty').get('capture_ready') is not False:
++            raise AssertionError('load alone must not authorize external RAM capture')
++        entry = k.host_page_entry(cold.process.pid, k.host_address(regions, offsets[0]))
++        if entry['present'] or entry['swapped']:
++            raise AssertionError('cold nonzero marker was already faulted into FC')
++        k.save_json(run/'cold-marker.json', entry)
++        cold.snapshot(run/'B.state')
++        response = cold.api('GET', '/memory/dirty')
++        page = offsets[0]//4096
++        if response['bitmap'][page//64] >> (page%64) & 1:
++            raise AssertionError('untouched marker unexpectedly selected; inheritance precondition absent')
++        b = capture_checkpoint(cold, regions, run/'B.ram')
++        cold.close(); vms.remove(cold)
++        changed = k.VM(a, 'cpu-changed', run); vms.append(changed)
++        changed.restore(run/'B.state', run/'B.ram')
++        changed.api('PATCH', '/vm', {'state': 'Resumed'})
++        changed.command('write 1 165'); changed.command('zero 2')
++        changed.api('PATCH', '/vm', {'state': 'Paused'})
++        changed.snapshot(run/'C.state')
++        regions = changed.mappings()
++        response = changed.api('GET', '/memory/dirty')
++        for offset in offsets[1:3]:
++            page = offset//4096
++            if not response['bitmap'][page//64] >> (page%64) & 1:
++                raise AssertionError('CPU write/zero candidate missing')
++        swap = pageout_one(changed, regions, offsets[1], run/'swap.json')
++        c = capture_checkpoint(changed, regions, run/'C.ram')
++        k.check_marker_file(run/'C.ram', offsets, 4096, [49,165,0,52])
++        changed.close(); vms.remove(changed)
++        final = k.VM(a, 'final-restore', run); vms.append(final)
++        final.restore(run/'C.state', run/'C.ram')
++        final.api('PATCH', '/vm', {'state': 'Resumed'})
++        k.check_guest_markers(final, 4096, [49,165,0,52])
++        final.close(); vms.remove(final)
++        if swap['status'] == 'swapped_pending_oracles':
++            swap['status'] = 'passed'; swap['native_and_restore_oracles'] = True
++            k.save_json(run/'swap.json', swap)
++        if not b['candidate_bytes'] < b['bytes'] or not c['candidate_bytes'] < c['bytes']:
++            raise AssertionError('fixture must demonstrate partial reads')
++        k.save_json(run/'result.json', {'status':'passed', 'cold_inheritance':True, 'cpu_write_zero':True,
++            'A_B_C_restore':True, 'B':b, 'C':c, 'swap':swap, 'not_tested':['production E2E','shared NBD in this fixture','device writes in this fixture']})
++        success = True
++    except BaseException as error:
++        k.save_json(run/'failure.json', {'error':repr(error), 'children':[{'pid':vm.process.pid,'name':vm.name} for vm in vms]})
++        raise
++    finally:
++        # This fixture owns no source helper. Only its own Popen children exit.
++        for vm in reversed(vms):
++            vm.close()
++        k.save_json(run/'cleanup.json', {'success':success, 'remaining_children':[vm.process.pid for vm in vms if vm.process.poll() is None]})
++
++
++if __name__ == '__main__':
++    main()
+-- 
+2.56.0
+

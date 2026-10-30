@@ -1,0 +1,63 @@
+{
+  "status": "passed",
+  "mechanism": "actual guest virtio-balloon inflation/deflation, not synthetic host madvise",
+  "guest_kernel": "Linux version 6.1.0-50-arm64 (debian-kernel@lists.debian.org) (gcc-12 (Debian 12.2.0-14+deb12u1) 12.2.0, GNU ld (GNU Binutils for Debian) 2.40) #1 SMP Debian 6.1.176-1 (2026-07-02)\n",
+  "parent_nonzero_candidates": 10240,
+  "discarded_pages": 10239,
+  "rewritten_discarded_pages": 10239,
+  "unwritten": {
+    "mode": "tracked_delta",
+    "sha256": "9ca2426057f9d2070f4e66a00b3c4419740ffb6432fe5cf3cae8ba6214996018",
+    "bytes": 201326592,
+    "payload_sha256": "13ad1f3d3ffa19287b59cc625de3c6fd68b3331bbe058910f23cc04f237abad1",
+    "candidate_bytes": 102891520,
+    "candidate_seconds": 0.13077447899559047,
+    "oracle_seconds": 0.4157460720016388,
+    "native_full_equal": true,
+    "repeated_harvest_equal": true,
+    "pid": 154190
+  },
+  "rewritten": {
+    "mode": "tracked_delta",
+    "sha256": "fb34a99709884ed1b9c8be868529be1fc99b9927cf97a524d4e8f1a3df68c916",
+    "bytes": 201326592,
+    "payload_sha256": "d21e489128310d21f1ac3832c74bf8bd209333d1b0ab14cfd831f2ab8a33594b",
+    "candidate_bytes": 109330432,
+    "candidate_seconds": 0.15647028099920135,
+    "oracle_seconds": 0.4658154380013002,
+    "native_full_equal": true,
+    "repeated_harvest_equal": true,
+    "pid": 154190
+  },
+  "other": {
+    "mode": "tracked_delta",
+    "sha256": "4280fc77ac693673474a53e75cfc9edd9522bbc9c71ef43f9ce044327adb2002",
+    "bytes": 201326592,
+    "payload_sha256": "ef5688a8753ad16538920f3de2253f3c58271935134d900dd354f7c6395dfdbb",
+    "candidate_bytes": 557056,
+    "candidate_seconds": 0.002223116003733594,
+    "oracle_seconds": 0.40533797700481955,
+    "native_full_equal": true,
+    "repeated_harvest_equal": true,
+    "pid": 154192
+  },
+  "restored": {
+    "discard-unwritten": {
+      "mode": "full_logical",
+      "sha256": "380c974f6a10890e05ff0a04f3ef6d69f05277a58c50faf273abb2a34ae45390",
+      "bytes": 201326592,
+      "seconds": 0.2488623360040947,
+      "pid": 154232
+    },
+    "discard-rewritten": {
+      "mode": "full_logical",
+      "sha256": "663993563ffa9149a2d5fe0707ed970f0ace46fedda6e37f56a36ea21afd5659",
+      "bytes": 201326592,
+      "seconds": 0.2629629750008462,
+      "pid": 154235
+    }
+  },
+  "source_sha256": "1119409f9dea69c7f17771899843a4f9761d502a8075264d1319878dde02aeda",
+  "free_page_reporting": false,
+  "scope": "M10 balloon/FPR path, independent full-logical exporter/native dump; orchestrator integration is separate"
+}

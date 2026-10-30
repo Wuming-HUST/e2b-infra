@@ -1,0 +1,18 @@
+{
+  "completed": [
+    183,
+    185,
+    226,
+    183
+  ],
+  "errors": 0,
+  "event": "status",
+  "rx_bytes": 112000,
+  "rx_packets": 80,
+  "stages": [
+    1,
+    2,
+    2,
+    1
+  ]
+}

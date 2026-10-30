@@ -1,0 +1,11 @@
+{
+  "returncode": 0,
+  "seconds": 0.017002105712890625,
+  "command": [
+    "sudo",
+    "-n",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/cargo-target/debug/deps/vmm-f716ef39988ce199",
+    "devices::virtio::block::virtio::device::tests::test_prepare_save",
+    "--nocapture"
+  ]
+}

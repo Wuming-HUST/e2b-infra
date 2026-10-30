@@ -1,0 +1,8 @@
+
+running 3 tests
+test devices::virtio::balloon::event_handler::tests::test_external_snapshot_freeze_preserves_reporting_event_and_ram ... ok
+test devices::virtio::rng::event_handler::tests::test_external_snapshot_freeze_preserves_entropy_event_and_ram ... ok
+test devices::virtio::vsock::event_handler::tests::test_external_snapshot_freeze_preserves_tx_event_and_rx_ram ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 515 filtered out; finished in 0.00s
+

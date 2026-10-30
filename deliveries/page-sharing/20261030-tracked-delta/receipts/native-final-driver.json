@@ -1,0 +1,18 @@
+{
+  "pid": 154089,
+  "started": 1793371365.231186,
+  "command": [
+    "sudo",
+    "-n",
+    "python3",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/infra/scripts/memory-lab/page-sharing/tracked_delta_check.py",
+    "--firecracker",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/cargo-target/release/firecracker",
+    "--kernel",
+    "/home/coder/tide-repro/assets/vmlinuz",
+    "--guest-binary",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/guest-init",
+    "--output",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "returncode": 0,
+  "seconds": 0.016153573989868164,
+  "command": [
+    "sudo",
+    "-n",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/cargo-target/debug/deps/vmm-f716ef39988ce199",
+    "test_external_snapshot",
+    "--nocapture"
+  ]
+}

@@ -1,0 +1,2 @@
+# github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox [github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox.test]
+internal/sandbox/checkpoint.go:115:13: undefined: template

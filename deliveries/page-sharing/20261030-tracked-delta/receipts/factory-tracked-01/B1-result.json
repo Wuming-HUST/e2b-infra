@@ -1,0 +1,10 @@
+{
+  "A": "ff7e6a7d-d526-468d-97be-de58fcea1836",
+  "B": "ccb96cef-73b6-4aa7-9d0d-481e03ec1fc9",
+  "C": "850349df-6001-4032-8dd9-c6a416211e6a",
+  "complete_original_trace": false,
+  "full_logical_native_oracle": true,
+  "requested_ram_export_mode": "tracked_delta",
+  "result": "passed",
+  "trace_derived_source_edit_fixture": true
+}

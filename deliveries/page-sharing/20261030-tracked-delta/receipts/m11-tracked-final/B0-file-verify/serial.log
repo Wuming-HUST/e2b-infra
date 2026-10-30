@@ -1,0 +1,50 @@
+2026-10-30T14:43:02.705312708 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T14:43:02.705455028 [anonymous-instance:main] Listening on API socket ("/tmp/psg-bg63fc32/fc.sock").
+2026-10-30T14:43:02.709420662 [anonymous-instance:fc_api] API server started.
+2026-10-30T14:43:02.709477022 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-2.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-2-sample2.ram\"}, \"enable_diff_snapshots\": true, \"resume_vm\": false}".
+2026-10-30T14:43:02.709697692 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:43:02.709841311 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T14:43:02.709844171 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T14:43:02.710696090 [anonymous-instance:main] [DevPreview] Async file IO is in development preview.
+2026-10-30T14:43:02.715624053 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 5915 us.
+2026-10-30T14:43:02.715843553 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:43:02.715856623 [anonymous-instance:fc_api] 'load snapshot' API request took 6384 us.
+2026-10-30T14:43:02.716947161 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T14:43:02.717149311 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T14:43:02.717162411 [anonymous-instance:main] kick block io.
+2026-10-30T14:43:02.717185571 [anonymous-instance:main] kick net io.
+2026-10-30T14:43:02.717399220 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T14:43:02.717668040 [anonymous-instance:fc_vcpu 1] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T14:43:02.717863840 [anonymous-instance:main] 'resume vm' VMM action took 718 us.
+2026-10-30T14:43:02.718059429 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:43:02.718071019 [anonymous-instance:fc_api] 'resume vm' API request took 1126 us.
+PSG {"completed":[318,330,361,310],"errors":0,"event":"status","rx_bytes":1078000,"rx_packets":770,"stages":[1,2,1,1]}
+2026-10-30T14:43:02.723182252 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T14:43:02.723236212 [anonymous-instance:main] 'pause vm' VMM action took 30 us.
+2026-10-30T14:43:02.723494151 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:43:02.723507851 [anonymous-instance:fc_api] 'pause vm' API request took 328 us.
+2026-10-30T14:43:02.723709491 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-restored.state\"}".
+2026-10-30T14:43:02.723724271 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:43:02.728732174 [anonymous-instance:main] 'create full snapshot' VMM action took 4998 us.
+2026-10-30T14:43:02.728977553 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:43:02.728991773 [anonymous-instance:fc_api] 'create full snapshot' API request took 5284 us.
+2026-10-30T14:43:02.729965682 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T14:43:02.730003272 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:43:02.731342850 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:43:02.731431200 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":65840,"kvm_collect_ns":52570,"kvm_ioctls":1,"vmm_collect_ns":8840,"vmm_words":512,"pagemap_ns":270,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":407,"kernel_vmm_pages":407,"pagemap_only_pages":0}
+2026-10-30T14:43:02.731438830 [anonymous-instance:main] 'get dirty memory' VMM action took 76 us.
+2026-10-30T14:43:02.731450600 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:43:02.744425631 [anonymous-instance:fc_api] The API server received a Get request on "/memory/dirty".
+2026-10-30T14:43:02.744807490 [anonymous-instance:main] DIRTY_STATS {"policy":"bitmap","hdbss_order":0,"total_ns":25460,"kvm_collect_ns":7350,"kvm_ioctls":1,"vmm_collect_ns":8490,"vmm_words":512,"pagemap_ns":190,"pagemap_reads":0,"pagemap_bytes":0,"pages":32768,"selected_pages":407,"kernel_vmm_pages":407,"pagemap_only_pages":0}
+2026-10-30T14:43:02.744819340 [anonymous-instance:main] 'get dirty memory' VMM action took 40 us.
+2026-10-30T14:43:02.745032620 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T14:43:02.790338094 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-restored.tracked.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-restored.tracked.native.ram\"}".
+2026-10-30T14:43:02.790587863 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:43:02.854209960 [anonymous-instance:main] 'create full snapshot' VMM action took 63607 us.
+2026-10-30T14:43:02.854446400 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:43:02.854462400 [anonymous-instance:fc_api] 'create full snapshot' API request took 64131 us.
+2026-10-30T14:43:04.029336300 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-restored.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m11-tracked-final/B0-file-restored.native.ram\"}".
+2026-10-30T14:43:04.029567020 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:43:04.101559434 [anonymous-instance:main] 'create full snapshot' VMM action took 71976 us.
+2026-10-30T14:43:04.101800424 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:43:04.101815784 [anonymous-instance:fc_api] 'create full snapshot' API request took 72484 us.

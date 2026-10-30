@@ -1,0 +1,15 @@
+# github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox [github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox.test]
+internal/sandbox/checkpoint.go:115:13: undefined: template
+FAIL	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox [build failed]
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc	1.060s
+2026/10/30 14:21:21 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:21:21 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:21:21 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:21:21 Using network slot size: 32766
+--- FAIL: TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles (0.00s)
+    checkpoint_test.go:147: invalid tracked checkpoint RAM header
+FAIL
+FAIL	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template	0.069s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/memorybacking	1.021s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd	1.072s
+FAIL

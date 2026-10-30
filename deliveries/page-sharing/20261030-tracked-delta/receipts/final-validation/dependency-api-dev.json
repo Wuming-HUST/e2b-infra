@@ -1,0 +1,34 @@
+[
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/equivalent-1.0.2.crate",
+    "sha256": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/hashbrown-0.15.2.crate",
+    "sha256": "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/indexmap-2.9.0.crate",
+    "sha256": "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_spanned-0.6.8.crate",
+    "sha256": "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/toml-0.8.20.crate",
+    "sha256": "cd87a5cdd6ffab733b2f74bc4fd7ee5fff6634124999ac278c35fc78c6120148"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/toml_datetime-0.6.8.crate",
+    "sha256": "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/toml_edit-0.22.24.crate",
+    "sha256": "17b4795ff5edd201c7cd6dca065ae59972ce77d1b80fa0a84d94950ece7d1474"
+  },
+  {
+    "file": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home/registry/cache/mirrors.ustc.edu.cn-38d0e5eb5da2abae/winnow-0.7.4.crate",
+    "sha256": "0e97b544156e9bebe1a0ffbc03484fc1ffe3100cbce3ffb17eac35f7cdd7ab36"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "actual_proc_mapping": "ffff74000000-ffff84000000 rw-p 00000000 103:07 4896294                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/factory-tracked-01/B0/file-memory/210f362f561012026876185b487dfa35865a6730c4993395dc6d5b1020ca5fd8.raw",
+  "inode": 4896294,
+  "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/factory-tracked-01/B0/file-memory/210f362f561012026876185b487dfa35865a6730c4993395dc6d5b1020ca5fd8.raw",
+  "regular_file": true
+}

@@ -1,0 +1,2 @@
+go: downloading github.com/go-swagger/go-swagger v0.33.2-0.20260129162912-5a56fc6f5a75
+github.com/go-swagger/go-swagger/cmd/swagger: module lookup disabled by GOPROXY=off

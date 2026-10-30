@@ -1,0 +1,34 @@
+[
+  {
+    "target_pages": 0,
+    "actual_pages": 24576,
+    "target_mib": 0,
+    "actual_mib": 96,
+    "swap_in": 0,
+    "swap_out": 0,
+    "major_faults": 0,
+    "minor_faults": 10616,
+    "free_memory": 44580864,
+    "total_memory": 66355200,
+    "available_memory": 48246784,
+    "disk_caches": 3182592,
+    "hugetlb_allocations": 0,
+    "hugetlb_failures": 0
+  },
+  {
+    "target_pages": 0,
+    "actual_pages": 0,
+    "target_mib": 0,
+    "actual_mib": 0,
+    "swap_in": 0,
+    "swap_out": 0,
+    "major_faults": 0,
+    "minor_faults": 10616,
+    "free_memory": 143642624,
+    "total_memory": 167018496,
+    "available_memory": 147308544,
+    "disk_caches": 3182592,
+    "hugetlb_allocations": 0,
+    "hugetlb_failures": 0
+  }
+]

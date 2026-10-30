@@ -1,0 +1,17 @@
+2026-10-30T14:42:46.948564060 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T14:42:46.948688760 [anonymous-instance:main] Listening on API socket ("/tmp/psg-l2jegi9a/fc.sock").
+2026-10-30T14:42:46.952925294 [anonymous-instance:fc_api] API server started.
+2026-10-30T14:42:46.952967774 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/C.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/C.ram\"}, \"enable_diff_snapshots\": true, \"resume_vm\": false}".
+2026-10-30T14:42:46.952992594 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T14:42:46.953096374 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T14:42:46.953099244 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T14:42:46.957565167 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 4567 us.
+2026-10-30T14:42:46.957775787 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:42:46.957786537 [anonymous-instance:fc_api] 'load snapshot' API request took 4823 us.
+2026-10-30T14:42:46.958490086 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T14:42:46.958510226 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T14:42:46.958733316 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T14:42:46.958758395 [anonymous-instance:main] 'resume vm' VMM action took 250 us.
+2026-10-30T14:42:46.958955485 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T14:42:46.958966595 [anonymous-instance:fc_api] 'resume vm' API request took 478 us.
+PSG {"event":"read","sha256":["4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd","f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8","ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7","ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"]}

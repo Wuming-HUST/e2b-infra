@@ -1,0 +1,2 @@
+{"method": "PUT", "path": "/snapshot/load", "body": {"snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/C.state", "mem_backend": {"backend_type": "File", "backend_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/native-final/C.ram"}, "enable_diff_snapshots": true, "resume_vm": false}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}

@@ -1,0 +1,459 @@
+2026/10/30 14:24:22 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:22 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:22 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:22 Using network slot size: 32766
+=== RUN   TestRAMExportModeValidation
+--- PASS: TestRAMExportModeValidation (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/cfg	0.015s
+2026/10/30 14:24:23 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:23 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:23 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:23 Using network slot size: 32766
+=== RUN   TestBootSourceOptionalInitrd
+=== RUN   TestBootSourceOptionalInitrd/#00
+=== RUN   TestBootSourceOptionalInitrd//fixtures/guest_initrd.gz
+--- PASS: TestBootSourceOptionalInitrd (0.00s)
+    --- PASS: TestBootSourceOptionalInitrd/#00 (0.00s)
+    --- PASS: TestBootSourceOptionalInitrd//fixtures/guest_initrd.gz (0.00s)
+=== RUN   TestExportMemoryRangesUsesLogicalOrderAcrossRegions
+--- PASS: TestExportMemoryRangesUsesLogicalOrderAcrossRegions (0.00s)
+=== RUN   TestExportMemoryRangesRejectsInvalidLayout
+--- PASS: TestExportMemoryRangesRejectsInvalidLayout (0.00s)
+=== RUN   TestTrackedMemoryStartCommand
+--- PASS: TestTrackedMemoryStartCommand (0.00s)
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/old_fc
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/untracked
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/wrong_size
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/wrong_page
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/tail_bits
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/wrong_version
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/resident_policy
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/not_frozen
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/truncated
+=== RUN   TestTrackedMemoryContractRejectsIncompleteCandidates/extra_word
+--- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/old_fc (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/untracked (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/wrong_size (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/wrong_page (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/tail_bits (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/wrong_version (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/resident_policy (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/not_frozen (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/truncated (0.00s)
+    --- PASS: TestTrackedMemoryContractRejectsIncompleteCandidates/extra_word (0.00s)
+=== RUN   TestTrackedMemoryPreservesColdAndSwappedCandidateBits
+--- PASS: TestTrackedMemoryPreservesColdAndSwappedCandidateBits (0.00s)
+=== RUN   TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested
+=== RUN   TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested/full
+=== RUN   TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested/tracked
+--- PASS: TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested (0.00s)
+    --- PASS: TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested/full (0.00s)
+    --- PASS: TestTrackedMemoryLoadEnablesLoggingOnlyWhenRequested/tracked (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc	0.022s
+2026/10/30 14:24:24 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:24 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:24 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:24 Using network slot size: 32766
+=== RUN   TestCheckpointValidateAcceptsSealedFullAndDelta
+=== RUN   TestCheckpointValidateAcceptsSealedFullAndDelta/full_logical
+=== RUN   TestCheckpointValidateAcceptsSealedFullAndDelta/uffd_delta
+--- PASS: TestCheckpointValidateAcceptsSealedFullAndDelta (0.00s)
+    --- PASS: TestCheckpointValidateAcceptsSealedFullAndDelta/full_logical (0.00s)
+    --- PASS: TestCheckpointValidateAcceptsSealedFullAndDelta/uffd_delta (0.00s)
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/valid
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/old_version
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_tracking
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/missing_digest
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/logical_hash
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_length
+--- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/valid (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/old_version (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_tracking (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/missing_digest (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/logical_hash (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_length (0.00s)
+=== RUN   TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles
+--- PASS: TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles (0.00s)
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/state-bytes
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/memory-header
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/rootfs-header
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/logical-size
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-memory-header-hash
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-rootfs-header-hash
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-state-hash
+--- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/state-bytes (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/memory-header (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/rootfs-header (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/logical-size (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-memory-header-hash (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-rootfs-header-hash (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-state-hash (0.00s)
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/format
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/tracked-delta
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/unknown-mode
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/invalid-RAM-hex
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/short-RAM-checksum
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/missing-RAM-checksum
+--- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/format (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/tracked-delta (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/unknown-mode (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/invalid-RAM-hex (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/short-RAM-checksum (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/missing-RAM-checksum (0.00s)
+=== RUN   TestCheckpointValidateAllowsLegacyWithoutOpeningPayloads
+--- PASS: TestCheckpointValidateAllowsLegacyWithoutOpeningPayloads (0.00s)
+=== RUN   TestMaterializeMemoryImageLayeredRanges
+=== RUN   TestMaterializeMemoryImageLayeredRanges/sparse_tail=false
+=== RUN   TestMaterializeMemoryImageLayeredRanges/sparse_tail=true
+--- PASS: TestMaterializeMemoryImageLayeredRanges (0.08s)
+    --- PASS: TestMaterializeMemoryImageLayeredRanges/sparse_tail=false (0.05s)
+    --- PASS: TestMaterializeMemoryImageLayeredRanges/sparse_tail=true (0.03s)
+=== RUN   TestMaterializeMemoryImagePublishesImmutableSparseFile
+=== PAUSE TestMaterializeMemoryImagePublishesImmutableSparseFile
+=== RUN   TestMaterializeMemoryImageRejectsCorruptedPublishedFile
+=== PAUSE TestMaterializeMemoryImageRejectsCorruptedPublishedFile
+=== RUN   TestMaterializeMemoryImageRejectsPathTraversal
+=== PAUSE TestMaterializeMemoryImageRejectsPathTraversal
+=== RUN   TestMaterializeMemoryImageIgnoresLegacyReference
+=== PAUSE TestMaterializeMemoryImageIgnoresLegacyReference
+=== RUN   TestOwnedMemoryViewRejectsBorrowedSource
+=== PAUSE TestOwnedMemoryViewRejectsBorrowedSource
+=== RUN   TestOwnedMemoryViewSourceSurvivesTemplateAndCacheClose
+=== PAUSE TestOwnedMemoryViewSourceSurvivesTemplateAndCacheClose
+=== RUN   TestFileMemoryBackendPathHonorsPerRestorePolicy
+=== PAUSE TestFileMemoryBackendPathHonorsPerRestorePolicy
+=== RUN   TestFileMemoryBackendPathRejectsUnsafeImage
+=== PAUSE TestFileMemoryBackendPathRejectsUnsafeImage
+=== RUN   TestFileMemoryBackendPathFallsBackWhileMaterializing
+=== PAUSE TestFileMemoryBackendPathFallsBackWhileMaterializing
+=== CONT  TestMaterializeMemoryImagePublishesImmutableSparseFile
+=== CONT  TestOwnedMemoryViewSourceSurvivesTemplateAndCacheClose
+=== CONT  TestMaterializeMemoryImageIgnoresLegacyReference
+=== CONT  TestFileMemoryBackendPathRejectsUnsafeImage
+=== RUN   TestFileMemoryBackendPathRejectsUnsafeImage/missing_file
+=== RUN   TestFileMemoryBackendPathRejectsUnsafeImage/writable_file
+=== RUN   TestFileMemoryBackendPathRejectsUnsafeImage/directory
+--- PASS: TestFileMemoryBackendPathRejectsUnsafeImage (0.00s)
+    --- PASS: TestFileMemoryBackendPathRejectsUnsafeImage/missing_file (0.00s)
+    --- PASS: TestFileMemoryBackendPathRejectsUnsafeImage/writable_file (0.00s)
+    --- PASS: TestFileMemoryBackendPathRejectsUnsafeImage/directory (0.00s)
+=== CONT  TestOwnedMemoryViewRejectsBorrowedSource
+--- PASS: TestOwnedMemoryViewRejectsBorrowedSource (0.00s)
+=== CONT  TestFileMemoryBackendPathHonorsPerRestorePolicy
+--- PASS: TestFileMemoryBackendPathHonorsPerRestorePolicy (0.00s)
+=== CONT  TestFileMemoryBackendPathFallsBackWhileMaterializing
+--- PASS: TestFileMemoryBackendPathFallsBackWhileMaterializing (0.00s)
+=== CONT  TestMaterializeMemoryImageRejectsPathTraversal
+--- PASS: TestMaterializeMemoryImageRejectsPathTraversal (0.00s)
+=== CONT  TestMaterializeMemoryImageRejectsCorruptedPublishedFile
+--- PASS: TestOwnedMemoryViewSourceSurvivesTemplateAndCacheClose (0.00s)
+--- PASS: TestMaterializeMemoryImageIgnoresLegacyReference (0.00s)
+--- PASS: TestMaterializeMemoryImagePublishesImmutableSparseFile (0.01s)
+--- PASS: TestMaterializeMemoryImageRejectsCorruptedPublishedFile (0.01s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template	0.120s
+2026/10/30 14:24:25 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:25 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:25 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:25 Using network slot size: 32766
+=== RUN   TestNoopMemoryUnaccessedParentIsExported
+--- PASS: TestNoopMemoryUnaccessedParentIsExported (0.00s)
+=== RUN   TestNoopMemoryMultiGenerationHeaderOracle
+--- PASS: TestNoopMemoryMultiGenerationHeaderOracle (0.00s)
+=== RUN   TestNoopMemoryRejectsInvalidLogicalLayout
+--- PASS: TestNoopMemoryRejectsInvalidLogicalLayout (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/uffd	0.015s
+=== RUN   TestProcessMemoryUnfaultedNonzeroParent
+--- PASS: TestProcessMemoryUnfaultedNonzeroParent (0.00s)
+=== RUN   TestProcessMemoryShortReadsContinueAcrossRegions
+--- PASS: TestProcessMemoryShortReadsContinueAcrossRegions (0.00s)
+=== RUN   TestProcessMemoryReadFailureDoesNotMarkPartialBlocks
+--- PASS: TestProcessMemoryReadFailureDoesNotMarkPartialBlocks (0.00s)
+=== RUN   TestProcessMemoryRetryCanBeCanceled
+--- PASS: TestProcessMemoryRetryCanBeCanceled (0.00s)
+=== RUN   TestProcessMemoryFailureCleansCacheAndPreservesExistingArtifact
+--- PASS: TestProcessMemoryFailureCleansCacheAndPreservesExistingArtifact (0.00s)
+=== RUN   TestProcessMemoryRejectsInvalidRangesBeforeCreatingArtifact
+--- PASS: TestProcessMemoryRejectsInvalidRangesBeforeCreatingArtifact (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block	0.016s
+2026/10/30 14:24:28 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:28 Using network slot size: 32766
+=== RUN   TestCheckpointPublishDoesNotReplaceExistingMetadata
+--- PASS: TestCheckpointPublishDoesNotReplaceExistingMetadata (0.00s)
+=== RUN   TestCheckpointPublishConcurrentWritersHaveOneCompleteWinner
+--- PASS: TestCheckpointPublishConcurrentWritersHaveOneCompleteWinner (0.01s)
+=== RUN   TestCheckpointPublishCanceledContextPublishesNothing
+--- PASS: TestCheckpointPublishCanceledContextPublishesNothing (0.00s)
+=== RUN   TestCheckpointPublishCancellationAfterSerialization
+--- PASS: TestCheckpointPublishCancellationAfterSerialization (0.00s)
+=== RUN   TestCheckpointSealFullLogicalUsesRealCaptureDigestAndEmptyRootfs
+--- PASS: TestCheckpointSealFullLogicalUsesRealCaptureDigestAndEmptyRootfs (0.00s)
+=== RUN   TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash
+=== RUN   TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash/nonempty
+=== RUN   TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash/empty
+--- PASS: TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash (0.01s)
+    --- PASS: TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash/nonempty (0.00s)
+    --- PASS: TestCheckpointSealTrackedUsesPayloadDigestWithoutLogicalHash/empty (0.00s)
+=== RUN   TestCheckpointSealFullLogicalRequiresCapturedDigest
+=== RUN   TestCheckpointSealFullLogicalRequiresCapturedDigest/no-capture-method
+=== RUN   TestCheckpointSealFullLogicalRequiresCapturedDigest/capture-not-valid
+--- PASS: TestCheckpointSealFullLogicalRequiresCapturedDigest (0.00s)
+    --- PASS: TestCheckpointSealFullLogicalRequiresCapturedDigest/no-capture-method (0.00s)
+    --- PASS: TestCheckpointSealFullLogicalRequiresCapturedDigest/capture-not-valid (0.00s)
+=== RUN   TestCheckpointSealInheritedHeaderIsNotFullLogical
+--- PASS: TestCheckpointSealInheritedHeaderIsNotFullLogical (0.00s)
+=== RUN   TestCheckpointSealRejectsCaptureLengthMismatch
+=== RUN   TestCheckpointSealRejectsCaptureLengthMismatch/truncated
+=== RUN   TestCheckpointSealRejectsCaptureLengthMismatch/oversized
+--- PASS: TestCheckpointSealRejectsCaptureLengthMismatch (0.00s)
+    --- PASS: TestCheckpointSealRejectsCaptureLengthMismatch/truncated (0.00s)
+    --- PASS: TestCheckpointSealRejectsCaptureLengthMismatch/oversized (0.00s)
+=== RUN   TestFactoryLifecycleDrainCancelsAndWaitsForStartupCleanup
+--- PASS: TestFactoryLifecycleDrainCancelsAndWaitsForStartupCleanup (0.00s)
+=== RUN   TestFactoryLifecycleLateStartupBecomesTrackedBeforeDrain
+--- PASS: TestFactoryLifecycleLateStartupBecomesTrackedBeforeDrain (0.00s)
+=== RUN   TestFactoryLifecycleNormalCloseRemovesOwnerAndErrorsDoNotSkipOthers
+--- PASS: TestFactoryLifecycleNormalCloseRemovesOwnerAndErrorsDoNotSkipOthers (0.00s)
+=== RUN   TestFactoryLifecycleConcurrentPublicationAndDrain
+--- PASS: TestFactoryLifecycleConcurrentPublicationAndDrain (0.00s)
+=== RUN   TestFactoryLifecyclePreservesHistoricalCloseFailure
+--- PASS: TestFactoryLifecyclePreservesHistoricalCloseFailure (0.00s)
+=== RUN   TestFactoryLifecyclePreservesStartupCleanupFailure
+--- PASS: TestFactoryLifecyclePreservesStartupCleanupFailure (0.00s)
+=== RUN   TestSnapshotPathsRejectExistingArtifactsAndSymlinks
+--- PASS: TestSnapshotPathsRejectExistingArtifactsAndSymlinks (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox	0.050s
+2026/10/30 14:24:28 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:28 Using network slot size: 32766
+=== RUN   TestLogicalReadAtUnalignedCrossLayerAndZeroExtent
+--- PASS: TestLogicalReadAtUnalignedCrossLayerAndZeroExtent (0.00s)
+=== RUN   TestLogicalReadAtRejectsZeroProgressAndTruncatedSource
+--- PASS: TestLogicalReadAtRejectsZeroProgressAndTruncatedSource (0.00s)
+=== RUN   TestPinnedFileSurvivesInvalidationAndLastViewClosesOnce
+=== PAUSE TestPinnedFileSurvivesInvalidationAndLastViewClosesOnce
+=== RUN   TestPinnedDiffSurvivesTTLAndExpiredReplacementRetiresOwner
+=== PAUSE TestPinnedDiffSurvivesTTLAndExpiredReplacementRetiresOwner
+=== RUN   TestPinnedDiffSurvivesAutomaticTTLEviction
+=== PAUSE TestPinnedDiffSurvivesAutomaticTTLEviction
+=== RUN   TestPinnedFilePartialAcquisitionReleasesPins
+=== PAUSE TestPinnedFilePartialAcquisitionReleasesPins
+=== RUN   TestDiffPinFailedStorageInitDoesNotHangClose
+=== PAUSE TestDiffPinFailedStorageInitDoesNotHangClose
+=== RUN   TestDiffPinAddRejectsClosedLocalDiff
+=== PAUSE TestDiffPinAddRejectsClosedLocalDiff
+=== RUN   TestLocalDiffOwnershipTransferProtectsPinnedSource
+=== PAUSE TestLocalDiffOwnershipTransferProtectsPinnedSource
+=== RUN   TestPinnedDiffCloseDrainsRead
+=== PAUSE TestPinnedDiffCloseDrainsRead
+=== RUN   TestDiffPinInitializationAndConcurrentInvalidation
+=== PAUSE TestDiffPinInitializationAndConcurrentInvalidation
+=== CONT  TestPinnedFileSurvivesInvalidationAndLastViewClosesOnce
+=== CONT  TestDiffPinAddRejectsClosedLocalDiff
+=== CONT  TestDiffPinFailedStorageInitDoesNotHangClose
+=== CONT  TestPinnedDiffCloseDrainsRead
+--- PASS: TestDiffPinFailedStorageInitDoesNotHangClose (0.00s)
+=== CONT  TestDiffPinInitializationAndConcurrentInvalidation
+--- PASS: TestPinnedFileSurvivesInvalidationAndLastViewClosesOnce (0.00s)
+=== CONT  TestPinnedFilePartialAcquisitionReleasesPins
+--- PASS: TestDiffPinAddRejectsClosedLocalDiff (0.00s)
+=== CONT  TestLocalDiffOwnershipTransferProtectsPinnedSource
+--- PASS: TestPinnedFilePartialAcquisitionReleasesPins (0.00s)
+=== CONT  TestPinnedDiffSurvivesTTLAndExpiredReplacementRetiresOwner
+--- PASS: TestDiffPinInitializationAndConcurrentInvalidation (0.00s)
+=== CONT  TestPinnedDiffSurvivesAutomaticTTLEviction
+--- PASS: TestLocalDiffOwnershipTransferProtectsPinnedSource (0.00s)
+--- PASS: TestPinnedDiffCloseDrainsRead (0.01s)
+--- PASS: TestPinnedDiffSurvivesAutomaticTTLEviction (0.02s)
+--- PASS: TestPinnedDiffSurvivesTTLAndExpiredReplacementRetiresOwner (0.03s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build	0.048s
+2026/10/30 14:24:29 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:24:29 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:29 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:24:29 Using network slot size: 32766
+=== RUN   TestReadonlyDispatchRejectsMutationsAndPreservesFraming
+--- PASS: TestReadonlyDispatchRejectsMutationsAndPreservesFraming (0.00s)
+=== RUN   TestReadonlyDispatchRejectsIncompleteReads
+=== RUN   TestReadonlyDispatchRejectsIncompleteReads/short-nil
+=== RUN   TestReadonlyDispatchRejectsIncompleteReads/zero-nil
+=== RUN   TestReadonlyDispatchRejectsIncompleteReads/short-eof
+=== RUN   TestReadonlyDispatchRejectsIncompleteReads/source-error
+=== RUN   TestReadonlyDispatchRejectsIncompleteReads/full-with-error
+--- PASS: TestReadonlyDispatchRejectsIncompleteReads (0.00s)
+    --- PASS: TestReadonlyDispatchRejectsIncompleteReads/short-nil (0.00s)
+    --- PASS: TestReadonlyDispatchRejectsIncompleteReads/zero-nil (0.00s)
+    --- PASS: TestReadonlyDispatchRejectsIncompleteReads/short-eof (0.00s)
+    --- PASS: TestReadonlyDispatchRejectsIncompleteReads/source-error (0.00s)
+    --- PASS: TestReadonlyDispatchRejectsIncompleteReads/full-with-error (0.00s)
+=== RUN   TestReadonlyDispatchValidatesRangeBeforeSource
+=== RUN   TestReadonlyDispatchValidatesRangeBeforeSource/past-end
+=== RUN   TestReadonlyDispatchValidatesRangeBeforeSource/negative-as-unsigned
+=== RUN   TestReadonlyDispatchValidatesRangeBeforeSource/overflow
+--- PASS: TestReadonlyDispatchValidatesRangeBeforeSource (0.00s)
+    --- PASS: TestReadonlyDispatchValidatesRangeBeforeSource/past-end (0.00s)
+    --- PASS: TestReadonlyDispatchValidatesRangeBeforeSource/negative-as-unsigned (0.00s)
+    --- PASS: TestReadonlyDispatchValidatesRangeBeforeSource/overflow (0.00s)
+=== RUN   TestDispatchLegacyWritesAndShortWriteErrors
+--- PASS: TestDispatchLegacyWritesAndShortWriteErrors (0.00s)
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/0
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/1
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/2
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/3
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/4
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/5
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/6
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/7
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/8
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/9
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/10
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/11
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/12
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/13
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/14
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/15
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/16
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/17
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/18
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/19
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/20
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/21
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/22
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/23
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/24
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/25
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/26
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/27
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/28
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/29
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/30
+=== RUN   TestDispatchBoundsReadsAndCancelsBlockedSource/31
+--- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/0 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/1 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/2 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/3 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/4 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/5 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/6 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/7 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/8 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/9 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/10 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/11 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/12 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/13 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/14 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/15 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/16 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/17 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/18 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/19 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/20 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/21 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/22 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/23 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/24 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/25 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/26 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/27 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/28 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/29 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/30 (0.00s)
+    --- PASS: TestDispatchBoundsReadsAndCancelsBlockedSource/31 (0.00s)
+=== RUN   TestDispatchRejectsOversizedRead
+--- PASS: TestDispatchRejectsOversizedRead (0.00s)
+=== RUN   TestWriteFullHandlesShortTransportWrites
+--- PASS: TestWriteFullHandlesShortTransportWrites (0.00s)
+=== RUN   TestReadonlyMountProtectsSourceAndFlags
+--- PASS: TestReadonlyMountProtectsSourceAndFlags (0.00s)
+=== RUN   TestReadonlyMountFailureBroadcast
+--- PASS: TestReadonlyMountFailureBroadcast (0.00s)
+=== RUN   TestReadonlyMountCloseIsIdempotent
+--- PASS: TestReadonlyMountCloseIsIdempotent (0.00s)
+=== RUN   TestReadonlyMountQuarantinesLostTransport
+--- PASS: TestReadonlyMountQuarantinesLostTransport (0.00s)
+=== RUN   TestReadonlyMountQuarantinesUnobservedSocketEOF
+=== RUN   TestReadonlyMountQuarantinesUnobservedSocketEOF/false
+=== RUN   TestReadonlyMountQuarantinesUnobservedSocketEOF/true
+--- PASS: TestReadonlyMountQuarantinesUnobservedSocketEOF (0.00s)
+    --- PASS: TestReadonlyMountQuarantinesUnobservedSocketEOF/false (0.00s)
+    --- PASS: TestReadonlyMountQuarantinesUnobservedSocketEOF/true (0.00s)
+=== RUN   TestReadonlyMountReadinessRejectsRegularFile
+--- PASS: TestReadonlyMountReadinessRejectsRegularFile (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd	0.022s
+=== RUN   TestRegistryConcurrentAcquireCancellationIsolationAndFinalClose
+--- PASS: TestRegistryConcurrentAcquireCancellationIsolationAndFinalClose (0.00s)
+=== RUN   TestRegistryAcquireWaitsForDisconnectBeforeRecreate
+--- PASS: TestRegistryAcquireWaitsForDisconnectBeforeRecreate (0.00s)
+=== RUN   TestRegistryKeepsRuntimeContextUntilDisconnectConfirmed
+=== RUN   TestRegistryKeepsRuntimeContextUntilDisconnectConfirmed/<nil>
+=== RUN   TestRegistryKeepsRuntimeContextUntilDisconnectConfirmed/disconnect_unconfirmed
+--- PASS: TestRegistryKeepsRuntimeContextUntilDisconnectConfirmed (0.00s)
+    --- PASS: TestRegistryKeepsRuntimeContextUntilDisconnectConfirmed/<nil> (0.00s)
+    --- PASS: TestRegistryKeepsRuntimeContextUntilDisconnectConfirmed/disconnect_unconfirmed (0.00s)
+=== RUN   TestRegistryFailureBroadcastAndShutdownWaitForOwners
+--- PASS: TestRegistryFailureBroadcastAndShutdownWaitForOwners (0.00s)
+=== RUN   TestRegistryCreateFailureFanoutRetryAndIdentitySeparation
+--- PASS: TestRegistryCreateFailureFanoutRetryAndIdentitySeparation (0.00s)
+=== RUN   TestRegistrySourceIdentityMismatchNeverReachesFactory
+--- PASS: TestRegistrySourceIdentityMismatchNeverReachesFactory (0.00s)
+=== RUN   TestRegistryAcquireWithSourceUsesOnlyCreatorAndFailedCleanupGatesRetry
+--- PASS: TestRegistryAcquireWithSourceUsesOnlyCreatorAndFailedCleanupGatesRetry (0.00s)
+=== RUN   TestRegistryDrainDuringFailedCreation
+--- PASS: TestRegistryDrainDuringFailedCreation (0.00s)
+=== RUN   TestRegistryDisconnectFailureQuarantinesIdentityAndPreservesSource
+--- PASS: TestRegistryDisconnectFailureQuarantinesIdentityAndPreservesSource (0.00s)
+=== RUN   TestLocalSourceBoundsFullReadsAndBorrowedOwnership
+--- PASS: TestLocalSourceBoundsFullReadsAndBorrowedOwnership (0.00s)
+=== RUN   TestHTTPSourceDemandRangesAndFaults
+=== RUN   TestHTTPSourceDemandRangesAndFaults/ok
+=== RUN   TestHTTPSourceDemandRangesAndFaults/short
+=== RUN   TestHTTPSourceDemandRangesAndFaults/wrong-range
+=== RUN   TestHTTPSourceDemandRangesAndFaults/changed-version
+=== RUN   TestHTTPSourceDemandRangesAndFaults/ignore-range
+=== RUN   TestHTTPSourceDemandRangesAndFaults/checksum
+=== RUN   TestHTTPSourceDemandRangesAndFaults/trailing
+=== RUN   TestHTTPSourceDemandRangesAndFaults/encoding
+=== RUN   TestHTTPSourceDemandRangesAndFaults/server-error
+--- PASS: TestHTTPSourceDemandRangesAndFaults (0.01s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/ok (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/short (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/wrong-range (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/changed-version (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/ignore-range (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/checksum (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/trailing (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/encoding (0.00s)
+    --- PASS: TestHTTPSourceDemandRangesAndFaults/server-error (0.00s)
+=== RUN   TestHTTPSourceCanceledReadDoesNotCancelPeersAndCloseCancelsReads
+--- PASS: TestHTTPSourceCanceledReadDoesNotCancelPeersAndCloseCancelsReads (0.00s)
+=== RUN   TestHTTPManifestAndRequestLimits
+--- PASS: TestHTTPManifestAndRequestLimits (0.02s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/memorybacking	0.040s
+testing: warning: no tests to run
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata	0.016s [no tests to run]
+=== RUN   TestTrackedDeltaGenerationsInheritColdZeroAndEmptyRounds
+--- PASS: TestTrackedDeltaGenerationsInheritColdZeroAndEmptyRounds (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/shared/pkg/storage/header	0.019s

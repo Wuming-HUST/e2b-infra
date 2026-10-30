@@ -1,0 +1,24 @@
+{
+  "pid": 154087,
+  "started": 1793371365.227372,
+  "command": [
+    "sudo",
+    "-n",
+    "python3",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/infra/scripts/memory-lab/page-sharing/m10_check.py",
+    "--firecracker",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/cargo-target/release/firecracker",
+    "--kernel",
+    "/home/coder/tide-repro/assets/vmlinuz",
+    "--guest-binary",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m10-guest-init",
+    "--nbd-helper",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/page-sharing-source",
+    "--module-dir",
+    "/home/coder/tide-repro/rootfs/lib/modules/6.1.0-50-arm64/kernel/drivers/virtio",
+    "--tracked-delta",
+    "--cleanup-failed",
+    "--output",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/tracked-delta-01/m10-balloon-tracked-final"
+  ]
+}

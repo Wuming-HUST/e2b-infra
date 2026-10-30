@@ -1,0 +1,14 @@
+{
+  "returncode": 0,
+  "seconds": 2.128342390060425,
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/bin/go",
+    "test",
+    "-p",
+    "2",
+    "../shared/pkg/storage/header",
+    "./internal/template/metadata",
+    "-count=1",
+    "-v"
+  ]
+}

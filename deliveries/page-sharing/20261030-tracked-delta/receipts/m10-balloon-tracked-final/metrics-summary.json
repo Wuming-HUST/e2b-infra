@@ -1,0 +1,12 @@
+{
+  "balloon-left": {
+    "free_page_report_count": 0,
+    "free_page_report_freed": 0,
+    "free_page_report_fails": 0
+  },
+  "balloon-right": {
+    "free_page_report_count": 0,
+    "free_page_report_freed": 0,
+    "free_page_report_fails": 0
+  }
+}

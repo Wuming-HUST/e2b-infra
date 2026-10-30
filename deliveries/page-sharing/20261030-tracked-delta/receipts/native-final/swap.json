@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "pid": 154114,
+  "logical_offset": 31694848,
+  "before": {
+    "present": true,
+    "swapped": false,
+    "pfn": 2690656774,
+    "exclusive": true,
+    "file_or_shared_anon": false
+  },
+  "samples": [
+    {
+      "present": false,
+      "swapped": true,
+      "pfn": 524289,
+      "exclusive": false,
+      "file_or_shared_anon": false
+    }
+  ],
+  "returned_bytes": 4096,
+  "errno": 0,
+  "native_and_restore_oracles": true
+}

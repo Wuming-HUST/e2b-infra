@@ -1,0 +1,20 @@
+2026/10/30 14:42:47 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 14:42:47 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:42:47 Using vrt network cidr 10.12.0.0/16
+2026/10/30 14:42:47 Using network slot size: 32766
+=== RUN   TestSharingFactoryIntegration
+    sharing_integration_linux_test.go:209: cold VM created; waiting for real envd
+    sharing_integration_linux_test.go:214: A: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:287: B0-left: cache template and resume
+    sharing_integration_linux_test.go:214: B0-B: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:287: B0-B-restored: cache template and resume
+    sharing_integration_linux_test.go:214: B0-C: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:287: B0-C-restored: cache template and resume
+    sharing_integration_linux_test.go:287: B1-left: cache template and resume
+    sharing_integration_linux_test.go:287: B1-right: cache template and resume
+    sharing_integration_linux_test.go:214: B1-B: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:287: B1-B-restored: cache template and resume
+    sharing_integration_linux_test.go:214: B1-C: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:287: B1-C-restored: cache template and resume
+--- PASS: TestSharingFactoryIntegration (13.80s)
+PASS

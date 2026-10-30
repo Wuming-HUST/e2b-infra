@@ -1,0 +1,492 @@
+From 87112f6e0948adc1a68e95415e9e0ed5f38009e8 Mon Sep 17 00:00:00 2001
+From: yangshengxin <yangshengxin@yangshengxindeMacBook-Air.local>
+Date: Fri, 30 Oct 2026 22:48:06 +0800
+Subject: [PATCH] fix(snapshot): complete cumulative dirty tracking for
+ external RAM deltas
+
+---
+ .../src/api_server/parsed_request.rs          |  5 +-
+ src/vmm/src/builder.rs                        |  2 +
+ src/vmm/src/devices/virtio/balloon/util.rs    | 71 +++++++++++++++++--
+ src/vmm/src/lib.rs                            | 16 +++--
+ src/vmm/src/persist.rs                        | 16 +++--
+ src/vmm/src/rpc_interface.rs                  | 15 +++-
+ src/vmm/src/utils/dirty_tracking.rs           | 50 +++++++++++++
+ src/vmm/src/vmm_config/instance_info.rs       | 16 ++++-
+ src/vmm/src/vstate/vm.rs                      | 16 ++---
+ 9 files changed, 175 insertions(+), 32 deletions(-)
+
+diff --git a/src/firecracker/src/api_server/parsed_request.rs b/src/firecracker/src/api_server/parsed_request.rs
+index 16b688987..d86300301 100644
+--- a/src/firecracker/src/api_server/parsed_request.rs
++++ b/src/firecracker/src/api_server/parsed_request.rs
+@@ -621,7 +621,10 @@ pub mod tests {
+             },
+         ));
+         verify_ok_response_with(VmmData::MemoryDirty(
+-            vmm::vmm_config::instance_info::MemoryDirty { bitmap: vec![] },
++            vmm::vmm_config::instance_info::MemoryDirty {
++                bitmap: vec![],
++                ..Default::default()
++            },
+         ));
+         verify_ok_response_with(VmmData::VmmVersion(String::default()));
+ 
+diff --git a/src/vmm/src/builder.rs b/src/vmm/src/builder.rs
+index d27ce3ca7..0a56a134c 100644
+--- a/src/vmm/src/builder.rs
++++ b/src/vmm/src/builder.rs
+@@ -177,6 +177,7 @@ fn create_vmm_and_vcpus(
+         events_observer: Some(std::io::stdin()),
+         instance_info: instance_info.clone(),
+         shutdown_exit_code: None,
++        external_capture_ready: false,
+         kvm,
+         vm,
+         uffd: None,
+@@ -860,6 +861,7 @@ pub(crate) mod tests {
+             events_observer: Some(std::io::stdin()),
+             instance_info: InstanceInfo::default(),
+             shutdown_exit_code: None,
++            external_capture_ready: false,
+             kvm,
+             vm,
+             uffd: None,
+diff --git a/src/vmm/src/devices/virtio/balloon/util.rs b/src/vmm/src/devices/virtio/balloon/util.rs
+index 35ef69f97..659bb4bd2 100644
+--- a/src/vmm/src/devices/virtio/balloon/util.rs
++++ b/src/vmm/src/devices/virtio/balloon/util.rs
+@@ -6,7 +6,9 @@ use std::io;
+ use super::{MAX_PAGE_COMPACT_BUFFER, RemoveRegionError};
+ use crate::logger::error;
+ use crate::utils::u64_to_usize;
+-use crate::vstate::memory::{GuestAddress, GuestMemory, GuestMemoryMmap, GuestMemoryRegion};
++use crate::vstate::memory::{
++    GuestAddress, GuestMemory, GuestMemoryExtension, GuestMemoryMmap, GuestMemoryRegion,
++};
+ 
+ /// This takes a vector of page frame numbers, and compacts them
+ /// into ranges of consecutive pages. The result is a vector
+@@ -69,17 +71,33 @@ pub(crate) fn remove_range(
+     guest_memory: &GuestMemoryMmap,
+     range: (GuestAddress, u64),
+     restored_from_file: bool,
++) -> Result<(), RemoveRegionError> {
++    remove_range_with_advice(guest_memory, range, restored_from_file, |address, len| {
++        // SAFETY: The helper validates the region before invoking this closure.
++        unsafe { libc::madvise(address, len, libc::MADV_DONTNEED) }
++    })
++}
++
++fn remove_range_with_advice(
++    guest_memory: &GuestMemoryMmap,
++    range: (GuestAddress, u64),
++    restored_from_file: bool,
++    advice: impl FnOnce(*mut libc::c_void, usize) -> libc::c_int,
+ ) -> Result<(), RemoveRegionError> {
+     let (guest_address, range_len) = range;
+ 
+     if let Some(region) = guest_memory.find_region(guest_address) {
+-        if guest_address.0 + range_len > region.start_addr().0 + region.len() {
++        if range_len == 0 || range_len > region.len() - (guest_address.0 - region.start_addr().0) {
+             return Err(RemoveRegionError::MalformedRange);
+         }
+         let phys_address = guest_memory
+             .get_host_address(guest_address)
+             .map_err(|_| RemoveRegionError::AddressTranslation)?;
+ 
++        // Record before the first mutation: mmap may succeed even if madvise
++        // later fails. Discard is a logical write even without a resident PTE.
++        guest_memory.mark_dirty(guest_address, u64_to_usize(range_len));
++
+         // Mmap a new anonymous region over the present one in order to create a hole.
+         // This workaround is (only) needed after resuming from a snapshot because the guest memory
+         // is mmaped from file as private and there is no `madvise` flag that works for this case.
+@@ -101,11 +119,7 @@ pub(crate) fn remove_range(
+         };
+ 
+         // Madvise the region in order to mark it as not used.
+-        // SAFETY: The address and length are known to be valid.
+-        let ret = unsafe {
+-            let range_len = u64_to_usize(range_len);
+-            libc::madvise(phys_address.cast(), range_len, libc::MADV_DONTNEED)
+-        };
++        let ret = advice(phys_address.cast(), u64_to_usize(range_len));
+         if ret < 0 {
+             return Err(RemoveRegionError::MadviseFail(io::Error::last_os_error()));
+         }
+@@ -256,6 +270,49 @@ mod tests {
+         );
+     }
+ 
++    #[test]
++    fn discard_marks_dirty_without_a_cpu_write() {
++        use vm_memory::bitmap::Bitmap;
++        let page = 4096;
++        for restored in [false, true] {
++            let mem = GuestMemoryMmap::from_regions(
++                crate::vstate::memory::anonymous(
++                    [(GuestAddress(0), 3 * page)].into_iter(),
++                    true,
++                    crate::vmm_config::machine_config::HugePageConfig::None,
++                )
++                .unwrap(),
++            )
++            .unwrap();
++            mem.write(&vec![0x5a; 3 * page], GuestAddress(0)).unwrap();
++            let region = mem.find_region(GuestAddress(0)).unwrap();
++            let bitmap = region.bitmap().as_ref().unwrap();
++            bitmap.get_and_reset();
++            remove_range(&mem, (GuestAddress(page as u64), page as u64), restored).unwrap();
++            assert!(!bitmap.dirty_at(0));
++            assert!(bitmap.dirty_at(page));
++            assert!(!bitmap.dirty_at(2 * page));
++            let mut data = vec![0; page];
++            mem.read(&mut data, GuestAddress(page as u64)).unwrap();
++            assert_eq!(data, vec![0; page]);
++            // Invalid ranges do not mutate memory or mark out-of-range bits.
++            assert!(remove_range(&mem, (GuestAddress(1), u64::MAX), restored).is_err());
++            assert!(remove_range(&mem, (GuestAddress(0), 0), restored).is_err());
++            if restored {
++                bitmap.get_and_reset();
++                assert!(remove_range_with_advice(
++                    &mem, (GuestAddress(0), page as u64), true, |_, _| -1,
++                ).is_err());
++                assert!(
++                    bitmap.dirty_at(0),
++                    "successful mmap must survive later madvise failure"
++                );
++                mem.read(&mut data, GuestAddress(0)).unwrap();
++                assert_eq!(data, vec![0; page]);
++            }
++        }
++    }
++
+     /// -------------------------------------
+     /// BEGIN PROPERTY BASED TESTING
+     use proptest::prelude::*;
+diff --git a/src/vmm/src/lib.rs b/src/vmm/src/lib.rs
+index 8aed3a473..cf4e1775a 100644
+--- a/src/vmm/src/lib.rs
++++ b/src/vmm/src/lib.rs
+@@ -140,12 +140,12 @@ use crate::device_manager::legacy::PortIODeviceManager;
+ use crate::device_manager::mmio::MMIODeviceManager;
+ use crate::devices::legacy::{IER_RDA_BIT, IER_RDA_OFFSET};
+ use crate::devices::virtio::balloon::{
+-    Balloon, BalloonConfig, BalloonError, BalloonStats, BALLOON_DEV_ID,
++    BALLOON_DEV_ID, Balloon, BalloonConfig, BalloonError, BalloonStats,
+ };
+ use crate::devices::virtio::block::device::Block;
+ use crate::devices::virtio::net::Net;
+ use crate::devices::virtio::{TYPE_BALLOON, TYPE_BLOCK, TYPE_NET};
+-use crate::logger::{error, info, warn, MetricsError, METRICS};
++use crate::logger::{METRICS, MetricsError, error, info, warn};
+ use crate::persist::{MicrovmState, MicrovmStateError, VmInfo};
+ use crate::rate_limiter::BucketUpdate;
+ use crate::snapshot::Persist;
+@@ -305,6 +305,8 @@ pub struct Vmm {
+     /// The [`InstanceInfo`] state of this [`Vmm`].
+     pub instance_info: InstanceInfo,
+     shutdown_exit_code: Option<FcExitCode>,
++    // True only after a successful state-only save froze all RAM writers.
++    external_capture_ready: bool,
+ 
+     // Guest VM core resources.
+     kvm: Kvm,
+@@ -399,6 +401,7 @@ impl Vmm {
+ 
+     /// Sends a resume command to the vCPUs.
+     pub fn resume_vm(&mut self) -> Result<(), VmmError> {
++        self.external_capture_ready = false;
+         self.mmio_device_manager
+             .freeze_external_snapshot_devices(false);
+         self.mmio_device_manager.kick_devices();
+@@ -768,10 +771,11 @@ impl Vmm {
+     /// Get dirty pages bitmap for guest memory.
+     ///
+     /// Returns a bitmap (Vec<u64>) where each bit corresponds to a guest page of `page_size`.
+-    /// A set bit indicates the page is present in RAM and has been written to (not write-protected).
++    /// Bitmap policy includes cumulative KVM/VMM changes regardless of residency.
++    /// Other policies retain the legacy resident/pagemap selection as a supplement.
+     /// Pages are ordered in the same order as reported by `/memory/mappings`.
+     pub fn get_dirty_memory(&self, page_size: usize) -> Result<Vec<u64>, VmmError> {
+-        use crate::utils::dirty_tracking::{mask_tail, or_words, DirtyStats};
++        use crate::utils::dirty_tracking::{DirtyStats, append_bitmap, mask_tail, or_words};
+         use crate::vstate::hdbss::{self, ExportPolicy};
+         use std::time::Instant;
+         let start = Instant::now();
+@@ -805,6 +809,7 @@ impl Vmm {
+             Some(utils::pagemap::PagemapReader::new(page_size)?)
+         };
+         let mut dirty_bitmap = vec![];
++        let mut logical_pages = 0;
+         for (slot, region) in self.vm.guest_memory().iter().enumerate() {
+             let base_addr = region.as_ptr() as usize;
+             let len = region.size() as usize;
+@@ -850,7 +855,8 @@ impl Vmm {
+                 .iter()
+                 .map(|x| x.count_ones() as u64)
+                 .sum::<u64>();
+-            dirty_bitmap.extend_from_slice(&slot_bitmap);
++            append_bitmap(&mut dirty_bitmap, logical_pages, &slot_bitmap, nr_pages);
++            logical_pages += nr_pages;
+         }
+         stats.total_ns = start.elapsed().as_nanos() as u64;
+         info!("DIRTY_STATS {}", serde_json::to_string(&stats).unwrap());
+diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
+index 1daa8c4bc..2cfc593a1 100644
+--- a/src/vmm/src/persist.rs
++++ b/src/vmm/src/persist.rs
+@@ -22,9 +22,9 @@ use crate::arch::aarch64::vcpu::get_manufacturer_id_from_host;
+ use crate::builder::{self, BuildMicrovmFromSnapshotError};
+ use crate::cpu_config::templates::StaticCpuTemplate;
+ #[cfg(target_arch = "x86_64")]
+-use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
+-#[cfg(target_arch = "x86_64")]
+ use crate::cpu_config::x86_64::cpuid::CpuidTrait;
++#[cfg(target_arch = "x86_64")]
++use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
+ use crate::device_manager::persist::{ACPIDeviceManagerState, DevicePersistError, DeviceStates};
+ use crate::logger::{info, warn};
+ use crate::resources::VmResources;
+@@ -40,7 +40,7 @@ use crate::vstate::memory;
+ use crate::vstate::memory::{GuestMemoryState, GuestRegionMmap, MemoryError};
+ use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
+ use crate::vstate::vm::VmState;
+-use crate::{vstate, EventManager, Vmm};
++use crate::{EventManager, Vmm, vstate};
+ 
+ /// Holds information related to the VM that is not part of VmState.
+ #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+@@ -164,6 +164,7 @@ pub fn create_snapshot(
+     vm_info: &VmInfo,
+     params: &CreateSnapshotParams,
+ ) -> Result<(), CreateSnapshotError> {
++    vmm.external_capture_ready = false;
+     // The lab exports memory through later API calls. Unlike an in-process
+     // snapshot, its CPU/device state and RAM copy span multiple epoll iterations.
+     // Stop net/block event handlers before saving either side of that boundary.
+@@ -204,6 +205,7 @@ pub fn create_snapshot(
+         })
+         .unwrap();
+ 
++    vmm.external_capture_ready = params.mem_file_path.is_none();
+     Ok(())
+ }
+ 
+@@ -623,11 +625,12 @@ mod tests {
+     use vmm_sys_util::tempfile::TempFile;
+ 
+     use super::*;
++    use crate::Vmm;
+     #[cfg(target_arch = "x86_64")]
+     use crate::builder::tests::insert_vmgenid_device;
+     use crate::builder::tests::{
+-        default_kernel_cmdline, default_vmm, insert_balloon_device, insert_block_devices,
+-        insert_net_device, insert_vsock_device, CustomBlockConfig,
++        CustomBlockConfig, default_kernel_cmdline, default_vmm, insert_balloon_device,
++        insert_block_devices, insert_net_device, insert_vsock_device,
+     };
+     #[cfg(target_arch = "aarch64")]
+     use crate::construct_kvm_mpidrs;
+@@ -637,7 +640,6 @@ mod tests {
+     use crate::vmm_config::net::NetworkInterfaceConfig;
+     use crate::vmm_config::vsock::tests::default_config;
+     use crate::vstate::memory::GuestMemoryRegionState;
+-    use crate::Vmm;
+ 
+     #[cfg(target_arch = "aarch64")]
+     #[test]
+@@ -651,7 +653,7 @@ mod tests {
+         };
+         use crate::devices::virtio::device::VirtioDevice;
+         use crate::devices::virtio::mmio::MmioTransport;
+-        use crate::devices::virtio::test_utils::{default_mem, VirtQueue};
++        use crate::devices::virtio::test_utils::{VirtQueue, default_mem};
+         use crate::vstate::memory::{Bytes, GuestAddress};
+ 
+         let disk = TempFile::new().unwrap();
+diff --git a/src/vmm/src/rpc_interface.rs b/src/vmm/src/rpc_interface.rs
+index 5c136617c..a594e0f5e 100644
+--- a/src/vmm/src/rpc_interface.rs
++++ b/src/vmm/src/rpc_interface.rs
+@@ -854,7 +854,20 @@ impl RuntimeApiController {
+         let elapsed_time_us = get_time_us(ClockType::Monotonic) - start_us;
+         info!("'get dirty memory' VMM action took {elapsed_time_us} us.");
+ 
+-        Ok(VmmData::MemoryDirty(MemoryDirty { bitmap }))
++        use crate::vstate::hdbss::{self, ExportPolicy};
++        use crate::vstate::memory::{GuestMemory, GuestMemoryRegion};
++        Ok(VmmData::MemoryDirty(MemoryDirty {
++            bitmap,
++            tracking_version: 1,
++            tracking_mode: format!("{:?}", hdbss::export_policy()).to_lowercase(),
++            tracking_complete: vmm.vm.common.track_dirty_export
++                && hdbss::export_policy() == ExportPolicy::Bitmap
++                && page_size == 4096
++                && vmm.vm.guest_memory().iter().all(|r| r.bitmap().is_some()),
++            capture_ready: vmm.external_capture_ready,
++            logical_size: vmm.vm.guest_memory().iter().map(|r| r.len()).sum(),
++            page_size: page_size as u64,
++        }))
+     }
+ 
+     /// Updates block device properties:
+diff --git a/src/vmm/src/utils/dirty_tracking.rs b/src/vmm/src/utils/dirty_tracking.rs
+index 4b6f2b410..92cfaeb75 100644
+--- a/src/vmm/src/utils/dirty_tracking.rs
++++ b/src/vmm/src/utils/dirty_tracking.rs
+@@ -40,9 +40,59 @@ pub fn mask_tail(words: &mut [u64], pages: usize) {
+     }
+ }
+ 
++/// Harvest a slot into the durable-in-process ledger before another ioctl can fail.
++pub fn harvest_slot<E>(
++    ledger: &mut std::collections::HashMap<u32, Vec<u64>>,
++    slot: u32,
++    collect: impl FnOnce() -> Result<Vec<u64>, E>,
++) -> Result<&mut Vec<u64>, E> {
++    let dirty = collect()?;
++    let saved = ledger.entry(slot).or_insert_with(|| vec![0; dirty.len()]);
++    or_words(saved, &dirty);
++    Ok(saved)
++}
++
++/// Append region bits without introducing padding between logical RAM regions.
++pub fn append_bitmap(dst: &mut Vec<u64>, offset: usize, src: &[u64], pages: usize) {
++    dst.resize((offset + pages).div_ceil(64), 0);
++    let shift = offset % 64;
++    for (i, &word) in src.iter().enumerate() {
++        let index = offset / 64 + i;
++        if index < dst.len() {
++            dst[index] |= word << shift;
++        }
++        if shift != 0 && index + 1 < dst.len() {
++            dst[index + 1] |= word >> (64 - shift);
++        }
++    }
++    mask_tail(dst, offset + pages);
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    #[test]
++    fn failed_later_slot_and_retry_preserve_harvested_bits() {
++        let mut ledger = std::collections::HashMap::new();
++        harvest_slot(&mut ledger, 0, || Ok::<_, &'static str>(vec![1])).unwrap();
++        assert!(harvest_slot(&mut ledger, 1, || Err("ioctl failed")).is_err());
++        assert_eq!(ledger.get(&0), Some(&vec![1]));
++        assert!(!ledger.contains_key(&1));
++        harvest_slot(&mut ledger, 0, || Ok::<_, &'static str>(vec![4])).unwrap();
++        harvest_slot(&mut ledger, 1, || Ok::<_, &'static str>(vec![2])).unwrap();
++        assert_eq!(ledger.get(&0), Some(&vec![5]));
++        assert_eq!(ledger.get(&1), Some(&vec![2]));
++    }
++
++    #[test]
++    fn flatten_regions_without_word_padding() {
++        let mut bits = vec![];
++        append_bitmap(&mut bits, 0, &[1], 1);
++        append_bitmap(&mut bits, 1, &[u64::MAX, 1], 65);
++        append_bitmap(&mut bits, 66, &[1], 1);
++        assert_eq!(bits, vec![u64::MAX, 7]);
++    }
++
+     #[test]
+     fn merge_preserves_rewrites_and_tail() {
+         let mut a = vec![1, 2, u64::MAX];
+diff --git a/src/vmm/src/vmm_config/instance_info.rs b/src/vmm/src/vmm_config/instance_info.rs
+index a06804383..d5980c881 100644
+--- a/src/vmm/src/vmm_config/instance_info.rs
++++ b/src/vmm/src/vmm_config/instance_info.rs
+@@ -3,7 +3,7 @@
+ use std::fmt::{self, Display, Formatter};
+ 
+ use crate::vstate::vm::GuestMemoryRegionMapping;
+-use serde::{ser, Serialize};
++use serde::{Serialize, ser};
+ 
+ /// Enumerates microVM runtime states.
+ #[derive(Clone, Debug, Default, PartialEq, Eq)]
+@@ -72,6 +72,18 @@ pub struct MemoryResponse {
+ #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+ pub struct MemoryDirty {
+     /// Bitmap for dirty pages. The bitmap is encoded as a vector of u64 values.
+-    /// Each bit represents whether a page has been written since the last snapshot.
++    /// With tracking_version 1 this accumulates changes since this VM restore.
+     pub bitmap: Vec<u64>,
++    /// Version 1 is cumulative KVM/VMM tracking since this restore.
++    pub tracking_version: u32,
++    /// Selection policy, independent of residency.
++    pub tracking_mode: String,
++    /// True only with logging and software bitmaps on every RAM region.
++    pub tracking_complete: bool,
++    /// A successful state-only snapshot has frozen CPU and device writers.
++    pub capture_ready: bool,
++    /// Bytes in the logical RAM stream, excluding GPA holes.
++    pub logical_size: u64,
++    /// Granularity of bitmap bits, in bytes.
++    pub page_size: u64,
+ }
+diff --git a/src/vmm/src/vstate/vm.rs b/src/vmm/src/vstate/vm.rs
+index 2461fcc45..17570c4bb 100644
+--- a/src/vmm/src/vstate/vm.rs
++++ b/src/vmm/src/vstate/vm.rs
+@@ -11,7 +11,7 @@ use std::io::Write;
+ use std::path::Path;
+ use std::sync::{Arc, Mutex};
+ 
+-use kvm_bindings::{kvm_userspace_memory_region, KVM_MEM_LOG_DIRTY_PAGES};
++use kvm_bindings::{KVM_MEM_LOG_DIRTY_PAGES, kvm_userspace_memory_region};
+ use kvm_ioctls::VmFd;
+ use serde::{Deserialize, Serialize};
+ use vmm_sys_util::eventfd::EventFd;
+@@ -27,7 +27,7 @@ use crate::vstate::memory::{
+     GuestRegionMmap,
+ };
+ use crate::vstate::vcpu::VcpuError;
+-use crate::{mem_size_mib, DirtyBitmap, Vcpu};
++use crate::{DirtyBitmap, Vcpu, mem_size_mib};
+ 
+ /// Architecture independent parts of a VM.
+ #[derive(Debug)]
+@@ -363,7 +363,7 @@ impl Vm {
+         &self,
+     ) -> Result<(DirtyBitmap, crate::utils::dirty_tracking::DirtyStats), vmm_sys_util::errno::Error>
+     {
+-        use crate::utils::dirty_tracking::{or_words, DirtyStats};
++        use crate::utils::dirty_tracking::{DirtyStats, harvest_slot, or_words};
+         use crate::vstate::hdbss::{self, ExportPolicy};
+         use std::time::Instant;
+         let mut stats = DirtyStats::default();
+@@ -377,13 +377,11 @@ impl Vm {
+                 .expect("dirty ledger poisoned");
+             for (slot, region) in self.guest_memory().iter().enumerate() {
+                 let start = Instant::now();
+-                let dirty = self.fd().get_dirty_log(slot as u32, region.size())?;
++                let saved = harvest_slot(&mut ledger, slot as u32, || {
++                    self.fd().get_dirty_log(slot as u32, region.size())
++                })?;
+                 stats.kvm_collect_ns += start.elapsed().as_nanos() as u64;
+                 stats.kvm_ioctls += 1;
+-                let saved = ledger
+-                    .entry(slot as u32)
+-                    .or_insert_with(|| vec![0; dirty.len()]);
+-                or_words(saved, &dirty);
+                 let start = Instant::now();
+                 if hdbss::export_policy() == ExportPolicy::Hybrid {
+                     for page in 0..region.size().div_ceil(host_page_size()) {
+@@ -531,8 +529,8 @@ pub fn mincore_bitmap(addr: *mut u8, len: usize, page_size: usize) -> Result<Vec
+ 
+ #[cfg(test)]
+ pub(crate) mod tests {
+-    use vm_memory::mmap::MmapRegionBuilder;
+     use vm_memory::GuestAddress;
++    use vm_memory::mmap::MmapRegionBuilder;
+ 
+     use super::*;
+     use crate::test_utils::single_region_mem_raw;
+-- 
+2.56.0
+

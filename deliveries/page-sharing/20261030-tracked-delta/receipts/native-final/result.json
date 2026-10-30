@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "cold_inheritance": true,
+  "cpu_write_zero": true,
+  "A_B_C_restore": true,
+  "B": {
+    "mode": "tracked_delta",
+    "sha256": "e9889dd6b2ad4c9e1df3ec4c19cfdc18afef312e0b6f7bbe5e4c411b9c736a11",
+    "bytes": 134217728,
+    "payload_sha256": "742f0464fbb61e8e870bf0090f943c17c3b9508d745e9b2eb4cec0bc7b31f9c8",
+    "candidate_bytes": 4096,
+    "candidate_seconds": 0.0009945979982148856,
+    "oracle_seconds": 0.2704363039956661,
+    "native_full_equal": true,
+    "repeated_harvest_equal": true,
+    "pid": 154101
+  },
+  "C": {
+    "mode": "tracked_delta",
+    "sha256": "cfa4c57ff1205597041d33c180f40f413ef2da4eca41e66a31a591188f4c8ad4",
+    "bytes": 134217728,
+    "payload_sha256": "98e520fd4fe71f7e2d718a25a6415e315d68b9d34d21f26cb77f8aca973c3530",
+    "candidate_bytes": 483328,
+    "candidate_seconds": 0.002054887001577299,
+    "oracle_seconds": 0.2701854150000145,
+    "native_full_equal": true,
+    "repeated_harvest_equal": true,
+    "pid": 154114
+  },
+  "swap": {
+    "status": "passed",
+    "pid": 154114,
+    "logical_offset": 31694848,
+    "before": {
+      "present": true,
+      "swapped": false,
+      "pfn": 2690656774,
+      "exclusive": true,
+      "file_or_shared_anon": false
+    },
+    "samples": [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 524289,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      }
+    ],
+    "returned_bytes": 4096,
+    "errno": 0,
+    "native_and_restore_oracles": true
+  },
+  "not_tested": [
+    "production E2E",
+    "shared NBD in this fixture",
+    "device writes in this fixture"
+  ]
+}

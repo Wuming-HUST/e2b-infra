@@ -1,0 +1,12 @@
+{
+  "mode": "tracked_delta",
+  "sha256": "f78c6ccd1b526af37cb52d932fbed272a54940c5658413fd40289e827d4dc39e",
+  "bytes": 134217728,
+  "payload_sha256": "2a50f9dd252a0e76cd531c4a208d8e8e058877c5998c22170e5912cb215ea73e",
+  "candidate_bytes": 3653632,
+  "candidate_seconds": 0.009077827002329286,
+  "oracle_seconds": 0.26709258899791166,
+  "native_full_equal": true,
+  "repeated_harvest_equal": true,
+  "pid": 154439
+}

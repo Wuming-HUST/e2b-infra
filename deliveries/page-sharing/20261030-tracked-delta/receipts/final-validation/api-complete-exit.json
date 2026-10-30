@@ -1,0 +1,15 @@
+{
+  "returncode": 0,
+  "seconds": 70.97057938575745,
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/validation-20261016/toolchains/rustup/toolchains/1.85.0-aarch64-unknown-linux-gnu/bin/cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "-p",
+    "firecracker",
+    "api_server::parsed_request",
+    "--",
+    "--nocapture"
+  ]
+}

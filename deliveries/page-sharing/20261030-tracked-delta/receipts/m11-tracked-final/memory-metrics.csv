@@ -1,0 +1,10 @@
+phase,vm,pid,Rss_kib,Pss_kib,Shared_Clean_kib,Private_Dirty_kib,Swap_kib,VmSwap_kib,minor_faults,major_faults
+seed-before-freeze,seed,154110,64936,62775,3020,61844,0,0,15520,0
+B0-file-0-before-freeze,B0-file,154208,35440,32996,3024,2792,0,0,2135,1209
+B0-file-1-before-freeze,B0-file,154208,134816,132651,3024,3676,0,0,2758,1209
+B0-file-2-before-freeze,B0-file,154208,134844,132229,3088,3912,0,0,2853,1209
+B0-file-restored-before-freeze,B0-file-verify,154364,36932,34494,3024,1924,0,0,735,1
+B1-nbd-0-before-freeze,B1-nbd,154439,21204,19887,1348,2704,0,0,987,26
+B1-nbd-1-before-freeze,B1-nbd,154439,134804,133487,1348,3560,0,0,3026,26
+B1-nbd-2-before-freeze,B1-nbd,154439,134828,133511,1348,4148,0,0,3141,26
+B1-nbd-restored-before-freeze,B1-nbd-verify,154448,39284,37955,1360,2292,0,0,934,80
