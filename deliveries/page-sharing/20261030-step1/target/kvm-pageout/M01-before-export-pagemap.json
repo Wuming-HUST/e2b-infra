@@ -1,0 +1,30 @@
+[
+  {
+    "present": false,
+    "swapped": false,
+    "pfn": 0,
+    "exclusive": false,
+    "file_or_shared_anon": false
+  },
+  {
+    "present": false,
+    "swapped": false,
+    "pfn": 0,
+    "exclusive": false,
+    "file_or_shared_anon": false
+  },
+  {
+    "present": false,
+    "swapped": false,
+    "pfn": 0,
+    "exclusive": false,
+    "file_or_shared_anon": false
+  },
+  {
+    "present": false,
+    "swapped": false,
+    "pfn": 0,
+    "exclusive": false,
+    "file_or_shared_anon": false
+  }
+]

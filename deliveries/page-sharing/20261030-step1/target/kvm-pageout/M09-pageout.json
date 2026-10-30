@@ -1,0 +1,57 @@
+{
+  "status": "mechanism_only",
+  "pid": 112098,
+  "vm": "nbd-left",
+  "advice": "MADV_PAGEOUT",
+  "advice_value": 21,
+  "flags": 0,
+  "syscall_provenance": "golang.org/x/sys v0.40.0 unix/zsysnum_linux_{arm64,amd64}.go and zerrors_linux.go",
+  "scope": "two COW marker pages in this run's nbd-left only; no pressure or system configuration changes",
+  "requested_bytes": 8192,
+  "samples": [
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 3145728,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 3145760,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      }
+    ]
+  ],
+  "addresses": [
+    281472860913664,
+    281472860909568
+  ],
+  "before": [
+    {
+      "present": true,
+      "swapped": false,
+      "pfn": 2754675559,
+      "exclusive": true,
+      "file_or_shared_anon": false
+    },
+    {
+      "present": true,
+      "swapped": false,
+      "pfn": 2757851692,
+      "exclusive": true,
+      "file_or_shared_anon": false
+    }
+  ],
+  "syscall_number": 440,
+  "returned_bytes": 8192,
+  "reason": "both private markers actually swapped; export/native/restore oracles passed",
+  "oracles": {
+    "exported_marker_bytes": "passed",
+    "native_full_ram_hash": "passed",
+    "restored_guest_markers": "passed"
+  }
+}

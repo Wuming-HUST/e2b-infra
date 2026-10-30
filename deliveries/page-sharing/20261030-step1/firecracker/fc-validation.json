@@ -1,0 +1,37 @@
+{
+  "rust_toolchain": "1.85.0-aarch64-unknown-linux-gnu",
+  "cargo_home": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home",
+  "cargo_target_dir": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target",
+  "cargo_build_jobs": 4,
+  "library_path": "/home/coder/projects/yangshengxin/e2b/validation-20261016/toolchains/lib",
+  "exit_codes": "fmt-changed-files\t0\ntests\t0\nbuild\t0\n",
+  "binary": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/release/firecracker",
+  "binary_sha256": "a0d8f0c4e57dc2e7c730902a79d2eb75fafd400348a640a8180d9cf9cbd29d14",
+  "binary_bytes": 4345920,
+  "binary_version": "Firecracker v1.12.1\n\n2026-10-30T11:35:43.362292858 [anonymous-instance:main] Firecracker exiting successfully. exit_code=0\n",
+  "source_hashes": {
+    "src/vmm/src/device_manager/mmio.rs": "cebad2f9be75c6d8e97c8d11c05d5b3f0958d36490b08665e94535f5421a42cf",
+    "src/vmm/src/devices/virtio/balloon/device.rs": "410935fec7db7ad768e1eadc9310c30a99de8d3ebde52ad8aec0ecbc3cba520d",
+    "src/vmm/src/devices/virtio/balloon/event_handler.rs": "6b2464eb009bab04cee80b3b1a25b6e04f477fe91c7cbd1b3c60c71ca83626c5",
+    "src/vmm/src/devices/virtio/rng/device.rs": "86c858cc69ef859f9af55252d4dcb34cf37f26902416a0f89acb9d9a6a7997de",
+    "src/vmm/src/devices/virtio/rng/event_handler.rs": "83782d6d9f0f4c69a9718c105784f8b06bfdaacc65f993078f0c3acd493f7e7a",
+    "src/vmm/src/devices/virtio/vsock/device.rs": "b13ec54979365a040e6e68ae876354f61b565bc59ca1c4c576f3f73d35b10197",
+    "src/vmm/src/devices/virtio/vsock/event_handler.rs": "6b3e30707fb892536934bd632f2de423b883fbf6bc9b2438ff001c7078446b6a",
+    "src/vmm/src/persist.rs": "0fcfa86f88e5260af48b4af4b19865b4c97857ed2d205e8e57f19c2b90012e5e"
+  },
+  "baseline_format_files_restored": {
+    "src/vmm/src/lib.rs": true,
+    "src/vmm/src/devices/virtio/block/virtio/event_handler.rs": true,
+    "src/vmm/src/devices/virtio/block/virtio/device.rs": true,
+    "src/vmm/src/devices/virtio/block/virtio/persist.rs": true,
+    "src/vmm/src/devices/virtio/balloon/persist.rs": true,
+    "src/vmm/src/devices/virtio/net/event_handler.rs": true,
+    "src/vmm/src/devices/virtio/net/device.rs": true,
+    "src/vmm/src/vstate/vm.rs": true,
+    "src/vmm/src/vmm_config/instance_info.rs": true,
+    "src/vmm/src/utils/mod.rs": true,
+    "src/firecracker/src/main.rs": true
+  },
+  "finished_utc": "2026-10-30T11:34:42Z",
+  "scope": "ARM GNU compilation and software unit tests; no KVM or physical page sharing acceptance"
+}

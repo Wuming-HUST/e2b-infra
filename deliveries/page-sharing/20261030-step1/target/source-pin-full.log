@@ -1,0 +1,230 @@
+2026/10/30 11:43:10 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 11:43:10 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:43:10 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:43:10 Using network slot size: 32766
+[LaunchDarkly] 2026/10/30 11:43:10 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:12 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:16 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:16 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:16 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:17 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:21 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:22 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:22 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:22 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:22 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:22 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:23 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:23 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:23 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:23 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:24 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:24 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:24 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:24 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+--- FAIL: TestDiffStoreConcurrentEvictionRace (1.62s)
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+    cache_test.go:398: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:398
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreConcurrentEvictionRace
+[LaunchDarkly] 2026/10/30 11:43:24 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:43:24 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:25 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+--- FAIL: TestDiffStoreResetDeleteRace (2.53s)
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	file already closed
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+    cache_test.go:485: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/build/cache_test.go:485
+        	            				/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/src/runtime/asm_arm64.s:1268
+        	Error:      	Received unexpected error:
+        	            	local diff ownership already transferred
+        	Test:       	TestDiffStoreResetDeleteRace
+[LaunchDarkly] 2026/10/30 11:43:26 INFO: Closing LaunchDarkly client
+[LaunchDarkly] 2026/10/30 11:43:26 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:26 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:26 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 11:43:32 INFO: Closing LaunchDarkly client
+FAIL
+FAIL	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build	21.879s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template	1.316s
+FAIL

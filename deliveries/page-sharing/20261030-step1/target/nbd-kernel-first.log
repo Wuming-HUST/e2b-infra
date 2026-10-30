@@ -1,0 +1,14 @@
+2026/10/30 11:24:45 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 11:24:45 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:24:45 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:24:45 Using network slot size: 32766
+=== RUN   TestReadonlyNBDKernelSharing
+    readonly_kernel_test.go:95: owned_device=/dev/nbd0 pid=101600 logical_size=4194304 host_page_size=4096
+    readonly_kernel_test.go:144: SHARED_PFN sample=0 a=2692190873 b=2692190873
+    readonly_kernel_test.go:144: SHARED_PFN sample=1 a=2692190873 b=2692190873
+    readonly_kernel_test.go:144: SHARED_PFN sample=2 a=2692190873 b=2692190873
+    readonly_kernel_test.go:166: COW_PFN a=2694807940 b=2692190873
+    readonly_kernel_test.go:239: verified capacity=4194304 readonly=true COW=true mapping_refault=true source_reads=55 failure=nbd read at 4190208 length 4096: injected immutable source failure
+        unexpected EOF read_error=read /dev/nbd0: input/output error PFN_verified=true
+--- PASS: TestReadonlyNBDKernelSharing (0.31s)
+PASS

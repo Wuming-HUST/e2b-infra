@@ -1,0 +1,167 @@
+{
+  "status": "passed",
+  "M01": "native KVM File mechanism passed",
+  "M07": "native KVM A-B-C marker and full-memory oracle passed",
+  "final_guest": {
+    "event": "read",
+    "sha256": [
+      "4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd",
+      "f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8",
+      "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+      "ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"
+    ]
+  },
+  "B": {
+    "mode": "full_logical",
+    "sha256": "cedc9acf1ad076db5916d218babc9677aed8c4c94c59323b9a6d70db9a8c27b6",
+    "bytes": 134217728,
+    "seconds": 0.1633777450042544,
+    "pid": 112079
+  },
+  "C": {
+    "mode": "full_logical",
+    "sha256": "8ff69d086785d40f8d07543bdcff8ec4f1ff1cd506bae3d7241dfe949fceaaa4",
+    "bytes": 134217728,
+    "seconds": 0.17472887899930356,
+    "pid": 112082
+  },
+  "not_tested": [
+    "orchestrator E2E",
+    "pressure",
+    "fault injection",
+    "trace"
+  ],
+  "shared_nbd": {
+    "M02": "three stable two-VM shared PFN samples passed",
+    "M03": "private write/zero PFN separation and isolation passed",
+    "M05": "one lease release preserves other VM; final drain confirmed",
+    "private": {
+      "mode": "full_logical",
+      "sha256": "e5caff37263b3abf811205d52dc5f297967e831bd8b28114f5a7eef71aa33055",
+      "bytes": 134217728,
+      "seconds": 0.22469153699785238,
+      "pid": 112098
+    },
+    "unmodified": {
+      "mode": "full_logical",
+      "sha256": "38f0b08a7a58d60b4ebb93cec3b96f046d78b497d175f4693f51be547b2e5521",
+      "bytes": 134217728,
+      "seconds": 0.18348300700017717,
+      "pid": 112100
+    },
+    "M09": {
+      "status": "mechanism_only",
+      "pid": 112098,
+      "vm": "nbd-left",
+      "advice": "MADV_PAGEOUT",
+      "advice_value": 21,
+      "flags": 0,
+      "syscall_provenance": "golang.org/x/sys v0.40.0 unix/zsysnum_linux_{arm64,amd64}.go and zerrors_linux.go",
+      "scope": "two COW marker pages in this run's nbd-left only; no pressure or system configuration changes",
+      "requested_bytes": 8192,
+      "samples": [
+        [
+          {
+            "present": false,
+            "swapped": true,
+            "pfn": 3145728,
+            "exclusive": false,
+            "file_or_shared_anon": false
+          },
+          {
+            "present": false,
+            "swapped": true,
+            "pfn": 3145760,
+            "exclusive": false,
+            "file_or_shared_anon": false
+          }
+        ]
+      ],
+      "addresses": [
+        281472860913664,
+        281472860909568
+      ],
+      "before": [
+        {
+          "present": true,
+          "swapped": false,
+          "pfn": 2754675559,
+          "exclusive": true,
+          "file_or_shared_anon": false
+        },
+        {
+          "present": true,
+          "swapped": false,
+          "pfn": 2757851692,
+          "exclusive": true,
+          "file_or_shared_anon": false
+        }
+      ],
+      "syscall_number": 440,
+      "returned_bytes": 8192,
+      "reason": "both private markers actually swapped; export/native/restore oracles passed",
+      "oracles": {
+        "exported_marker_bytes": "passed",
+        "native_full_ram_hash": "passed",
+        "restored_guest_markers": "passed"
+      }
+    }
+  },
+  "M09": {
+    "status": "mechanism_only",
+    "pid": 112098,
+    "vm": "nbd-left",
+    "advice": "MADV_PAGEOUT",
+    "advice_value": 21,
+    "flags": 0,
+    "syscall_provenance": "golang.org/x/sys v0.40.0 unix/zsysnum_linux_{arm64,amd64}.go and zerrors_linux.go",
+    "scope": "two COW marker pages in this run's nbd-left only; no pressure or system configuration changes",
+    "requested_bytes": 8192,
+    "samples": [
+      [
+        {
+          "present": false,
+          "swapped": true,
+          "pfn": 3145728,
+          "exclusive": false,
+          "file_or_shared_anon": false
+        },
+        {
+          "present": false,
+          "swapped": true,
+          "pfn": 3145760,
+          "exclusive": false,
+          "file_or_shared_anon": false
+        }
+      ]
+    ],
+    "addresses": [
+      281472860913664,
+      281472860909568
+    ],
+    "before": [
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2754675559,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2757851692,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    "syscall_number": 440,
+    "returned_bytes": 8192,
+    "reason": "both private markers actually swapped; export/native/restore oracles passed",
+    "oracles": {
+      "exported_marker_bytes": "passed",
+      "native_full_ram_hash": "passed",
+      "restored_guest_markers": "passed"
+    }
+  }
+}

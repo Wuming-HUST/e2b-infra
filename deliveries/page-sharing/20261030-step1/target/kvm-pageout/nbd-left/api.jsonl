@@ -1,0 +1,8 @@
+{"method": "PUT", "path": "/snapshot/load", "body": {"snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-pageout/A.state", "mem_backend": {"backend_type": "File", "backend_path": "/dev/nbd0"}, "enable_diff_snapshots": false, "resume_vm": false}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/memory/mappings", "body": null, "status": 200, "response": "{\"mappings\":[{\"base_host_virt_addr\":281472829227008,\"size\":134217728,\"offset\":0,\"page_size\":4096}]}"}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-pageout/NBD.private.state"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-pageout/NBD.private.native.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-pageout/NBD.private.native.ram"}, "status": 204, "response": ""}

@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-30",
+  "status": {
+    "step_1": "implemented; software and native mechanisms validated; overall acceptance pending",
+    "step_2": "not started; gated by step_1 acceptance"
+  },
+  "infra": {
+    "repository": "/Users/yangshengxin/Documents/Projects/04.Agentic/e2b/e2b-infra-nashzhou",
+    "branch": "feat/shared-nbd-memory-20261030",
+    "base": "d15315d801dbc6e3986a3890751f91aa21ec4aa8",
+    "source_commit": "fa6e5cedb71bde93e86f9e03bcd9a1fc0d9621cc",
+    "patch": "infra-step1.patch"
+  },
+  "firecracker": {
+    "repository": "/Users/yangshengxin/Documents/Projects/04.Agentic/e2b/firecracker-nashzhou",
+    "branch": "feat/shared-nbd-memory-20261030",
+    "base": "8da283e3bfc876167fde8f45e541bec0bfad0e9a",
+    "source_commit": "0ce25136688b6d68e9c27c9e176bf0ebcf930a03",
+    "patch": "firecracker-step1.patch",
+    "build": "Rust 1.85, GNU ARM64, release, offline locked; production musl/seccomp packaging unaccepted"
+  },
+  "target": {
+    "route": [
+      "H-arch",
+      "agent03.coder"
+    ],
+    "directory": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030",
+    "container_memory_bytes": 34359738368,
+    "host_page_size": 4096,
+    "software_result": "target/software-delivery/exit-codes.tsv",
+    "native_result": "target/kvm-delivery/result.json",
+    "cache_eviction": "target/nbd-cache-eviction.log",
+    "binary_hashes": "final-artifacts.log"
+  },
+  "unaccepted": [
+    "orchestrator end-to-end deployment",
+    "M10 guest balloon/FPR discard/rewrite and cross-VM isolation",
+    "M11 device completion/pause and state/RAM/rootfs joint oracle",
+    "B0/B1 original application trace",
+    "real remote object storage faults",
+    "actual multi-region large-memory KVM",
+    "sustained pressure and performance/capacity"
+  ]
+}

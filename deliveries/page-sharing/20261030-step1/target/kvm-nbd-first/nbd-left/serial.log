@@ -1,0 +1,47 @@
+2026-10-30T11:36:43.083973052 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T11:36:43.084115721 [anonymous-instance:main] Listening on API socket ("/tmp/psg-o2cd3zxu/fc.sock").
+2026-10-30T11:36:43.087846266 [anonymous-instance:fc_api] API server started.
+2026-10-30T11:36:43.090523952 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/A.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/dev/nbd0\"}, \"enable_diff_snapshots\": false, \"resume_vm\": false}".
+2026-10-30T11:36:43.090708182 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T11:36:43.090816192 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T11:36:43.090818842 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T11:36:43.105196371 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 14478 us.
+2026-10-30T11:36:43.105427891 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.105440501 [anonymous-instance:fc_api] 'load snapshot' API request took 14921 us.
+2026-10-30T11:36:43.106131620 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T11:36:43.106342500 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T11:36:43.106549999 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T11:36:43.106759039 [anonymous-instance:main] 'resume vm' VMM action took 418 us.
+2026-10-30T11:36:43.106950879 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.106962029 [anonymous-instance:fc_api] 'resume vm' API request took 833 us.
+PSG {"event":"read","sha256":["4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd","c4e4416b00b3648466f272e781d2bbc5d7b2ef19a55ec3a565417f599ba1ae79","3472c45e8a3bf5c75cc1f5d6d73c1b005c152e83c58b37e099849151a71973f7","ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"]}
+2026-10-30T11:36:43.228822844 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T11:36:43.229484353 [anonymous-instance:main] 'pause vm' VMM action took 430 us.
+2026-10-30T11:36:43.229704422 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.229716062 [anonymous-instance:fc_api] 'pause vm' API request took 897 us.
+2026-10-30T11:36:43.243526833 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T11:36:43.243553802 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T11:36:43.311803144 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T11:36:43.312041874 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T11:36:43.312310984 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T11:36:43.312540833 [anonymous-instance:main] 'resume vm' VMM action took 501 us.
+2026-10-30T11:36:43.312564383 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T11:36:43.312567823 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T11:36:43.312769723 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.312781893 [anonymous-instance:fc_api] 'resume vm' API request took 982 us.
+PSG {"event":"write","page":1,"value":165}
+PSG {"event":"zero","page":2,"value":0}
+2026-10-30T11:36:43.317908456 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T11:36:43.318475175 [anonymous-instance:main] 'pause vm' VMM action took 310 us.
+2026-10-30T11:36:43.318699855 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.318711275 [anonymous-instance:fc_api] 'pause vm' API request took 805 us.
+2026-10-30T11:36:43.382664463 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/NBD.private.state\"}".
+2026-10-30T11:36:43.382900222 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T11:36:43.386064718 [anonymous-instance:main] 'create full snapshot' VMM action took 3151 us.
+2026-10-30T11:36:43.386288258 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.386300088 [anonymous-instance:fc_api] 'create full snapshot' API request took 3639 us.
+2026-10-30T11:36:43.651945636 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/NBD.private.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/NBD.private.native.ram\"}".
+2026-10-30T11:36:43.651990296 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T11:36:43.713869507 [anonymous-instance:main] 'create full snapshot' VMM action took 61864 us.
+2026-10-30T11:36:43.714127557 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:36:43.714141787 [anonymous-instance:fc_api] 'create full snapshot' API request took 62201 us.

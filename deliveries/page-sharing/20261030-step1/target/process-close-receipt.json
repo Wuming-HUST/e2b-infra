@@ -1,0 +1,174 @@
+{
+  "probe": "read-only; no signals or restarts",
+  "receipts": [
+    {
+      "receipt": "kvm-file-first/final-restore/pid.json",
+      "pid": 110970,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-file-first/initial/pid.json",
+      "pid": 110961,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-file-first/mutated-restore/pid.json",
+      "pid": 110967,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-file-first/unaccessed-restore/pid.json",
+      "pid": 110964,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/final-restore/pid.json",
+      "pid": 111411,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/initial/pid.json",
+      "pid": 111402,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/mutated-restore/pid.json",
+      "pid": 111408,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/nbd-helper/pid.json",
+      "pid": 111414,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/nbd-left/pid.json",
+      "pid": 111425,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/nbd-private-restored/pid.json",
+      "pid": 111434,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/nbd-right/pid.json",
+      "pid": 111427,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-nbd-first/unaccessed-restore/pid.json",
+      "pid": 111405,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/final-restore/pid.json",
+      "pid": 112085,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/initial/pid.json",
+      "pid": 112076,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/mutated-restore/pid.json",
+      "pid": 112082,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/nbd-helper/pid.json",
+      "pid": 112088,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/nbd-left/pid.json",
+      "pid": 112098,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/nbd-private-restored/pid.json",
+      "pid": 112108,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/nbd-right/pid.json",
+      "pid": 112100,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-pageout/unaccessed-restore/pid.json",
+      "pid": 112079,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/final-restore/pid.json",
+      "pid": 114539,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/initial/pid.json",
+      "pid": 114529,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/mutated-restore/pid.json",
+      "pid": 114536,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/nbd-helper/pid.json",
+      "pid": 114542,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/nbd-left/pid.json",
+      "pid": 114551,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/nbd-private-restored/pid.json",
+      "pid": 114560,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/nbd-right/pid.json",
+      "pid": 114553,
+      "current_cmdline": null,
+      "original_process_gone": true
+    },
+    {
+      "receipt": "kvm-delivery/unaccessed-restore/pid.json",
+      "pid": 114533,
+      "current_cmdline": null,
+      "original_process_gone": true
+    }
+  ],
+  "all_original_processes_gone": true
+}

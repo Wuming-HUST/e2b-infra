@@ -1,0 +1,11 @@
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/memorybacking	1.066s
+2026/10/30 11:23:01 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 11:23:01 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:23:01 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:23:01 Using network slot size: 32766
+--- FAIL: TestDispatchBoundsReadsAndCancelsBlockedSource (3.00s)
+    dispatch_test.go:227: cancel left pending operations
+FAIL
+FAIL	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd	3.056s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox	1.082s
+FAIL

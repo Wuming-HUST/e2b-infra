@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "M01": "native KVM File mechanism passed",
+  "M07": "native KVM A-B-C marker and full-memory oracle passed",
+  "final_guest": {
+    "event": "read",
+    "sha256": [
+      "4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd",
+      "f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8",
+      "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+      "ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"
+    ]
+  },
+  "B": {
+    "mode": "full_logical",
+    "sha256": "d90c5b912f031d170bec900081b62c6cc0b37ecae5ed7b814b227cd6eda492d4",
+    "bytes": 134217728,
+    "seconds": 0.19168535499920836,
+    "pid": 111405
+  },
+  "C": {
+    "mode": "full_logical",
+    "sha256": "94621b94b3db757e23379ce28adea5f761081f02b8829fe73633670a43fda82d",
+    "bytes": 134217728,
+    "seconds": 0.21705784799996763,
+    "pid": 111408
+  },
+  "not_tested": [
+    "orchestrator E2E",
+    "swap",
+    "pressure",
+    "fault injection",
+    "trace"
+  ],
+  "shared_nbd": {
+    "M02": "three stable two-VM shared PFN samples passed",
+    "M03": "private write/zero PFN separation and isolation passed",
+    "M05": "one lease release preserves other VM; final drain confirmed",
+    "private": {
+      "mode": "full_logical",
+      "sha256": "ec3fac5bc378a168efa4eb9566793b3c4b9e49cfc7fd215283155f1607ce81a8",
+      "bytes": 134217728,
+      "seconds": 0.26129604499874404,
+      "pid": 111425
+    },
+    "unmodified": {
+      "mode": "full_logical",
+      "sha256": "335b3e73e8549dc0459ae9f5120165dded8557934ca4084ed226c1f16c0e541c",
+      "bytes": 134217728,
+      "seconds": 0.1882438499960699,
+      "pid": 111427
+    }
+  }
+}

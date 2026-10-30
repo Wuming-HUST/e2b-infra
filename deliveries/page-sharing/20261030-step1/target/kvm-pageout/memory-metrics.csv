@@ -1,0 +1,7 @@
+phase,vm,pid,Rss_kib,Pss_kib,Shared_Clean_kib,Private_Dirty_kib,Swap_kib,VmSwap_kib,minor_faults,major_faults
+shared-before-full-oracle,nbd-left,112098,15424,7865,13840,1080,0,0,493,20
+shared-before-full-oracle,nbd-right,112100,14912,7353,13840,992,0,0,482,0
+private-before-full-oracle,nbd-left,112098,15824,8285,13800,1136,0,0,513,21
+private-before-full-oracle,nbd-right,112100,14912,7373,13800,992,0,0,482,0
+after-pageout-before-full-oracle,nbd-left,112098,15832,8293,13800,1144,8,0,517,21
+after-pageout-before-full-oracle,nbd-right,112100,14912,7373,13800,992,0,0,482,0

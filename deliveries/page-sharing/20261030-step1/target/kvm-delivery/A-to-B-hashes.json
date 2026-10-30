@@ -1,0 +1,5 @@
+{
+  "A": "89a85d680fb98e0627b5c0d5b1ca94d386b55de245bb700c587bcf4d89e7b868",
+  "B": "40008a08c93972d304ae3e743c9af991cee969e1391fadff35d3aa8a59051e01",
+  "note": "FC restores a new VMGenID before vCPU execution; cross-generation whole-RAM equality is not required"
+}

@@ -1,0 +1,20 @@
+   Compiling aws-lc-rs v1.13.0
+   Compiling aws-lc-sys v0.28.0
+   Compiling firecracker v1.12.1 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/firecracker)
+   Compiling semver v1.0.26
+   Compiling micro_http v0.1.0 (https://github.com/firecracker-microvm/micro-http#e854e50b)
+   Compiling acpi_tables v0.1.0 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/acpi-tables)
+   Compiling utils v0.1.0 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/utils)
+   Compiling memfd v0.6.4
+   Compiling timerfd v1.6.0
+   Compiling linux-loader v0.13.0
+   Compiling event-manager v0.4.0
+   Compiling vm-allocator v0.1.1
+   Compiling log v0.4.27
+   Compiling base64 v0.22.1
+   Compiling crc64 v2.0.0
+   Compiling vm-fdt v0.3.0
+   Compiling vm-superio v0.8.0
+warning: firecracker@1.12.1: No default seccomp policy for target: aarch64-unknown-linux-gnu. Defaulting to `resources/seccomp/unimplemented.json`.
+   Compiling vmm v0.1.0 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm)
+    Finished `release` profile [optimized] target(s) in 1m 08s

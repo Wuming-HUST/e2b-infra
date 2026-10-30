@@ -1,0 +1,584 @@
+From 0ce25136688b6d68e9c27c9e176bf0ebcf930a03 Mon Sep 17 00:00:00 2001
+From: yangshengxin <yangshengxin@yangshengxindeMacBook-Air.local>
+Date: Fri, 30 Oct 2026 19:34:21 +0800
+Subject: [PATCH] fix(vmm): freeze RAM writers during external checkpoint
+ export
+
+---
+ docs/external-ram-checkpoint.md               | 31 +++++++++
+ src/vmm/src/device_manager/mmio.rs            | 67 +++++++++++++++----
+ src/vmm/src/devices/virtio/balloon/device.rs  | 19 ++++--
+ .../devices/virtio/balloon/event_handler.rs   | 53 ++++++++++++++-
+ src/vmm/src/devices/virtio/rng/device.rs      |  2 +
+ .../src/devices/virtio/rng/event_handler.rs   | 54 +++++++++++++++
+ src/vmm/src/devices/virtio/vsock/device.rs    |  2 +
+ .../src/devices/virtio/vsock/event_handler.rs | 53 +++++++++++++++
+ src/vmm/src/persist.rs                        | 19 ++++--
+ 9 files changed, 273 insertions(+), 27 deletions(-)
+ create mode 100644 docs/external-ram-checkpoint.md
+
+diff --git a/docs/external-ram-checkpoint.md b/docs/external-ram-checkpoint.md
+new file mode 100644
+index 000000000..5dcc27b50
+--- /dev/null
++++ b/docs/external-ram-checkpoint.md
+@@ -0,0 +1,31 @@
++# External RAM checkpoints
++
++When `PUT /snapshot/create` omits `mem_file_path`, the VMM freezes its
++in-process virtio RAM writers before saving CPU and device state. This applies
++independently of dirty export tracking. Block `prepare_save` drains outstanding
++asynchronous I/O. Net, block, balloon (including free-page reporting), vsock and
++entropy event handlers preserve pending events while frozen. Resume unfreezes
++and kicks devices using the existing resume path.
++
++An external exporter may then read every logical RAM region reported by
++`GET /memory/mappings`, in file-offset order. It must handle nonresident backing
++pages, private swapped pages, short reads and read errors. Residency does not
++establish that a page is logically zero. Keep the VM paused until all checkpoint
++payloads are captured; only publish a checkpoint manifest after the payloads
++are complete and durable. On export failure, terminate the paused VM or resume
++it explicitly; a failed snapshot request does not unfreeze devices implicitly.
++
++Vhost-user block devices can write outside this event loop and are rejected for
++external RAM checkpoints. These changes do not introduce a persistent device
++field or change the existing snapshot serialization version. Runtime freeze
++flags initialize to false on construction and restore.
++
++The paired E2B implementation uses complete logical RAM export for File and
++shared read-only NBD backends. KVM dirty bitmaps and mincore/pagemap filters are
++not substitutes for that export. Shared NBD restore uses an O_RDONLY backing
++with MAP_PRIVATE so each VM retains private writes.
++
++Focused regressions are named `test_external_snapshot_*` in the balloon, vsock
++and entropy event-handler modules. They verify RAM and pending-event stability
++while frozen and processing after thaw. Target KVM tests and application trace
++acceptance remain separate from these unit tests.
+diff --git a/src/vmm/src/device_manager/mmio.rs b/src/vmm/src/device_manager/mmio.rs
+index 5447c3bfb..cd202ee37 100644
+--- a/src/vmm/src/device_manager/mmio.rs
++++ b/src/vmm/src/device_manager/mmio.rs
+@@ -11,7 +11,7 @@ use std::num::NonZeroU32;
+ use std::sync::{Arc, Mutex};
+ 
+ #[cfg(target_arch = "x86_64")]
+-use acpi_tables::{aml, Aml};
++use acpi_tables::{Aml, aml};
+ use kvm_ioctls::{IoEventAddress, VmFd};
+ use linux_loader::cmdline as kernel_cmdline;
+ #[cfg(target_arch = "x86_64")]
+@@ -23,6 +23,7 @@ use vm_allocator::AllocPolicy;
+ use super::resources::ResourceAllocator;
+ use crate::arch::DeviceType;
+ use crate::arch::DeviceType::Virtio;
++use crate::devices::BusDevice;
+ #[cfg(target_arch = "aarch64")]
+ use crate::devices::legacy::RTCDevice;
+ use crate::devices::pseudo::BootTimer;
+@@ -32,9 +33,8 @@ use crate::devices::virtio::device::VirtioDevice;
+ use crate::devices::virtio::mmio::MmioTransport;
+ use crate::devices::virtio::net::Net;
+ use crate::devices::virtio::rng::Entropy;
+-use crate::devices::virtio::vsock::{Vsock, VsockUnixBackend, TYPE_VSOCK};
++use crate::devices::virtio::vsock::{TYPE_VSOCK, Vsock, VsockUnixBackend};
+ use crate::devices::virtio::{TYPE_BALLOON, TYPE_BLOCK, TYPE_NET, TYPE_RNG};
+-use crate::devices::BusDevice;
+ #[cfg(target_arch = "x86_64")]
+ use crate::vstate::memory::GuestAddress;
+ 
+@@ -446,7 +446,25 @@ impl MMIODeviceManager {
+         Ok(())
+     }
+ 
+-    /// Freeze net/block event handling while external RAM export follows state save.
++    /// Out-of-process vhost-user writers cannot be frozen by this event loop.
++    /// Refuse external RAM export rather than pair state with moving RAM.
++    pub fn supports_external_snapshot(&self) -> bool {
++        self.for_each_virtio_device(|kind, _, _, dev| {
++            if kind == TYPE_BLOCK {
++                let mut device = dev.lock().expect("Poisoned lock");
++                if matches!(
++                    device.as_mut_any().downcast_mut::<Block>(),
++                    Some(Block::VhostUser(_))
++                ) {
++                    return Err(());
++                }
++            }
++            Ok(())
++        })
++        .is_ok()
++    }
++
++    /// Freeze in-process RAM writers while external RAM export follows state save.
+     pub fn freeze_external_snapshot_devices(&self, frozen: bool) {
+         let _: Result<(), MmioError> = self.for_each_virtio_device(|kind, _, _, dev| {
+             let mut device = dev.lock().expect("Poisoned lock");
+@@ -458,6 +476,27 @@ impl MMIODeviceManager {
+                         .unwrap()
+                         .external_snapshot_frozen = frozen
+                 }
++                TYPE_BALLOON => {
++                    device
++                        .as_mut_any()
++                        .downcast_mut::<Balloon>()
++                        .unwrap()
++                        .external_snapshot_frozen = frozen;
++                }
++                TYPE_VSOCK => {
++                    device
++                        .as_mut_any()
++                        .downcast_mut::<Vsock<VsockUnixBackend>>()
++                        .unwrap()
++                        .external_snapshot_frozen = frozen;
++                }
++                TYPE_RNG => {
++                    device
++                        .as_mut_any()
++                        .downcast_mut::<Entropy>()
++                        .unwrap()
++                        .external_snapshot_frozen = frozen;
++                }
+                 TYPE_BLOCK => {
+                     if let Some(Block::Virtio(block)) = device.as_mut_any().downcast_mut::<Block>()
+                     {
+@@ -552,13 +591,13 @@ mod tests {
+     use vmm_sys_util::eventfd::EventFd;
+ 
+     use super::*;
++    use crate::Vm;
++    use crate::devices::virtio::ActivateError;
+     use crate::devices::virtio::device::{IrqTrigger, VirtioDevice};
+     use crate::devices::virtio::queue::Queue;
+-    use crate::devices::virtio::ActivateError;
+     use crate::test_utils::multi_region_mem_raw;
+     use crate::vstate::kvm::Kvm;
+     use crate::vstate::memory::{GuestAddress, GuestMemoryMmap};
+-    use crate::Vm;
+ 
+     const QUEUE_SIZES: &[u16] = &[64];
+ 
+@@ -787,9 +826,11 @@ mod tests {
+                 &id,
+             )
+             .unwrap();
+-        assert!(device_manager
+-            .get_device(DeviceType::Virtio(type_id), &id)
+-            .is_some());
++        assert!(
++            device_manager
++                .get_device(DeviceType::Virtio(type_id), &id)
++                .is_some()
++        );
+         assert_eq!(
+             addr,
+             device_manager.id_to_dev_info[&(DeviceType::Virtio(type_id), id.clone())].addr
+@@ -803,9 +844,11 @@ mod tests {
+         );
+ 
+         let id = "bar";
+-        assert!(device_manager
+-            .get_device(DeviceType::Virtio(type_id), id)
+-            .is_none());
++        assert!(
++            device_manager
++                .get_device(DeviceType::Virtio(type_id), id)
++                .is_none()
++        );
+ 
+         let dummy2 = Arc::new(Mutex::new(DummyDevice::new()));
+         let id2 = String::from("foo2");
+diff --git a/src/vmm/src/devices/virtio/balloon/device.rs b/src/vmm/src/devices/virtio/balloon/device.rs
+index e794529dc..c1aa46c70 100644
+--- a/src/vmm/src/devices/virtio/balloon/device.rs
++++ b/src/vmm/src/devices/virtio/balloon/device.rs
+@@ -167,6 +167,7 @@ pub struct Balloon {
+ 
+     // Implementation specific fields.
+     pub(crate) restored_from_file: bool,
++    pub(crate) external_snapshot_frozen: bool,
+     pub(crate) stats_polling_interval_s: u16,
+     pub(crate) stats_timer: TimerFd,
+     // The index of the previous stats descriptor is saved because
+@@ -260,6 +261,7 @@ impl Balloon {
+             device_state: DeviceState::Inactive,
+             activate_evt: EventFd::new(libc::EFD_NONBLOCK).map_err(BalloonError::EventFd)?,
+             restored_from_file,
++            external_snapshot_frozen: false,
+             stats_polling_interval_s,
+             stats_timer,
+             stats_desc_index: None,
+@@ -330,9 +332,7 @@ impl Balloon {
+                 last_desc = desc.next_descriptor();
+             }
+ 
+-            queue
+-                .add_used(head_index, 0)
+-                .map_err(BalloonError::Queue)?;
++            queue.add_used(head_index, 0).map_err(BalloonError::Queue)?;
+             needs_interrupt = true;
+         }
+         queue.advance_used_ring_idx();
+@@ -812,7 +812,8 @@ pub(crate) mod tests {
+         // Test all feature combinations.
+         for deflate_on_oom in [true, false].iter() {
+             for stats_interval in [0, 1].iter() {
+-                let mut balloon = Balloon::new(0, *deflate_on_oom, *stats_interval, false, false).unwrap();
++                let mut balloon =
++                    Balloon::new(0, *deflate_on_oom, *stats_interval, false, false).unwrap();
+                 assert_eq!(balloon.device_type(), TYPE_BALLOON);
+ 
+                 let features: u64 = (1u64 << VIRTIO_F_VERSION_1)
+@@ -1226,7 +1227,10 @@ pub(crate) mod tests {
+             assert_eq!(repq.used.idx.get(), 0);
+             // The page is untouched.
+             for i in 0..page_size {
+-                assert_eq!(mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(), 1);
++                assert_eq!(
++                    mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(),
++                    1
++                );
+             }
+         }
+ 
+@@ -1246,7 +1250,10 @@ pub(crate) mod tests {
+ 
+             // The reported page has been released (zeroed).
+             for i in 0..page_size {
+-                assert_eq!(mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(), 0);
++                assert_eq!(
++                    mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(),
++                    0
++                );
+             }
+         }
+     }
+diff --git a/src/vmm/src/devices/virtio/balloon/event_handler.rs b/src/vmm/src/devices/virtio/balloon/event_handler.rs
+index 603ea708c..547cd609e 100644
+--- a/src/vmm/src/devices/virtio/balloon/event_handler.rs
++++ b/src/vmm/src/devices/virtio/balloon/event_handler.rs
+@@ -54,7 +54,10 @@ impl Balloon {
+                 Self::PROCESS_VIRTQ_REPORTING,
+                 EventSet::IN,
+             )) {
+-                error!("Failed to register free page reporting queue event: {}", err);
++                error!(
++                    "Failed to register free page reporting queue event: {}",
++                    err
++                );
+             }
+         }
+     }
+@@ -86,6 +89,11 @@ impl Balloon {
+ 
+ impl MutEventSubscriber for Balloon {
+     fn process(&mut self, event: Events, ops: &mut EventOps) {
++        // Keep pending eventfds intact until resume_vm kicks the devices.
++        // API state save and external RAM export span several event-loop turns.
++        if self.external_snapshot_frozen {
++            return;
++        }
+         let source = event.data();
+         let event_set = event.event_set();
+         let supported_events = EventSet::IN;
+@@ -150,7 +158,48 @@ pub mod tests {
+     use super::*;
+     use crate::devices::virtio::balloon::test_utils::set_request;
+     use crate::devices::virtio::test_utils::{VirtQueue, default_mem};
+-    use crate::vstate::memory::GuestAddress;
++    use crate::vstate::memory::{Bytes, GuestAddress};
++
++    #[test]
++    fn test_external_snapshot_freeze_preserves_reporting_event_and_ram() {
++        let page_size = crate::utils::get_page_size().unwrap();
++        let mem = crate::test_utils::single_region_mem(4 * page_size);
++        let mut balloon = Balloon::new(0, true, 0, true, false).unwrap();
++        let index = balloon.free_page_reporting_idx();
++        let queue = VirtQueue::new(GuestAddress(0), &mem, 16);
++        balloon.set_queue(index, queue.create_queue());
++        balloon.activate(mem.clone()).unwrap();
++        let page = GuestAddress(page_size as u64);
++        let original = vec![0xa5; page_size];
++        mem.write_slice(&original, page).unwrap();
++        set_request(&queue, 0, page_size as u64, page_size as u32, 0);
++        balloon.external_snapshot_frozen = true;
++        balloon.queue_evts[index].write(1).unwrap();
++        let balloon = Arc::new(Mutex::new(balloon));
++        let mut manager = EventManager::new().unwrap();
++        manager.add_subscriber(balloon.clone());
++
++        // A level-triggered event must remain pending over successive event-loop
++        // turns while external RAM export is in progress. In particular FPR may
++        // neither zero the reported page nor advance the used ring.
++        for _ in 0..2 {
++            assert_eq!(manager.run_with_timeout(0).unwrap(), 1);
++            assert_eq!(queue.used.idx.get(), 0);
++            let mut observed = vec![0; page_size];
++            mem.read_slice(&mut observed, page).unwrap();
++            assert_eq!(observed, original);
++        }
++
++        balloon.lock().unwrap().external_snapshot_frozen = false;
++        // No eventfd rewrite: successful processing proves the frozen handler
++        // preserved the original event as well as the descriptor and RAM.
++        assert_eq!(manager.run_with_timeout(50).unwrap(), 1);
++        assert_eq!(queue.used.idx.get(), 1);
++        let mut observed = vec![0xff; page_size];
++        mem.read_slice(&mut observed, page).unwrap();
++        assert_eq!(observed, vec![0; page_size]);
++        assert_eq!(manager.run_with_timeout(0).unwrap(), 0);
++    }
+ 
+     #[test]
+     fn test_event_handler() {
+diff --git a/src/vmm/src/devices/virtio/rng/device.rs b/src/vmm/src/devices/virtio/rng/device.rs
+index 173dd820c..bc30521b0 100644
+--- a/src/vmm/src/devices/virtio/rng/device.rs
++++ b/src/vmm/src/devices/virtio/rng/device.rs
+@@ -45,6 +45,7 @@ pub struct Entropy {
+ 
+     // Transport fields
+     device_state: DeviceState,
++    pub(crate) external_snapshot_frozen: bool,
+     pub(crate) queues: Vec<Queue>,
+     queue_events: Vec<EventFd>,
+     irq_trigger: IrqTrigger,
+@@ -76,6 +77,7 @@ impl Entropy {
+             acked_features: 0u64,
+             activate_event,
+             device_state: DeviceState::Inactive,
++            external_snapshot_frozen: false,
+             queues,
+             queue_events,
+             irq_trigger,
+diff --git a/src/vmm/src/devices/virtio/rng/event_handler.rs b/src/vmm/src/devices/virtio/rng/event_handler.rs
+index dffda5d88..7acf5a1ae 100644
+--- a/src/vmm/src/devices/virtio/rng/event_handler.rs
++++ b/src/vmm/src/devices/virtio/rng/event_handler.rs
+@@ -73,6 +73,11 @@ impl MutEventSubscriber for Entropy {
+     }
+ 
+     fn process(&mut self, events: event_manager::Events, ops: &mut event_manager::EventOps) {
++        // Keep pending eventfds intact until resume_vm kicks the devices.
++        // API state save and external RAM export span several event-loop turns.
++        if self.external_snapshot_frozen {
++            return;
++        }
+         let event_set = events.event_set();
+         let source = events.data();
+ 
+@@ -96,3 +101,52 @@ impl MutEventSubscriber for Entropy {
+         }
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use std::sync::{Arc, Mutex};
++
++    use event_manager::{EventManager, SubscriberOps};
++
++    use super::*;
++    use crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE;
++    use crate::devices::virtio::test_utils::{VirtQueue, default_mem};
++    use crate::rate_limiter::RateLimiter;
++    use crate::vstate::memory::{Bytes, GuestAddress};
++
++    #[test]
++    fn test_external_snapshot_freeze_preserves_entropy_event_and_ram() {
++        let mem = default_mem();
++        let queue = VirtQueue::new(GuestAddress(0), &mem, 16);
++        let mut entropy = Entropy::new(RateLimiter::default()).unwrap();
++        entropy.queues_mut()[RNG_QUEUE] = queue.create_queue();
++        entropy.activate(mem.clone()).unwrap();
++        let payload_addr = GuestAddress(0x4000);
++        let original = [0xa5; 64];
++        mem.write_slice(&original, payload_addr).unwrap();
++        queue.dtable[0].set(0x4000, original.len() as u32, VIRTQ_DESC_F_WRITE, 0);
++        queue.avail.ring[0].set(0);
++        queue.avail.idx.set(1);
++        entropy.external_snapshot_frozen = true;
++        entropy.queue_events()[RNG_QUEUE].write(1).unwrap();
++        let entropy = Arc::new(Mutex::new(entropy));
++        let mut manager = EventManager::new().unwrap();
++        manager.add_subscriber(entropy.clone());
++
++        for _ in 0..2 {
++            assert_eq!(manager.run_with_timeout(0).unwrap(), 1);
++            assert_eq!(queue.used.idx.get(), 0);
++            let mut observed = [0; 64];
++            mem.read_slice(&mut observed, payload_addr).unwrap();
++            assert_eq!(observed, original);
++        }
++
++        entropy.lock().unwrap().external_snapshot_frozen = false;
++        assert_eq!(manager.run_with_timeout(50).unwrap(), 1);
++        assert_eq!(queue.used.idx.get(), 1);
++        // Check completed length rather than random byte values: successful
++        // entropy completion must account for all requested guest writes.
++        assert_eq!(queue.used.ring[0].get().len, original.len() as u32);
++        assert_eq!(manager.run_with_timeout(0).unwrap(), 0);
++    }
++}
+diff --git a/src/vmm/src/devices/virtio/vsock/device.rs b/src/vmm/src/devices/virtio/vsock/device.rs
+index 9fe635aa5..dc1a4be21 100644
+--- a/src/vmm/src/devices/virtio/vsock/device.rs
++++ b/src/vmm/src/devices/virtio/vsock/device.rs
+@@ -69,6 +69,7 @@ pub struct Vsock<B> {
+     // continuous triggers from happening before the device gets activated.
+     pub(crate) activate_evt: EventFd,
+     pub(crate) device_state: DeviceState,
++    pub(crate) external_snapshot_frozen: bool,
+ 
+     pub rx_packet: VsockPacketRx,
+     pub tx_packet: VsockPacketTx,
+@@ -105,6 +106,7 @@ where
+             irq_trigger: IrqTrigger::new().map_err(VsockError::EventFd)?,
+             activate_evt: EventFd::new(libc::EFD_NONBLOCK).map_err(VsockError::EventFd)?,
+             device_state: DeviceState::Inactive,
++            external_snapshot_frozen: false,
+             rx_packet: VsockPacketRx::new()?,
+             tx_packet: VsockPacketTx::default(),
+         })
+diff --git a/src/vmm/src/devices/virtio/vsock/event_handler.rs b/src/vmm/src/devices/virtio/vsock/event_handler.rs
+index 632148546..45c708981 100755
+--- a/src/vmm/src/devices/virtio/vsock/event_handler.rs
++++ b/src/vmm/src/devices/virtio/vsock/event_handler.rs
+@@ -178,6 +178,11 @@ where
+     B: Debug + VsockBackend + 'static,
+ {
+     fn process(&mut self, event: Events, ops: &mut EventOps) {
++        // Keep pending eventfds intact until resume_vm kicks the devices.
++        // API state save and external RAM export span several event-loop turns.
++        if self.external_snapshot_frozen {
++            return;
++        }
+         let source = event.data();
+         let evset = event.event_set();
+ 
+@@ -225,6 +230,54 @@ mod tests {
+     use super::*;
+     use crate::devices::virtio::vsock::test_utils::{EventHandlerContext, TestContext};
+ 
++    #[test]
++    fn test_external_snapshot_freeze_preserves_tx_event_and_rx_ram() {
++        use crate::vstate::memory::{Bytes, GuestAddress};
++
++        let test_ctx = TestContext::new();
++        let mut ctx = test_ctx.create_event_handler_context();
++        ctx.mock_activate(test_ctx.mem.clone());
++        ctx.device.backend.set_pending_rx(true);
++        let payload_addr = GuestAddress(0x0040_1000);
++        let original = vec![0xa5; 4096];
++        test_ctx.mem.write_slice(&original, payload_addr).unwrap();
++        ctx.device.external_snapshot_frozen = true;
++        ctx.device.queue_events[TXQ_INDEX].write(1).unwrap();
++        let vsock = Arc::new(Mutex::new(ctx.device));
++        let mut manager = EventManager::new().unwrap();
++        manager.add_subscriber(vsock.clone());
++
++        for _ in 0..2 {
++            assert_eq!(manager.run_with_timeout(0).unwrap(), 1);
++            assert_eq!(ctx.guest_txvq.used.idx.get(), 0);
++            assert_eq!(ctx.guest_rxvq.used.idx.get(), 0);
++            let device = vsock.lock().unwrap();
++            assert_eq!(device.backend.tx_ok_cnt, 0);
++            assert_eq!(device.backend.rx_ok_cnt, 0);
++            let mut observed = vec![0; original.len()];
++            test_ctx
++                .mem
++                .read_slice(&mut observed, payload_addr)
++                .unwrap();
++            assert_eq!(observed, original);
++        }
++
++        vsock.lock().unwrap().external_snapshot_frozen = false;
++        assert_eq!(manager.run_with_timeout(50).unwrap(), 1);
++        assert_eq!(ctx.guest_txvq.used.idx.get(), 1);
++        assert_eq!(ctx.guest_rxvq.used.idx.get(), 1);
++        let device = vsock.lock().unwrap();
++        assert_eq!(device.backend.tx_ok_cnt, 1);
++        assert_eq!(device.backend.rx_ok_cnt, 1);
++        let mut observed = [0; 8];
++        test_ctx
++            .mem
++            .read_slice(&mut observed, payload_addr)
++            .unwrap();
++        assert_eq!(observed, [0xd, 0xe, 0xa, 0xd, 0xb, 0xe, 0xe, 0xf]);
++        assert_eq!(manager.run_with_timeout(0).unwrap(), 0);
++    }
++
+     #[test]
+     fn test_txq_event() {
+         // Test case:
+diff --git a/src/vmm/src/persist.rs b/src/vmm/src/persist.rs
+index 1cae45248..a17741c8a 100644
+--- a/src/vmm/src/persist.rs
++++ b/src/vmm/src/persist.rs
+@@ -22,9 +22,9 @@ use crate::arch::aarch64::vcpu::get_manufacturer_id_from_host;
+ use crate::builder::{self, BuildMicrovmFromSnapshotError};
+ use crate::cpu_config::templates::StaticCpuTemplate;
+ #[cfg(target_arch = "x86_64")]
+-use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
+-#[cfg(target_arch = "x86_64")]
+ use crate::cpu_config::x86_64::cpuid::CpuidTrait;
++#[cfg(target_arch = "x86_64")]
++use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
+ use crate::device_manager::persist::{ACPIDeviceManagerState, DevicePersistError, DeviceStates};
+ use crate::logger::{info, warn};
+ use crate::resources::VmResources;
+@@ -40,7 +40,7 @@ use crate::vstate::memory;
+ use crate::vstate::memory::{GuestMemoryState, GuestRegionMmap, MemoryError};
+ use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
+ use crate::vstate::vm::VmState;
+-use crate::{vstate, EventManager, Vmm};
++use crate::{EventManager, Vmm, vstate};
+ 
+ /// Holds information related to the VM that is not part of VmState.
+ #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+@@ -133,6 +133,8 @@ pub enum MicrovmStateError {
+ #[rustfmt::skip]
+ #[derive(Debug, thiserror::Error, displaydoc::Display)]
+ pub enum CreateSnapshotError {
++    /// External RAM export does not support out-of-process vhost-user writers.
++    UnsupportedExternalSnapshotDevice,
+     /// Cannot get dirty bitmap: {0}
+     DirtyBitmap(#[from] vmm_sys_util::errno::Error),
+     /// Cannot write memory file: {0}
+@@ -164,7 +166,10 @@ pub fn create_snapshot(
+     // snapshot, its CPU/device state and RAM copy span multiple epoll iterations.
+     // Stop net/block event handlers before saving either side of that boundary.
+     // Block prepare_save below drains outstanding async IO before state is saved.
+-    if vmm.vm.common.track_dirty_export && params.mem_file_path.is_none() {
++    if params.mem_file_path.is_none() {
++        if !vmm.mmio_device_manager.supports_external_snapshot() {
++            return Err(CreateSnapshotError::UnsupportedExternalSnapshotDevice);
++        }
+         vmm.mmio_device_manager
+             .freeze_external_snapshot_devices(true);
+     }
+@@ -616,11 +621,12 @@ mod tests {
+     use vmm_sys_util::tempfile::TempFile;
+ 
+     use super::*;
++    use crate::Vmm;
+     #[cfg(target_arch = "x86_64")]
+     use crate::builder::tests::insert_vmgenid_device;
+     use crate::builder::tests::{
+-        default_kernel_cmdline, default_vmm, insert_balloon_device, insert_block_devices,
+-        insert_net_device, insert_vsock_device, CustomBlockConfig,
++        CustomBlockConfig, default_kernel_cmdline, default_vmm, insert_balloon_device,
++        insert_block_devices, insert_net_device, insert_vsock_device,
+     };
+     #[cfg(target_arch = "aarch64")]
+     use crate::construct_kvm_mpidrs;
+@@ -630,7 +636,6 @@ mod tests {
+     use crate::vmm_config::net::NetworkInterfaceConfig;
+     use crate::vmm_config::vsock::tests::default_config;
+     use crate::vstate::memory::GuestMemoryRegionState;
+-    use crate::Vmm;
+ 
+     fn default_vmm_with_devices() -> Vmm {
+         let mut event_manager = EventManager::new().expect("Cannot create EventManager");
+-- 
+2.56.0
+

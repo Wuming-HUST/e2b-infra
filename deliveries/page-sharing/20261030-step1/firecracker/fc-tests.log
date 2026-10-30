@@ -1,0 +1,28 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running unittests src/lib.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/debug/deps/vmm-f716ef39988ce199)
+
+running 3 tests
+test devices::virtio::balloon::event_handler::tests::test_external_snapshot_freeze_preserves_reporting_event_and_ram ... ok
+test devices::virtio::rng::event_handler::tests::test_external_snapshot_freeze_preserves_entropy_event_and_ram ... ok
+test devices::virtio::vsock::event_handler::tests::test_external_snapshot_freeze_preserves_tx_event_and_rx_ram ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 507 filtered out; finished in 0.00s
+
+     Running tests/devices.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/debug/deps/devices-2eab278ec30660be)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/integration_tests.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/debug/deps/integration_tests-410b6214b6e3ee5f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/io_uring.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/debug/deps/io_uring-9de097a76044a2ee)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+

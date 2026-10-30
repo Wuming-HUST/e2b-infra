@@ -1,0 +1,608 @@
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/memorybacking	1.460s
+2026/10/30 11:35:28 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 11:35:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:35:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:35:28 Using network slot size: 32766
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct32MBWrite (0.00s)
+    path_direct_test.go:61: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:61
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct32MBWrite
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Write (0.00s)
+    path_direct_test.go:90: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:90
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Write
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathDirect_WriteAtOffset (0.00s)
+    path_direct_test.go:115: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:115
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_WriteAtOffset
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_Direct4MBWrite (0.00s)
+    path_direct_test.go:30: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:30
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_Direct4MBWrite
+        	Messages:   	the nbd requires root privileges to run
+--- FAIL: TestPathLargeRead (0.00s)
+    path_direct_test.go:161: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:161
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathLargeRead
+        	Messages:   	the nbd requires root privileges to run
+[LaunchDarkly] 2026/10/30 11:35:28 INFO: Starting LaunchDarkly client 7.13.0
+--- FAIL: TestPathDirect_LargeWrite (0.00s)
+    path_direct_test.go:142: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:177
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/nbd/path_direct_test.go:142
+        	Error:      	Not equal: 
+        	            	expected: 0
+        	            	actual  : 1000
+        	Test:       	TestPathDirect_LargeWrite
+        	Messages:   	the nbd requires root privileges to run
+FAIL
+FAIL	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd	0.667s
+FAIL

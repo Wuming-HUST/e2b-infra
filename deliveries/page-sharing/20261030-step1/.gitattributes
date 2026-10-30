@@ -1,0 +1,6 @@
+# Preserve raw evidence and transportable patches byte for byte.
+* -text
+*.log -whitespace
+*.patch -whitespace
+*.csv -whitespace
+*.state binary

@@ -1,0 +1,5 @@
+{"method": "PUT", "path": "/machine-config", "body": {"vcpu_count": 1, "mem_size_mib": 128}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/boot-source", "body": {"kernel_image_path": "/home/coder/tide-repro/assets/vmlinuz", "initrd_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/guest-initrd.gz", "boot_args": "console=ttyS0 reboot=k panic=1 pci=off"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "InstanceStart"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/A.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-nbd-first/A.ram"}, "status": 204, "response": ""}

@@ -1,0 +1,5 @@
+cargo 1.85.0 (d73d2caf9 2024-12-31)
+rustc 1.85.0 (4d91de4e4 2025-02-17)
+CARGO_HOME=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-home
+CARGO_TARGET_DIR=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target
+CARGO_BUILD_JOBS=4

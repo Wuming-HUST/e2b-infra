@@ -1,0 +1,8 @@
+version mismatch: client v2.37.0+8a148a9, server v2.33.6+b98577c
+download v2.33.6+b98577c with: 'curl -fsSL http://192.168.90.48/install.sh | sh'
+1974d462876ff60307dec6905d2c751f4c30db6be8ef55e58da29157799412a3  software-delivery/orchestrator
+ad47dd77b2f00c3deb48262dee3b8c4dc648295826b6aabf55dbe370b09670e2  software-delivery/page-sharing-source
+7d6c2117f4b671489c70491c6e2c6d7d5ebaf4a3eebfdb2c722e1e18c4126986  software-delivery/nbd.test
+e13d0079dd924b4307f1382714b10f704f62c4896662ae17c403e9dd7f9cab8f  software-delivery/guest-init
+a0d8f0c4e57dc2e7c730902a79d2eb75fafd400348a640a8180d9cf9cbd29d14  cargo-target/release/firecracker
+84b9c190bb4589c4a9527e3191fec051f9f115e88f0a3e8afae96ba0dfb4dfef  /home/coder/tide-repro/assets/vmlinuz

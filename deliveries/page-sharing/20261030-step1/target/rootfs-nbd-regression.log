@@ -1,0 +1,29 @@
+2026/10/30 11:39:03 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 11:39:03 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:39:03 Using vrt network cidr 10.12.0.0/16
+2026/10/30 11:39:03 Using network slot size: 32766
+=== RUN   TestPathDirect_Direct4MBWrite
+=== PAUSE TestPathDirect_Direct4MBWrite
+=== RUN   TestPathDirect_Direct32MBWrite
+=== PAUSE TestPathDirect_Direct32MBWrite
+=== RUN   TestPathDirect_Write
+=== PAUSE TestPathDirect_Write
+=== RUN   TestPathDirect_WriteAtOffset
+=== PAUSE TestPathDirect_WriteAtOffset
+=== CONT  TestPathDirect_Direct4MBWrite
+[LaunchDarkly] 2026/10/30 11:39:03 INFO: Starting LaunchDarkly client 7.13.0
+    path_direct_test.go:30: NBD device path: /dev/nbd0
+--- PASS: TestPathDirect_Direct4MBWrite (0.28s)
+=== CONT  TestPathDirect_Write
+[LaunchDarkly] 2026/10/30 11:39:03 INFO: Starting LaunchDarkly client 7.13.0
+    path_direct_test.go:90: NBD device path: /dev/nbd1
+--- PASS: TestPathDirect_Write (0.39s)
+=== CONT  TestPathDirect_WriteAtOffset
+[LaunchDarkly] 2026/10/30 11:39:03 INFO: Starting LaunchDarkly client 7.13.0
+    path_direct_test.go:115: NBD device path: /dev/nbd0
+--- PASS: TestPathDirect_WriteAtOffset (0.21s)
+=== CONT  TestPathDirect_Direct32MBWrite
+[LaunchDarkly] 2026/10/30 11:39:03 INFO: Starting LaunchDarkly client 7.13.0
+    path_direct_test.go:61: NBD device path: /dev/nbd1
+--- PASS: TestPathDirect_Direct32MBWrite (0.37s)
+PASS

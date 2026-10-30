@@ -1,0 +1,18 @@
+[
+  "src/vmm/src/lib.rs",
+  "src/vmm/src/persist.rs",
+  "src/vmm/src/devices/virtio/block/virtio/event_handler.rs",
+  "src/vmm/src/devices/virtio/block/virtio/device.rs",
+  "src/vmm/src/devices/virtio/block/virtio/persist.rs",
+  "src/vmm/src/devices/virtio/balloon/event_handler.rs",
+  "src/vmm/src/devices/virtio/balloon/device.rs",
+  "src/vmm/src/devices/virtio/balloon/persist.rs",
+  "src/vmm/src/devices/virtio/net/event_handler.rs",
+  "src/vmm/src/devices/virtio/net/device.rs",
+  "src/vmm/src/devices/virtio/vsock/event_handler.rs",
+  "src/vmm/src/vstate/vm.rs",
+  "src/vmm/src/vmm_config/instance_info.rs",
+  "src/vmm/src/utils/mod.rs",
+  "src/vmm/src/device_manager/mmio.rs",
+  "src/firecracker/src/main.rs"
+]

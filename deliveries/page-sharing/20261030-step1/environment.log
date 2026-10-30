@@ -1,0 +1,20 @@
+version mismatch: client v2.37.0+8a148a9, server v2.33.6+b98577c
+download v2.33.6+b98577c with: 'curl -fsSL http://192.168.90.48/install.sh | sh'
+Linux agent03 6.6.0-95.0.0.99.oe2403sp2.aarch64 #1 SMP Thu Jun  5 23:21:14 CST 2025 aarch64 aarch64 aarch64 GNU/Linux
+uid=1000(coder) gid=1000(coder) groups=1000(coder)
+4096
+34359738368
+1600000 100000
+34359738368
+Filename				Type		Size		Used		Priority
+/swapfile                               file		1048572		1280		-2
+/dev/nvme1n1p3                          partition	4194300		0		-3
+a8df9db3-8263-428b-bb69-be1f7784fde3
+crw-rw---- 1 root kvm  10, 232 Oct 30 01:18 /dev/kvm
+brw-rw---- 1 root disk 43,   0 Oct 30 11:09 /dev/nbd0
+go version go1.25.4 linux/arm64
+rustc 1.86.0 (05f9846f8 2025-03-31) (built from a source tarball)
+root-kvm-access=yes
+84b9c190bb4589c4a9527e3191fec051f9f115e88f0a3e8afae96ba0dfb4dfef  /home/coder/tide-repro/assets/vmlinuz
+    PID     ELAPSED COMMAND
+previous-experiment-pid-69057-not-present

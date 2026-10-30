@@ -1,0 +1,573 @@
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/firecracker/src/main.rs:22:
+ use vmm::arch::host_page_size;
+ use vmm::builder::StartMicrovmError;
+ use vmm::logger::{
+-    debug, error, info, LoggerConfig, ProcessTimeReporter, StoreMetric, LOGGER, METRICS,
++    LOGGER, LoggerConfig, METRICS, ProcessTimeReporter, StoreMetric, debug, error, info,
+ };
+ use vmm::persist::SNAPSHOT_VERSION;
+ use vmm::resources::VmResources;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/firecracker/src/main.rs:30:
+ use vmm::signal_handler::register_signal_handlers;
+ use vmm::snapshot::{Snapshot, SnapshotError};
+ use vmm::vmm_config::instance_info::{InstanceInfo, VmState};
+-use vmm::vmm_config::metrics::{init_metrics, MetricsConfig, MetricsConfigError};
++use vmm::vmm_config::metrics::{MetricsConfig, MetricsConfigError, init_metrics};
+ use vmm::{EventManager, FcExitCode, HTTP_MAX_PAYLOAD_SIZE};
+ use vmm_sys_util::terminal::Terminal;
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:11:
+ use std::sync::{Arc, Mutex};
+ 
+ #[cfg(target_arch = "x86_64")]
+-use acpi_tables::{aml, Aml};
++use acpi_tables::{Aml, aml};
+ use kvm_ioctls::{IoEventAddress, VmFd};
+ use linux_loader::cmdline as kernel_cmdline;
+ #[cfg(target_arch = "x86_64")]
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:23:
+ use super::resources::ResourceAllocator;
+ use crate::arch::DeviceType;
+ use crate::arch::DeviceType::Virtio;
++use crate::devices::BusDevice;
+ #[cfg(target_arch = "aarch64")]
+ use crate::devices::legacy::RTCDevice;
+ use crate::devices::pseudo::BootTimer;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:32:
+ use crate::devices::virtio::mmio::MmioTransport;
+ use crate::devices::virtio::net::Net;
+ use crate::devices::virtio::rng::Entropy;
+-use crate::devices::virtio::vsock::{Vsock, VsockUnixBackend, TYPE_VSOCK};
++use crate::devices::virtio::vsock::{TYPE_VSOCK, Vsock, VsockUnixBackend};
+ use crate::devices::virtio::{TYPE_BALLOON, TYPE_BLOCK, TYPE_NET, TYPE_RNG};
+-use crate::devices::BusDevice;
+ #[cfg(target_arch = "x86_64")]
+ use crate::vstate::memory::GuestAddress;
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:452:
+         self.for_each_virtio_device(|kind, _, _, dev| {
+             if kind == TYPE_BLOCK {
+                 let mut device = dev.lock().expect("Poisoned lock");
+-                if matches!(device.as_mut_any().downcast_mut::<Block>(), Some(Block::VhostUser(_))) {
++                if matches!(
++                    device.as_mut_any().downcast_mut::<Block>(),
++                    Some(Block::VhostUser(_))
++                ) {
+                     return Err(());
+                 }
+             }
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:459:
+             Ok(())
+-        }).is_ok()
++        })
++        .is_ok()
+     }
+ 
+     /// Freeze in-process RAM writers while external RAM export follows state save.
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:473:
+                         .external_snapshot_frozen = frozen
+                 }
+                 TYPE_BALLOON => {
+-                    device.as_mut_any().downcast_mut::<Balloon>().unwrap()
++                    device
++                        .as_mut_any()
++                        .downcast_mut::<Balloon>()
++                        .unwrap()
+                         .external_snapshot_frozen = frozen;
+                 }
+                 TYPE_VSOCK => {
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:480:
+-                    device.as_mut_any().downcast_mut::<Vsock<VsockUnixBackend>>().unwrap()
++                    device
++                        .as_mut_any()
++                        .downcast_mut::<Vsock<VsockUnixBackend>>()
++                        .unwrap()
+                         .external_snapshot_frozen = frozen;
+                 }
+                 TYPE_RNG => {
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:484:
+-                    device.as_mut_any().downcast_mut::<Entropy>().unwrap()
++                    device
++                        .as_mut_any()
++                        .downcast_mut::<Entropy>()
++                        .unwrap()
+                         .external_snapshot_frozen = frozen;
+                 }
+                 TYPE_BLOCK => {
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:578:
+     use vmm_sys_util::eventfd::EventFd;
+ 
+     use super::*;
++    use crate::Vm;
++    use crate::devices::virtio::ActivateError;
+     use crate::devices::virtio::device::{IrqTrigger, VirtioDevice};
+     use crate::devices::virtio::queue::Queue;
+-    use crate::devices::virtio::ActivateError;
+     use crate::test_utils::multi_region_mem_raw;
+     use crate::vstate::kvm::Kvm;
+     use crate::vstate::memory::{GuestAddress, GuestMemoryMmap};
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:587:
+-    use crate::Vm;
+ 
+     const QUEUE_SIZES: &[u16] = &[64];
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:813:
+                 &id,
+             )
+             .unwrap();
+-        assert!(device_manager
+-            .get_device(DeviceType::Virtio(type_id), &id)
+-            .is_some());
++        assert!(
++            device_manager
++                .get_device(DeviceType::Virtio(type_id), &id)
++                .is_some()
++        );
+         assert_eq!(
+             addr,
+             device_manager.id_to_dev_info[&(DeviceType::Virtio(type_id), id.clone())].addr
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/device_manager/mmio.rs:829:
+         );
+ 
+         let id = "bar";
+-        assert!(device_manager
+-            .get_device(DeviceType::Virtio(type_id), id)
+-            .is_none());
++        assert!(
++            device_manager
++                .get_device(DeviceType::Virtio(type_id), id)
++                .is_none()
++        );
+ 
+         let dummy2 = Arc::new(Mutex::new(DummyDevice::new()));
+         let id2 = String::from("foo2");
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/balloon/device.rs:332:
+                 last_desc = desc.next_descriptor();
+             }
+ 
+-            queue
+-                .add_used(head_index, 0)
+-                .map_err(BalloonError::Queue)?;
++            queue.add_used(head_index, 0).map_err(BalloonError::Queue)?;
+             needs_interrupt = true;
+         }
+         queue.advance_used_ring_idx();
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/balloon/device.rs:814:
+         // Test all feature combinations.
+         for deflate_on_oom in [true, false].iter() {
+             for stats_interval in [0, 1].iter() {
+-                let mut balloon = Balloon::new(0, *deflate_on_oom, *stats_interval, false, false).unwrap();
++                let mut balloon =
++                    Balloon::new(0, *deflate_on_oom, *stats_interval, false, false).unwrap();
+                 assert_eq!(balloon.device_type(), TYPE_BALLOON);
+ 
+                 let features: u64 = (1u64 << VIRTIO_F_VERSION_1)
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/balloon/device.rs:1228:
+             assert_eq!(repq.used.idx.get(), 0);
+             // The page is untouched.
+             for i in 0..page_size {
+-                assert_eq!(mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(), 1);
++                assert_eq!(
++                    mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(),
++                    1
++                );
+             }
+         }
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/balloon/device.rs:1248:
+ 
+             // The reported page has been released (zeroed).
+             for i in 0..page_size {
+-                assert_eq!(mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(), 0);
++                assert_eq!(
++                    mem.read_obj::<u8>(GuestAddress(reported_addr + i)).unwrap(),
++                    0
++                );
+             }
+         }
+     }
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/balloon/event_handler.rs:54:
+                 Self::PROCESS_VIRTQ_REPORTING,
+                 EventSet::IN,
+             )) {
+-                error!("Failed to register free page reporting queue event: {}", err);
++                error!(
++                    "Failed to register free page reporting queue event: {}",
++                    err
++                );
+             }
+         }
+     }
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/balloon/persist.rs:122:
+     ) -> Result<Self, Self::Error> {
+         // Whether free page reporting was enabled is encoded in the saved
+         // available features. We need it to reconstruct the queue layout.
+-        let free_page_reporting = state.virtio_state.avail_features
+-            & (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING)
+-            != 0;
++        let free_page_reporting =
++            state.virtio_state.avail_features & (1u64 << VIRTIO_BALLOON_F_FREE_PAGE_REPORTING) != 0;
+ 
+         // We can safely create the balloon with arbitrary flags and
+         // num_pages because we will overwrite them after.
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/device.rs:20:
+ 
+ use super::io::async_io;
+ use super::request::*;
+-use super::{io as block_io, VirtioBlockError, BLOCK_QUEUE_SIZES, SECTOR_SHIFT, SECTOR_SIZE};
+-use crate::devices::virtio::block::virtio::metrics::{BlockDeviceMetrics, BlockMetricsPerDevice};
++use super::{BLOCK_QUEUE_SIZES, SECTOR_SHIFT, SECTOR_SIZE, VirtioBlockError, io as block_io};
+ use crate::devices::virtio::block::CacheType;
++use crate::devices::virtio::block::virtio::metrics::{BlockDeviceMetrics, BlockMetricsPerDevice};
+ use crate::devices::virtio::device::{DeviceState, IrqTrigger, IrqType, VirtioDevice};
+ use crate::devices::virtio::generated::virtio_blk::{
+     VIRTIO_BLK_F_FLUSH, VIRTIO_BLK_F_RO, VIRTIO_BLK_ID_BYTES,
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/device.rs:31:
+ use crate::devices::virtio::generated::virtio_ring::VIRTIO_RING_F_EVENT_IDX;
+ use crate::devices::virtio::queue::Queue;
+ use crate::devices::virtio::{ActivateError, TYPE_BLOCK};
+-use crate::logger::{error, warn, IncMetric};
++use crate::logger::{IncMetric, error, warn};
+ use crate::rate_limiter::{BucketUpdate, RateLimiter};
+ use crate::utils::u64_to_usize;
+-use crate::vmm_config::drive::BlockDeviceConfig;
+ use crate::vmm_config::RateLimiterConfig;
++use crate::vmm_config::drive::BlockDeviceConfig;
+ use crate::vstate::memory::GuestMemoryMmap;
+ 
+ /// The engine file type, either Sync or Async (through io_uring).
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/device.rs:680:
+ 
+     use super::*;
+     use crate::check_metric_after_block;
++    use crate::devices::virtio::block::virtio::IO_URING_NUM_ENTRIES;
+     use crate::devices::virtio::block::virtio::test_utils::{
+         default_block, read_blk_req_descriptors, set_queue, set_rate_limiter,
+         simulate_async_completion_event, simulate_queue_and_async_completion_events,
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/device.rs:686:
+         simulate_queue_event,
+     };
+-    use crate::devices::virtio::block::virtio::IO_URING_NUM_ENTRIES;
+     use crate::devices::virtio::queue::{VIRTQ_DESC_F_NEXT, VIRTQ_DESC_F_WRITE};
+-    use crate::devices::virtio::test_utils::{default_mem, VirtQueue};
++    use crate::devices::virtio::test_utils::{VirtQueue, default_mem};
+     use crate::rate_limiter::TokenType;
+     use crate::vstate::memory::{Address, Bytes, GuestAddress};
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/event_handler.rs:127:
+     };
+     use crate::devices::virtio::block::virtio::{VIRTIO_BLK_S_OK, VIRTIO_BLK_T_OUT};
+     use crate::devices::virtio::queue::VIRTQ_DESC_F_NEXT;
+-    use crate::devices::virtio::test_utils::{default_mem, VirtQueue};
++    use crate::devices::virtio::test_utils::{VirtQueue, default_mem};
+     use crate::vstate::memory::{Bytes, GuestAddress};
+ 
+     #[test]
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/persist.rs:3:
+ 
+ //! Defines the structures needed for saving/restoring block devices.
+ 
+-use std::sync::atomic::AtomicU32;
+ use std::sync::Arc;
++use std::sync::atomic::AtomicU32;
+ 
+ use device::ConfigSpace;
+ use serde::{Deserialize, Serialize};
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/persist.rs:12:
+ 
+ use super::device::DiskProperties;
+ use super::*;
++use crate::devices::virtio::TYPE_BLOCK;
+ use crate::devices::virtio::block::persist::BlockConstructorArgs;
+ use crate::devices::virtio::block::virtio::device::FileEngineType;
+ use crate::devices::virtio::block::virtio::metrics::BlockMetricsPerDevice;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/block/virtio/persist.rs:18:
+ use crate::devices::virtio::device::{DeviceState, IrqTrigger};
+ use crate::devices::virtio::generated::virtio_blk::VIRTIO_BLK_F_RO;
+ use crate::devices::virtio::persist::VirtioDeviceState;
+-use crate::devices::virtio::TYPE_BLOCK;
+-use crate::rate_limiter::persist::RateLimiterState;
+ use crate::rate_limiter::RateLimiter;
++use crate::rate_limiter::persist::RateLimiterState;
+ use crate::snapshot::Persist;
+ 
+ /// Holds info about block's file engine type. Gets saved in snapshot.
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:10:
+ use std::net::Ipv4Addr;
+ use std::sync::{Arc, Mutex};
+ 
+-use libc::{iovec, EAGAIN};
++use libc::{EAGAIN, iovec};
+ use log::error;
+ use vmm_sys_util::eventfd::EventFd;
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:18:
+ use crate::devices::virtio::device::{DeviceState, IrqTrigger, IrqType, VirtioDevice};
+ use crate::devices::virtio::generated::virtio_config::VIRTIO_F_VERSION_1;
+ use crate::devices::virtio::generated::virtio_net::{
+-    virtio_net_hdr_v1, VIRTIO_NET_F_CSUM, VIRTIO_NET_F_GUEST_CSUM, VIRTIO_NET_F_GUEST_TSO4,
+-    VIRTIO_NET_F_GUEST_TSO6, VIRTIO_NET_F_GUEST_UFO, VIRTIO_NET_F_HOST_TSO4,
+-    VIRTIO_NET_F_HOST_TSO6, VIRTIO_NET_F_HOST_UFO, VIRTIO_NET_F_MAC, VIRTIO_NET_F_MRG_RXBUF,
++    VIRTIO_NET_F_CSUM, VIRTIO_NET_F_GUEST_CSUM, VIRTIO_NET_F_GUEST_TSO4, VIRTIO_NET_F_GUEST_TSO6,
++    VIRTIO_NET_F_GUEST_UFO, VIRTIO_NET_F_HOST_TSO4, VIRTIO_NET_F_HOST_TSO6, VIRTIO_NET_F_HOST_UFO,
++    VIRTIO_NET_F_MAC, VIRTIO_NET_F_MRG_RXBUF, virtio_net_hdr_v1,
+ };
+ use crate::devices::virtio::generated::virtio_ring::VIRTIO_RING_F_EVENT_IDX;
+ use crate::devices::virtio::iovec::{
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:29:
+ use crate::devices::virtio::net::metrics::{NetDeviceMetrics, NetMetricsPerDevice};
+ use crate::devices::virtio::net::tap::Tap;
+ use crate::devices::virtio::net::{
+-    generated, NetError, NetQueue, MAX_BUFFER_SIZE, NET_QUEUE_SIZES, RX_INDEX, TX_INDEX,
++    MAX_BUFFER_SIZE, NET_QUEUE_SIZES, NetError, NetQueue, RX_INDEX, TX_INDEX, generated,
+ };
+ use crate::devices::virtio::queue::{DescriptorChain, Queue};
+ use crate::devices::virtio::{ActivateError, TYPE_NET};
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:36:
+-use crate::devices::{report_net_event_fail, DeviceError};
++use crate::devices::{DeviceError, report_net_event_fail};
+ use crate::dumbo::pdu::arp::ETH_IPV4_FRAME_LEN;
+ use crate::dumbo::pdu::ethernet::{EthernetFrame, PAYLOAD_OFFSET};
+ use crate::logger::{IncMetric, METRICS};
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:1045:
+     use crate::check_metric_after_block;
+     use crate::devices::virtio::generated::virtio_ring::VIRTIO_RING_F_EVENT_IDX;
+     use crate::devices::virtio::iovec::IoVecBuffer;
++    use crate::devices::virtio::net::NET_QUEUE_SIZES;
+     use crate::devices::virtio::net::device::{
+         frame_bytes_from_buf, frame_bytes_from_buf_mut, frame_hdr_len, init_vnet_hdr, vnet_hdr_len,
+     };
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:1051:
+     use crate::devices::virtio::net::test_utils::test::TestHelper;
+     use crate::devices::virtio::net::test_utils::{
+-        default_net, if_index, inject_tap_tx_frame, set_mac, NetEvent, NetQueue,
+-        TapTrafficSimulator,
++        NetEvent, NetQueue, TapTrafficSimulator, default_net, if_index, inject_tap_tx_frame,
++        set_mac,
+     };
+-    use crate::devices::virtio::net::NET_QUEUE_SIZES;
+     use crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE;
+     use crate::devices::virtio::test_utils::VirtQueue;
+-    use crate::dumbo::pdu::arp::{EthIPv4ArpFrame, ETH_IPV4_FRAME_LEN};
+-    use crate::dumbo::pdu::ethernet::ETHERTYPE_ARP;
+     use crate::dumbo::EthernetFrame;
++    use crate::dumbo::pdu::arp::{ETH_IPV4_FRAME_LEN, EthIPv4ArpFrame};
++    use crate::dumbo::pdu::ethernet::ETHERTYPE_ARP;
+     use crate::logger::IncMetric;
+     use crate::rate_limiter::{BucketUpdate, RateLimiter, TokenBucket, TokenType};
+     use crate::test_utils::single_region_mem;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:1065:
+-    use crate::utils::net::mac::{MacAddr, MAC_ADDR_LEN};
++    use crate::utils::net::mac::{MAC_ADDR_LEN, MacAddr};
+     use crate::vstate::memory::{Address, GuestMemory};
+ 
+     impl Net {
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/device.rs:1926:
+         check_metric_after_block!(
+             &METRICS.mmds.rx_accepted,
+             1,
+-            assert!(Net::write_to_mmds_or_tap(
+-                net.mmds_ns.as_mut(),
+-                &mut net.tx_rate_limiter,
+-                &mut headers,
+-                &buffer,
+-                &mut net.tap,
+-                Some(src_mac),
+-                &net.metrics,
++            assert!(
++                Net::write_to_mmds_or_tap(
++                    net.mmds_ns.as_mut(),
++                    &mut net.tx_rate_limiter,
++                    &mut headers,
++                    &buffer,
++                    &mut net.tap,
++                    Some(src_mac),
++                    &net.metrics,
++                )
++                .unwrap()
+             )
+-            .unwrap())
+         );
+ 
+         // Validate that MMDS has a response and we can retrieve it.
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/event_handler.rs:7:
+ use crate::devices::virtio::device::VirtioDevice;
+ use crate::devices::virtio::net::device::Net;
+ use crate::devices::virtio::net::{RX_INDEX, TX_INDEX};
+-use crate::logger::{error, warn, IncMetric};
++use crate::logger::{IncMetric, error, warn};
+ 
+ impl Net {
+     const PROCESS_ACTIVATE: u32 = 0;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/net/event_handler.rs:135:
+ 
+ #[cfg(test)]
+ pub mod tests {
+-    use crate::devices::virtio::net::test_utils::test::TestHelper;
+     use crate::devices::virtio::net::test_utils::NetQueue;
++    use crate::devices::virtio::net::test_utils::test::TestHelper;
+     use crate::devices::virtio::net::{MAX_BUFFER_SIZE, TX_INDEX};
+     use crate::test_utils::single_region_mem;
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/vsock/event_handler.rs:255:
+             assert_eq!(device.backend.tx_ok_cnt, 0);
+             assert_eq!(device.backend.rx_ok_cnt, 0);
+             let mut observed = vec![0; original.len()];
+-            test_ctx.mem.read_slice(&mut observed, payload_addr).unwrap();
++            test_ctx
++                .mem
++                .read_slice(&mut observed, payload_addr)
++                .unwrap();
+             assert_eq!(observed, original);
+         }
+ 
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/devices/virtio/vsock/event_handler.rs:267:
+         assert_eq!(device.backend.tx_ok_cnt, 1);
+         assert_eq!(device.backend.rx_ok_cnt, 1);
+         let mut observed = [0; 8];
+-        test_ctx.mem.read_slice(&mut observed, payload_addr).unwrap();
++        test_ctx
++            .mem
++            .read_slice(&mut observed, payload_addr)
++            .unwrap();
+         assert_eq!(observed, [0xd, 0xe, 0xa, 0xd, 0xb, 0xe, 0xe, 0xf]);
+         assert_eq!(manager.run_with_timeout(0).unwrap(), 0);
+     }
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/lib.rs:140:
+ use crate::device_manager::mmio::MMIODeviceManager;
+ use crate::devices::legacy::{IER_RDA_BIT, IER_RDA_OFFSET};
+ use crate::devices::virtio::balloon::{
+-    Balloon, BalloonConfig, BalloonError, BalloonStats, BALLOON_DEV_ID,
++    BALLOON_DEV_ID, Balloon, BalloonConfig, BalloonError, BalloonStats,
+ };
+ use crate::devices::virtio::block::device::Block;
+ use crate::devices::virtio::net::Net;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/lib.rs:147:
+ use crate::devices::virtio::{TYPE_BALLOON, TYPE_BLOCK, TYPE_NET};
+-use crate::logger::{error, info, warn, MetricsError, METRICS};
++use crate::logger::{METRICS, MetricsError, error, info, warn};
+ use crate::persist::{MicrovmState, MicrovmStateError, VmInfo};
+ use crate::rate_limiter::BucketUpdate;
+ use crate::snapshot::Persist;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/lib.rs:768:
+     /// A set bit indicates the page is present in RAM and has been written to (not write-protected).
+     /// Pages are ordered in the same order as reported by `/memory/mappings`.
+     pub fn get_dirty_memory(&self, page_size: usize) -> Result<Vec<u64>, VmmError> {
+-        use crate::utils::dirty_tracking::{mask_tail, or_words, DirtyStats};
++        use crate::utils::dirty_tracking::{DirtyStats, mask_tail, or_words};
+         use crate::vstate::hdbss::{self, ExportPolicy};
+         use std::time::Instant;
+         let start = Instant::now();
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/persist.rs:22:
+ use crate::builder::{self, BuildMicrovmFromSnapshotError};
+ use crate::cpu_config::templates::StaticCpuTemplate;
+ #[cfg(target_arch = "x86_64")]
+-use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
+-#[cfg(target_arch = "x86_64")]
+ use crate::cpu_config::x86_64::cpuid::CpuidTrait;
++#[cfg(target_arch = "x86_64")]
++use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
+ use crate::device_manager::persist::{ACPIDeviceManagerState, DevicePersistError, DeviceStates};
+ use crate::logger::{info, warn};
+ use crate::resources::VmResources;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/persist.rs:40:
+ use crate::vstate::memory::{GuestMemoryState, GuestRegionMmap, MemoryError};
+ use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
+ use crate::vstate::vm::VmState;
+-use crate::{vstate, EventManager, Vmm};
++use crate::{EventManager, Vmm, vstate};
+ 
+ /// Holds information related to the VM that is not part of VmState.
+ #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/persist.rs:621:
+     use vmm_sys_util::tempfile::TempFile;
+ 
+     use super::*;
++    use crate::Vmm;
+     #[cfg(target_arch = "x86_64")]
+     use crate::builder::tests::insert_vmgenid_device;
+     use crate::builder::tests::{
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/persist.rs:627:
+-        default_kernel_cmdline, default_vmm, insert_balloon_device, insert_block_devices,
+-        insert_net_device, insert_vsock_device, CustomBlockConfig,
++        CustomBlockConfig, default_kernel_cmdline, default_vmm, insert_balloon_device,
++        insert_block_devices, insert_net_device, insert_vsock_device,
+     };
+     #[cfg(target_arch = "aarch64")]
+     use crate::construct_kvm_mpidrs;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/persist.rs:635:
+     use crate::vmm_config::net::NetworkInterfaceConfig;
+     use crate::vmm_config::vsock::tests::default_config;
+     use crate::vstate::memory::GuestMemoryRegionState;
+-    use crate::Vmm;
+ 
+     fn default_vmm_with_devices() -> Vmm {
+         let mut event_manager = EventManager::new().expect("Cannot create EventManager");
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/utils/mod.rs:3:
+ 
+ /// Module with helpers to read/write bytes into slices
+ pub mod byte_order;
++/// Dirty bitmap collection counters and word operations.
++pub mod dirty_tracking;
+ /// Module with network related helpers
+ pub mod net;
++/// Module with pagemap utilities
++pub mod pagemap;
+ /// Module with external libc functions
+ pub mod signal;
+ /// Module with state machine
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/utils/mod.rs:11:
+ pub mod sm;
+-/// Module with pagemap utilities
+-pub mod pagemap;
+-/// Dirty bitmap collection counters and word operations.
+-pub mod dirty_tracking;
+ 
+ use std::num::Wrapping;
+ use std::result::Result;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/vmm_config/instance_info.rs:3:
+ use std::fmt::{self, Display, Formatter};
+ 
+ use crate::vstate::vm::GuestMemoryRegionMapping;
+-use serde::{ser, Serialize};
++use serde::{Serialize, ser};
+ 
+ /// Enumerates microVM runtime states.
+ #[derive(Clone, Debug, Default, PartialEq, Eq)]
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/vstate/vm.rs:11:
+ use std::path::Path;
+ use std::sync::{Arc, Mutex};
+ 
+-use kvm_bindings::{kvm_userspace_memory_region, KVM_MEM_LOG_DIRTY_PAGES};
++use kvm_bindings::{KVM_MEM_LOG_DIRTY_PAGES, kvm_userspace_memory_region};
+ use kvm_ioctls::VmFd;
+ use serde::{Deserialize, Serialize};
+ use vmm_sys_util::eventfd::EventFd;
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/vstate/vm.rs:27:
+     GuestRegionMmap,
+ };
+ use crate::vstate::vcpu::VcpuError;
+-use crate::{mem_size_mib, DirtyBitmap, Vcpu};
++use crate::{DirtyBitmap, Vcpu, mem_size_mib};
+ 
+ /// Architecture independent parts of a VM.
+ #[derive(Debug)]
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/vstate/vm.rs:363:
+         &self,
+     ) -> Result<(DirtyBitmap, crate::utils::dirty_tracking::DirtyStats), vmm_sys_util::errno::Error>
+     {
+-        use crate::utils::dirty_tracking::{or_words, DirtyStats};
++        use crate::utils::dirty_tracking::{DirtyStats, or_words};
+         use crate::vstate::hdbss::{self, ExportPolicy};
+         use std::time::Instant;
+         let mut stats = DirtyStats::default();
+Diff in /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm/src/vstate/vm.rs:531:
+ 
+ #[cfg(test)]
+ pub(crate) mod tests {
+-    use vm_memory::mmap::MmapRegionBuilder;
+     use vm_memory::GuestAddress;
++    use vm_memory::mmap::MmapRegionBuilder;
+ 
+     use super::*;
+     use crate::test_utils::single_region_mem_raw;

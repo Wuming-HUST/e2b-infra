@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "M01": "native KVM File mechanism passed",
+  "M07": "native KVM A-B-C marker and full-memory oracle passed",
+  "final_guest": {
+    "event": "read",
+    "sha256": [
+      "4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd",
+      "f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8",
+      "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
+      "ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"
+    ]
+  },
+  "B": {
+    "mode": "full_logical",
+    "sha256": "6922e9cb29dfb779e34a381ff47f19518256be56b6335edacab5376b89b43e30",
+    "bytes": 134217728,
+    "seconds": 0.18129742900055135,
+    "pid": 110964
+  },
+  "C": {
+    "mode": "full_logical",
+    "sha256": "2c97c85abb5dc03b3e96bd63aebf8f9dab4ce09faa9cb4dc5dd39284331c0a85",
+    "bytes": 134217728,
+    "seconds": 0.1730541209981311,
+    "pid": 110967
+  },
+  "not_tested": [
+    "orchestrator E2E",
+    "shared NBD",
+    "PFN sharing",
+    "swap",
+    "trace"
+  ]
+}

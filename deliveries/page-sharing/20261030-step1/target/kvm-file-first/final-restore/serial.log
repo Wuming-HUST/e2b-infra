@@ -1,0 +1,16 @@
+2026-10-30T11:35:46.265982208 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T11:35:46.266112198 [anonymous-instance:main] Listening on API socket ("/tmp/psg-7o5ivpax/fc.sock").
+2026-10-30T11:35:46.269991383 [anonymous-instance:fc_api] API server started.
+2026-10-30T11:35:46.270037922 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-file-first/C.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-file-first/C.ram\"}, \"enable_diff_snapshots\": false, \"resume_vm\": false}".
+2026-10-30T11:35:46.270271862 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T11:35:46.270396832 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T11:35:46.270399502 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T11:35:46.280708457 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 10416 us.
+2026-10-30T11:35:46.280922547 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:35:46.280932687 [anonymous-instance:fc_api] 'load snapshot' API request took 10898 us.
+2026-10-30T11:35:46.281629556 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T11:35:46.281858376 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T11:35:46.281889535 [anonymous-instance:main] 'resume vm' VMM action took 34 us.
+2026-10-30T11:35:46.282095845 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T11:35:46.282107195 [anonymous-instance:fc_api] 'resume vm' API request took 480 us.
+PSG {"event":"read","sha256":["4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd","f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8","ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7","ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"]}
