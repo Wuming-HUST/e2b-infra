@@ -1,0 +1,20 @@
+{"method": "PUT", "path": "/metrics", "body": {"metrics_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/balloon-left/metrics.jsonl"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/load", "body": {"snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/A.state", "mem_backend": {"backend_type": "File", "backend_path": "/dev/nbd1"}, "enable_diff_snapshots": false, "resume_vm": false}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/memory/mappings", "body": null, "status": 200, "response": "{\"mappings\":[{\"base_host_virt_addr\":281472627900416,\"size\":201326592,\"offset\":0,\"page_size\":4096}]}"}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "FlushMetrics"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "FlushMetrics"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "FlushMetrics"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "FlushMetrics"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/balloon/statistics", "body": null, "status": 200, "response": "{\"target_pages\":0,\"actual_pages\":0,\"target_mib\":0,\"actual_mib\":0,\"swap_in\":0,\"swap_out\":0,\"major_faults\":0,\"minor_faults\":10612,\"free_memory\":103247872,\"total_memory\":167018496,\"available_memory\":106913792,\"disk_caches\":3182592,\"hugetlb_allocations\":0,\"hugetlb_failures\":0}"}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-unwritten.state"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-unwritten.native.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-unwritten.native.ram"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-unwritten.repeat.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-unwritten.repeat.ram"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/balloon", "body": {"amount_mib": 0}, "status": 204, "response": ""}
+{"method": "GET", "path": "/balloon/statistics", "body": null, "status": 200, "response": "{\"target_pages\":0,\"actual_pages\":0,\"target_mib\":0,\"actual_mib\":0,\"swap_in\":0,\"swap_out\":0,\"major_faults\":0,\"minor_faults\":10615,\"free_memory\":144334848,\"total_memory\":167018496,\"available_memory\":148000768,\"disk_caches\":3182592,\"hugetlb_allocations\":0,\"hugetlb_failures\":0}"}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-rewritten.state"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-rewritten.native.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-fpr-cleanup-v2/discard-rewritten.native.ram"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "FlushMetrics"}, "status": 204, "response": ""}

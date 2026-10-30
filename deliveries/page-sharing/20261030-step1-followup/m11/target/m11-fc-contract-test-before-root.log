@@ -1,0 +1,27 @@
+   Compiling vmm v0.1.0 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/firecracker/src/vmm)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.09s
+     Running unittests src/lib.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-cargo-target/debug/deps/vmm-f716ef39988ce199)
+
+running 5 tests
+
+thread 'persist::tests::test_checkpoint_flush_failure_publishes_no_state_or_ram' panicked at src/vmm/src/vstate/vm.rs:545:36:
+Cannot create Kvm: Kvm(Error(13))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'persist::tests::test_checkpoint_captures_async_block_completion_before_gic' panicked at src/vmm/src/vstate/vm.rs:545:36:
+Cannot create Kvm: Kvm(Error(13))
+test persist::tests::test_checkpoint_flush_failure_publishes_no_state_or_ram ... FAILED
+test persist::tests::test_checkpoint_captures_async_block_completion_before_gic ... FAILED
+test devices::virtio::vsock::device::tests::test_checkpoint_vsock_write_failure_is_not_published ... ok
+test devices::virtio::vsock::device::tests::test_checkpoint_vsock_reset_is_idempotent_until_resume ... ok
+test devices::virtio::vsock::device::tests::test_checkpoint_vsock_empty_queue_never_becomes_success ... ok
+
+failures:
+
+failures:
+    persist::tests::test_checkpoint_captures_async_block_completion_before_gic
+    persist::tests::test_checkpoint_flush_failure_publishes_no_state_or_ram
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 510 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p vmm --lib`

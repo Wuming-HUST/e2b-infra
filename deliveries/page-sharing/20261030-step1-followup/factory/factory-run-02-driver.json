@@ -1,0 +1,50 @@
+{
+  "pid": 130463,
+  "started": 1793364210.7381387,
+  "command": [
+    "sudo",
+    "-n",
+    "env",
+    "PATH=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-deps/usr/sbin:/home/coder/.local/bin:/tmp/coder-script-data/bin:/home/coder/.local/bin/:/home/coder/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/tmp/coder.dzB3qx",
+    "E2B_SHARING_INTEGRATION_DIR=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02",
+    "E2B_SHARING_FC=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/firecracker-source-matched",
+    "E2B_SHARING_KERNEL=/home/coder/tide-repro/assets/vmlinuz",
+    "E2B_SHARING_ROOTFS=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/rootfs.ext4",
+    "E2B_SHARING_INITRD=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/initrd.gz",
+    "E2B_SHARING_TRACE_FIXTURE=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json",
+    "E2B_SHARING_INIT=/sbin/sharing-init",
+    "E2B_SHARING_SLOT_BASE=25000",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-integration-v3.test",
+    "-test.run",
+    "^TestSharingFactoryIntegration$",
+    "-test.v",
+    "-test.timeout",
+    "10m"
+  ],
+  "inputs": {
+    "E2B_SHARING_FC": {
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/firecracker-source-matched",
+      "sha256": "8830ff065716e073b74bed06fe073356ffff839eef5fe6039f3905b2b5149349"
+    },
+    "E2B_SHARING_KERNEL": {
+      "path": "/home/coder/tide-repro/assets/vmlinuz",
+      "sha256": "84b9c190bb4589c4a9527e3191fec051f9f115e88f0a3e8afae96ba0dfb4dfef"
+    },
+    "E2B_SHARING_ROOTFS": {
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/rootfs.ext4",
+      "sha256": "c5779c5de7bcf5e5d98e0bfc36b857166b47ee7f7d810f4c23c6260f191fa99c"
+    },
+    "E2B_SHARING_INITRD": {
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/initrd.gz",
+      "sha256": "9cfd8b0a2a45a26214447c889d3c1bb96a7791231f7f919bbf2b06dc63f0e61b"
+    },
+    "E2B_SHARING_TRACE_FIXTURE": {
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json",
+      "sha256": "aa732fd55fc81846601c90570979f0fa1de6eaa347a67e293260d9e4a91b46ca"
+    },
+    "test": {
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-integration-v3.test",
+      "sha256": "748ae00ff9249fb4ac9a061f8a1e3094e7be6d7bd09a8a9119ce7597db6dc27c"
+    }
+  }
+}

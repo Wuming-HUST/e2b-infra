@@ -1,0 +1,14 @@
+{
+  "uname": [
+    "Linux",
+    "agent03",
+    "6.6.0-95.0.0.99.oe2403sp2.aarch64",
+    "#1 SMP Thu Jun  5 23:21:14 CST 2025",
+    "aarch64",
+    "aarch64"
+  ],
+  "host_page_size": 4096,
+  "fc_sha256": "9dc7eb45645eda4dbb85facc5896ed19a2d78c34c5331bc3d5520dfcd52b4e2f",
+  "kernel_sha256": "84b9c190bb4589c4a9527e3191fec051f9f115e88f0a3e8afae96ba0dfb4dfef",
+  "guest_sha256": "9e36ddc1f85621209b9c44dd27e4e0a384c4f4c464b1cd5af454fcb12225c468"
+}

@@ -1,0 +1,306 @@
+{
+  "observed_utc": "2026-10-30T12:39:06Z",
+  "processes": [
+    {
+      "receipt": "m10-probe/initial/pid.json",
+      "pid": 118143,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-probe-modules/initial/pid.json",
+      "pid": 120952,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-first/balloon-left/pid.json",
+      "pid": 122062,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-first/balloon-right/pid.json",
+      "pid": 122064,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-first/discard-rewritten-restored/pid.json",
+      "pid": 122128,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-first/discard-unwritten-restored/pid.json",
+      "pid": 122125,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-first/initial/pid.json",
+      "pid": 122047,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-first/nbd-helper/pid.json",
+      "pid": 122050,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-first/balloon-left/pid.json",
+      "pid": 122602,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-first/balloon-right/pid.json",
+      "pid": 122604,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-first/discard-rewritten-restored/pid.json",
+      "pid": 122669,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-first/discard-unwritten-restored/pid.json",
+      "pid": 122666,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-first/initial/pid.json",
+      "pid": 122589,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-first/nbd-helper/pid.json",
+      "pid": 122592,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-delivery/balloon-left/pid.json",
+      "pid": 123245,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-delivery/balloon-right/pid.json",
+      "pid": 123247,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-delivery/discard-rewritten-restored/pid.json",
+      "pid": 123268,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-delivery/discard-unwritten-restored/pid.json",
+      "pid": 123265,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-delivery/initial/pid.json",
+      "pid": 123178,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-delivery/nbd-helper/pid.json",
+      "pid": 123187,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-delivery/balloon-left/pid.json",
+      "pid": 123289,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-delivery/balloon-right/pid.json",
+      "pid": 123291,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-delivery/discard-rewritten-restored/pid.json",
+      "pid": 123311,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-delivery/discard-unwritten-restored/pid.json",
+      "pid": 123308,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-delivery/initial/pid.json",
+      "pid": 123276,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-delivery/nbd-helper/pid.json",
+      "pid": 123279,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-cleanup-v2/balloon-left/pid.json",
+      "pid": 126671,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-cleanup-v2/balloon-right/pid.json",
+      "pid": 126673,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-cleanup-v2/discard-rewritten-restored/pid.json",
+      "pid": 126685,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-cleanup-v2/discard-unwritten-restored/pid.json",
+      "pid": 126682,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-cleanup-v2/initial/pid.json",
+      "pid": 126658,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-cleanup-v2/nbd-helper/pid.json",
+      "pid": 126661,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-cleanup-v2/balloon-left/pid.json",
+      "pid": 126706,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-cleanup-v2/balloon-right/pid.json",
+      "pid": 126708,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-cleanup-v2/discard-rewritten-restored/pid.json",
+      "pid": 126789,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-cleanup-v2/discard-unwritten-restored/pid.json",
+      "pid": 126786,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-cleanup-v2/initial/pid.json",
+      "pid": 126693,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-cleanup-v2/nbd-helper/pid.json",
+      "pid": 126696,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-final-fc/balloon-left/pid.json",
+      "pid": 128008,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-final-fc/balloon-right/pid.json",
+      "pid": 128010,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-final-fc/discard-rewritten-restored/pid.json",
+      "pid": 128019,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-final-fc/discard-unwritten-restored/pid.json",
+      "pid": 128016,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-final-fc/initial/pid.json",
+      "pid": 127941,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-balloon-final-fc/nbd-helper/pid.json",
+      "pid": 127997,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-final-fc/balloon-left/pid.json",
+      "pid": 128039,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-final-fc/balloon-right/pid.json",
+      "pid": 128041,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-final-fc/discard-rewritten-restored/pid.json",
+      "pid": 128053,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-final-fc/discard-unwritten-restored/pid.json",
+      "pid": 128050,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-final-fc/initial/pid.json",
+      "pid": 128026,
+      "proc_exists": false,
+      "cmdline": null
+    },
+    {
+      "receipt": "m10-fpr-final-fc/nbd-helper/pid.json",
+      "pid": 128029,
+      "proc_exists": false,
+      "cmdline": null
+    }
+  ],
+  "all_absent": true
+}

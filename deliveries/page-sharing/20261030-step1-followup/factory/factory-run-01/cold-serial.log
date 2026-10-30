@@ -1,0 +1,21 @@
+2026-10-30T12:28:28.880270029 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T12:28:28.880406219 [anonymous-instance:main] Listening on API socket ("/tmp/fc-sharing-f00f09f7-p63bhimnnts3444m2a18.sock").
+2026-10-30T12:28:28.886701289 [anonymous-instance:fc_api] API server started.
+2026-10-30T12:28:28.886757269 [anonymous-instance:fc_api] The API server received a Put request on "/boot-source" with body "{\"boot_args\":\"console=ttyS0 init=/sbin/sharing-init ip=169.254.0.21::169.254.0.22:255.255.255.252:instance:eth0:off:tap0 ipv6.autoconf=1 ipv6.disable=0 loglevel=5 panic=1 reboot=k\",\"initrd_path\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v1/initrd.gz\",\"kernel_image_path\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-01/sandbox/sharing/vmlinux.bin\"}\n".
+2026-10-30T12:28:28.887228299 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:28:29.052872763 [anonymous-instance:fc_api] The API server received a Put request on "/drives/rootfs" with body "{\"drive_id\":\"rootfs\",\"is_root_device\":true,\"path_on_host\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-01/sandbox/rootfs.ext4\"}\n".
+2026-10-30T12:28:29.054018771 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:28:29.054446491 [anonymous-instance:fc_api] The API server received a Put request on "/network-interfaces/eth0" with body "{\"guest_mac\":\"02:FC:00:00:00:05\",\"host_dev_name\":\"tap0\",\"iface_id\":\"eth0\"}\n".
+2026-10-30T12:28:29.055126020 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:28:29.055534379 [anonymous-instance:fc_api] The API server received a Put request on "/mmds/config" with body "{\"network_interfaces\":[\"eth0\"],\"version\":\"V2\"}\n".
+2026-10-30T12:28:29.055794919 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:28:29.055925569 [anonymous-instance:fc_api] The API server received a Put request on "/machine-config" with body "{\"mem_size_mib\":256,\"smt\":false,\"vcpu_count\":1}\n".
+2026-10-30T12:28:29.055947819 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:28:29.056015389 [anonymous-instance:fc_api] The API server received a Put request on "/entropy" with body "{}\n".
+2026-10-30T12:28:29.056301548 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:28:29.056619138 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\":\"InstanceStart\"}\n".
+2026-10-30T12:28:29.089751399 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T12:28:29.089992748 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+[    0.000655] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[    0.063039] cacheinfo: Unable to detect cache hierarchy for CPU 0
+SHARING_INIT_READY ip=169.254.0.21 envd=111

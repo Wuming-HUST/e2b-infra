@@ -1,0 +1,6 @@
+{
+  "actual_proc_mapping": "ffff84000000-ffff94000000 rw-p 00000000 103:07 4107434                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/aad989f4efa7fd6c2b388bfaaca154384bf9f1f554674150ed38c871d65c7ec8.raw",
+  "inode": 4107434,
+  "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/aad989f4efa7fd6c2b388bfaaca154384bf9f1f554674150ed38c871d65c7ec8.raw",
+  "regular_file": true
+}

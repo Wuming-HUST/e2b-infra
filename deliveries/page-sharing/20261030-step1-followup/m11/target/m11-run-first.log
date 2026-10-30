@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/scripts/memory-lab/page-sharing/m11_check.py", line 189, in <module>
+    if __name__=='__main__': main()
+                             ^^^^^^
+  File "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/scripts/memory-lab/page-sharing/m11_check.py", line 148, in main
+    vm.event('ready');sender=Sender(tap)
+    ^^^^^^^^^^^^^^^^^
+  File "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/scripts/memory-lab/page-sharing/kvm_check.py", line 140, in event
+    raise RuntimeError(f"{self.name}: guest error {value}")
+RuntimeError: seed: guest error {'error': 'no such file or directory', 'event': 'error'}

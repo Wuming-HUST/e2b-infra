@@ -1,0 +1,48 @@
+aaaaaecd0000-aaaaaeeac000 r-xp 00000000 103:07 3717195                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/release/firecracker
+aaaaaeeb0000-aaaaaeec0000 r--p 001e0000 103:07 3717195                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/release/firecracker
+aaaaaeec0000-aaaaaeec1000 rw-p 001f0000 103:07 3717195                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/cargo-target/release/firecracker
+aaaab929c000-aaaab92bd000 rw-p 00000000 00:00 0                          [heap]
+ffff78000000-ffff78021000 rw-p 00000000 00:00 0 
+ffff78021000-ffff7c000000 ---p 00000000 00:00 0 
+ffff80000000-ffff81a00000 rw-p 00000000 00:d6 62                         /dev/nbd0
+ffff81a00000-ffff81e00000 rw-p 00000000 00:00 0 
+ffff81e00000-ffff83600000 rw-p 01e00000 00:d6 62                         /dev/nbd0
+ffff83600000-ffff84800000 rw-p 00000000 00:00 0 
+ffff84800000-ffff84c00000 rw-p 04800000 00:d6 62                         /dev/nbd0
+ffff84c00000-ffff87800000 rw-p 00000000 00:00 0 
+ffff87800000-ffff87a00000 rw-p 07800000 00:d6 62                         /dev/nbd0
+ffff87a00000-ffff8ac00000 rw-p 00000000 00:00 0 
+ffff8ac00000-ffff8b000000 rw-p 0ac00000 00:d6 62                         /dev/nbd0
+ffff8b000000-ffff8b800000 rw-p 00000000 00:00 0 
+ffff8b800000-ffff8c000000 rw-p 0b800000 00:d6 62                         /dev/nbd0
+ffff8c000000-ffff8c021000 rw-p 00000000 00:00 0 
+ffff8c021000-ffff90000000 ---p 00000000 00:00 0 
+ffff90bc0000-ffff90bd0000 ---p 00000000 00:00 0 
+ffff90bd0000-ffff90dd0000 rw-p 00000000 00:00 0 
+ffff90dd0000-ffff90de0000 ---p 00000000 00:00 0 
+ffff90de0000-ffff90fe0000 rw-p 00000000 00:00 0 
+ffff90fe0000-ffff91162000 r-xp 00000000 103:07 187054642                 /lib64/libc.so.6
+ffff91162000-ffff9117d000 ---p 00182000 103:07 187054642                 /lib64/libc.so.6
+ffff9117d000-ffff91180000 r--p 0018d000 103:07 187054642                 /lib64/libc.so.6
+ffff91180000-ffff91182000 rw-p 00190000 103:07 187054642                 /lib64/libc.so.6
+ffff91182000-ffff9118e000 rw-p 00000000 00:00 0 
+ffff91190000-ffff911a4000 r-xp 00000000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffff911a4000-ffff911bf000 ---p 00014000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffff911bf000-ffff911c0000 r--p 0001f000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffff911c0000-ffff911c1000 rw-p 00020000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffff911c2000-ffff911e5000 r-xp 00000000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffff911e7000-ffff911e8000 ---p 00000000 00:00 0 
+ffff911e8000-ffff911ec000 rw-p 00000000 00:00 0 
+ffff911ec000-ffff911ed000 rw-p 00000000 00:00 0 
+ffff911ed000-ffff911ef000 rw-s 00000000 00:0e 1068                       anon_inode:kvm-vcpu:0
+ffff911ef000-ffff911f0000 ---p 00000000 00:00 0 
+ffff911f0000-ffff911f4000 rw-p 00000000 00:00 0 
+ffff911f4000-ffff911f6000 rw-p 00000000 00:00 0 
+ffff911f6000-ffff911f7000 ---p 00000000 00:00 0 
+ffff911f7000-ffff911fb000 rw-p 00000000 00:00 0 
+ffff911fb000-ffff911fd000 rw-p 00000000 00:00 0 
+ffff911fd000-ffff911ff000 r--p 00000000 00:00 0                          [vvar]
+ffff911ff000-ffff91200000 r-xp 00000000 00:00 0                          [vdso]
+ffff91200000-ffff91202000 r--p 0002e000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffff91202000-ffff91204000 rw-p 00030000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffffc20ce000-ffffc2104000 rw-p 00000000 00:00 0                          [stack]

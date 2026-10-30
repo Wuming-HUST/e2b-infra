@@ -1,0 +1,12 @@
+NAME="openEuler"
+VERSION="24.03 (LTS-SP2)"
+ID="openEuler"
+VERSION_ID="24.03"
+PRETTY_NAME="openEuler 24.03 (LTS-SP2)"
+ANSI_COLOR="0;31"
+
+Linux agent03 6.6.0-95.0.0.99.oe2403sp2.aarch64 #1 SMP Thu Jun  5 23:21:14 CST 2025 aarch64 aarch64 aarch64 GNU/Linux
+4096
+34359738368
+1600000 100000
+go version go1.25.4 linux/arm64

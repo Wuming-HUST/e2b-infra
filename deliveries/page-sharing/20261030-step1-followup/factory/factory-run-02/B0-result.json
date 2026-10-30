@@ -1,0 +1,9 @@
+{
+  "A": "94062db4-d00a-4d39-8ca3-eab9ba13c8e2",
+  "B": "94862070-9a6d-4492-8072-78c31a8bb317",
+  "C": "a60f0e25-3b85-44fc-abb1-6068d8ba761b",
+  "complete_original_trace": false,
+  "full_logical_native_oracle": true,
+  "result": "passed",
+  "trace_derived_source_edit_fixture": true
+}

@@ -1,0 +1,6 @@
+5ac56102825179a306b399cf605af40b99cc0198f139bce29016fa74ab7e6bf3  m11-repro-fixture/modules/failover.ko
+4eec892df5c9b0aeb981a5b0040cc7d4f4c44f7b7b36b3e33aed4dd8cfe7b314  m11-repro-fixture/modules/net_failover.ko
+a241539e7f21a37bc9f0530267b21d5d7bc2a55a69446a6a5c38622703e73b80  m11-repro-fixture/modules/virtio_blk.ko
+9fc7d44524453928e5ec878fc559f5ee7018786c8071798ca645477eb9abbf91  m11-repro-fixture/modules/virtio_mmio.ko
+02af825fa90923b1e749e12391b1d68390c0bbbdc99f3a5f74647c2f036514d0  m11-repro-fixture/modules/virtio_net.ko
+af326bc50180f91cfa64c857547b78aaa48fbdc6c011638d880f536a4050493a  m11-repro-fixture/m11-guest

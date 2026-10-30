@@ -1,0 +1,8 @@
+set -eu
+cd /home/coder/projects/yangshengxin/e2b/page-sharing-20261030
+cp --reflink=auto m11-tools/firecracker-source-matched m10-build/firecracker-source-matched
+printf '%s\n' '8830ff065716e073b74bed06fe073356ffff839eef5fe6039f3905b2b5149349  m10-build/firecracker-source-matched' | sha256sum -c -
+sha256sum infra/scripts/memory-lab/page-sharing/m10_guest.go infra/scripts/memory-lab/page-sharing/m10_check.py infra/scripts/memory-lab/page-sharing/m10_cleanup_test.py infra/scripts/memory-lab/page-sharing/kvm_check.py m10-build/guest-init m10-build/firecracker-source-matched /home/coder/tide-repro/assets/vmlinuz > m10-build/source-matched-sha256.txt
+python3 infra/scripts/memory-lab/page-sharing/m10_cleanup_test.py > m10-build/cleanup-contract-source-matched.log 2>&1
+sudo -n python3 infra/scripts/memory-lab/page-sharing/m10_check.py --firecracker m10-build/firecracker-source-matched --kernel /home/coder/tide-repro/assets/vmlinuz --guest-binary m10-build/guest-init --nbd-helper software-delivery/page-sharing-source --module-dir /home/coder/tide-repro/rootfs/lib/modules/6.1.0-50-arm64/kernel/drivers/virtio --output m10-balloon-source-matched --cleanup-failed > m10-balloon-source-matched.log 2>&1
+sudo -n python3 infra/scripts/memory-lab/page-sharing/m10_check.py --firecracker m10-build/firecracker-source-matched --kernel /home/coder/tide-repro/assets/vmlinuz --guest-binary m10-build/guest-init --nbd-helper software-delivery/page-sharing-source --module-dir /home/coder/tide-repro/rootfs/lib/modules/6.1.0-50-arm64/kernel/drivers/virtio --output m10-fpr-source-matched --free-page-reporting --cleanup-failed > m10-fpr-source-matched.log 2>&1

@@ -1,0 +1,16 @@
+{"method": "PUT", "path": "/snapshot/load", "body": {"snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/seed.state", "mem_backend": {"backend_type": "File", "backend_path": "/dev/nbd0"}, "enable_diff_snapshots": false, "resume_vm": false}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-0.state"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/memory/mappings", "body": null, "status": 200, "response": "{\"mappings\":[{\"base_host_virt_addr\":281472896335872,\"size\":134217728,\"offset\":0,\"page_size\":4096}]}"}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-0.native.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-0.native.ram"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-1.state"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/memory/mappings", "body": null, "status": 200, "response": "{\"mappings\":[{\"base_host_virt_addr\":281472896335872,\"size\":134217728,\"offset\":0,\"page_size\":4096}]}"}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-1.native.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-1.native.ram"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Resumed"}, "status": 204, "response": ""}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-2.state"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/memory/mappings", "body": null, "status": 200, "response": "{\"mappings\":[{\"base_host_virt_addr\":281472896335872,\"size\":134217728,\"offset\":0,\"page_size\":4096}]}"}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-2.native.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B1-nbd-2.native.ram"}, "status": 204, "response": ""}

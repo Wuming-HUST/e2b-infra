@@ -1,0 +1,47 @@
+{
+  "status": "passed",
+  "mechanism": "actual guest virtio-balloon inflation/deflation, not synthetic host madvise",
+  "guest_kernel": "Linux version 6.1.0-50-arm64 (debian-kernel@lists.debian.org) (gcc-12 (Debian 12.2.0-14+deb12u1) 12.2.0, GNU ld (GNU Binutils for Debian) 2.40) #1 SMP Debian 6.1.176-1 (2026-07-02)\n",
+  "parent_nonzero_candidates": 10240,
+  "discarded_pages": 10239,
+  "rewritten_discarded_pages": 10239,
+  "unwritten": {
+    "mode": "full_logical",
+    "sha256": "e18ea6e63b3b504d1799177843548020ffb852102b26055f1c5bdc0bbd4fe389",
+    "bytes": 201326592,
+    "seconds": 0.26018539399956353,
+    "pid": 122062
+  },
+  "rewritten": {
+    "mode": "full_logical",
+    "sha256": "b56dbe3b6b9e9f2c3ae5cb884bba90912cb5cad9c81b91f5e0b4b256805250ce",
+    "bytes": 201326592,
+    "seconds": 0.25225650599895744,
+    "pid": 122062
+  },
+  "other": {
+    "mode": "full_logical",
+    "sha256": "d7c9f4d3fa2f60d134c2041664f997611527b1ebfc6aa833c2a552407910c476",
+    "bytes": 201326592,
+    "seconds": 0.24620238499483094,
+    "pid": 122064
+  },
+  "restored": {
+    "discard-unwritten": {
+      "mode": "full_logical",
+      "sha256": "1c902bd6d91e88c607a172ad448e1285258174e507f0bd64c4cc47aaf077a4ae",
+      "bytes": 201326592,
+      "seconds": 0.22644219500216423,
+      "pid": 122125
+    },
+    "discard-rewritten": {
+      "mode": "full_logical",
+      "sha256": "4a31d005149575b8280832255b928c27954a6ee25eba75ae7d5027e957fa5fa4",
+      "bytes": 201326592,
+      "seconds": 0.23289762499916833,
+      "pid": 122128
+    }
+  },
+  "source_sha256": "10dd03514233be95304144f1a96eaf2bf499a15e2867254be8cafea26e2e2a11",
+  "scope": "M10 balloon path, independent full-logical exporter/native dump; orchestrator integration is separate"
+}

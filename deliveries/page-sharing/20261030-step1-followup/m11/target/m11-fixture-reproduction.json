@@ -1,0 +1,5 @@
+{
+  "tested_guest_sha256": "af326bc50180f91cfa64c857547b78aaa48fbdc6c011638d880f536a4050493a",
+  "reproduced_guest_sha256": "af326bc50180f91cfa64c857547b78aaa48fbdc6c011638d880f536a4050493a",
+  "identical": true
+}

@@ -1,0 +1,60 @@
+aaaaaacb0000-aaaaaae8c000 r-xp 00000000 103:07 3842979                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-build/firecracker-final
+aaaaaae90000-aaaaaaea0000 r--p 001e0000 103:07 3842979                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-build/firecracker-final
+aaaaaaea0000-aaaaaaea1000 rw-p 001f0000 103:07 3842979                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-build/firecracker-final
+aaaad6164000-aaaad6185000 rw-p 00000000 00:00 0                          [heap]
+ffff9c000000-ffff9c021000 rw-p 00000000 00:00 0 
+ffff9c021000-ffffa0000000 ---p 00000000 00:00 0 
+ffffa4000000-ffffa5860000 rw-p 00000000 00:d6 63                         /dev/nbd1
+ffffa5860000-ffffa5a79000 rw-p 00000000 00:00 0 
+ffffa5a79000-ffffa5a7b000 rw-p 01a79000 00:d6 63                         /dev/nbd1
+ffffa5a7b000-ffffa5e13000 rw-p 00000000 00:00 0 
+ffffa5e13000-ffffa63ab000 rw-p 01e13000 00:d6 63                         /dev/nbd1
+ffffa63ab000-ffffa6400000 rw-p 00000000 00:00 0 
+ffffa6400000-ffffa7800000 rw-p 02400000 00:d6 63                         /dev/nbd1
+ffffa7800000-ffffa8a41000 rw-p 00000000 00:00 0 
+ffffa8a41000-ffffa8a8a000 rw-p 04a41000 00:d6 63                         /dev/nbd1
+ffffa8a8a000-ffffaa68e000 rw-p 00000000 00:00 0 
+ffffaa68e000-ffffab860000 rw-p 0668e000 00:d6 63                         /dev/nbd1
+ffffab860000-ffffabc00000 rw-p 00000000 00:00 0 
+ffffabc00000-ffffad000000 rw-p 07c00000 00:d6 63                         /dev/nbd1
+ffffad000000-ffffad2c2000 rw-p 00000000 00:00 0 
+ffffad2c2000-ffffad400000 rw-p 092c2000 00:d6 63                         /dev/nbd1
+ffffad400000-ffffaee72000 rw-p 00000000 00:00 0 
+ffffaee72000-ffffaee73000 rw-p 0ae72000 00:d6 63                         /dev/nbd1
+ffffaee73000-ffffaee7f000 rw-p 00000000 00:00 0 
+ffffaee7f000-ffffaeec5000 rw-p 0ae7f000 00:d6 63                         /dev/nbd1
+ffffaeec5000-ffffaf800000 rw-p 00000000 00:00 0 
+ffffaf800000-ffffafc65000 rw-p 0b800000 00:d6 63                         /dev/nbd1
+ffffafc65000-ffffafdff000 rw-p 00000000 00:00 0 
+ffffafdff000-ffffb0000000 rw-p 0bdff000 00:d6 63                         /dev/nbd1
+ffffb0000000-ffffb0021000 rw-p 00000000 00:00 0 
+ffffb0021000-ffffb4000000 ---p 00000000 00:00 0 
+ffffb71c0000-ffffb71d0000 ---p 00000000 00:00 0 
+ffffb71d0000-ffffb73d0000 rw-p 00000000 00:00 0 
+ffffb73d0000-ffffb73e0000 ---p 00000000 00:00 0 
+ffffb73e0000-ffffb75e0000 rw-p 00000000 00:00 0 
+ffffb75e0000-ffffb7762000 r-xp 00000000 103:07 187054642                 /lib64/libc.so.6
+ffffb7762000-ffffb777d000 ---p 00182000 103:07 187054642                 /lib64/libc.so.6
+ffffb777d000-ffffb7780000 r--p 0018d000 103:07 187054642                 /lib64/libc.so.6
+ffffb7780000-ffffb7782000 rw-p 00190000 103:07 187054642                 /lib64/libc.so.6
+ffffb7782000-ffffb778e000 rw-p 00000000 00:00 0 
+ffffb7790000-ffffb77a4000 r-xp 00000000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb77a4000-ffffb77bf000 ---p 00014000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb77bf000-ffffb77c0000 r--p 0001f000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb77c0000-ffffb77c1000 rw-p 00020000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb77c2000-ffffb77e5000 r-xp 00000000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffffb77e7000-ffffb77e8000 ---p 00000000 00:00 0 
+ffffb77e8000-ffffb77ec000 rw-p 00000000 00:00 0 
+ffffb77ec000-ffffb77ed000 rw-p 00000000 00:00 0 
+ffffb77ed000-ffffb77ef000 rw-s 00000000 00:0e 1068                       anon_inode:kvm-vcpu:0
+ffffb77ef000-ffffb77f0000 ---p 00000000 00:00 0 
+ffffb77f0000-ffffb77f4000 rw-p 00000000 00:00 0 
+ffffb77f4000-ffffb77f6000 rw-p 00000000 00:00 0 
+ffffb77f6000-ffffb77f7000 ---p 00000000 00:00 0 
+ffffb77f7000-ffffb77fb000 rw-p 00000000 00:00 0 
+ffffb77fb000-ffffb77fd000 rw-p 00000000 00:00 0 
+ffffb77fd000-ffffb77ff000 r--p 00000000 00:00 0                          [vvar]
+ffffb77ff000-ffffb7800000 r-xp 00000000 00:00 0                          [vdso]
+ffffb7800000-ffffb7802000 r--p 0002e000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffffb7802000-ffffb7804000 rw-p 00030000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+fffff3f04000-fffff3f3a000 rw-p 00000000 00:00 0                          [stack]

@@ -1,0 +1,11 @@
+debugfs 1.47.0 (5-Feb-2023)
+Allocated inode: 6701
+debugfs 1.47.0 (5-Feb-2023)
+debugfs 1.47.0 (5-Feb-2023)
+Fixture ready: /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2
+d4ae644c25be4ea6f1e9b696a2431c8585753afd1e5261915e4e41b0d628671e  /home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/rootfs.ext4
+a8879a896e25b1e556f118cf2fce428bf649728952be09739d8f59b3a41a884b  /home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/initrd.gz
+c5779c5de7bcf5e5d98e0bfc36b857166b47ee7f7d810f4c23c6260f191fa99c  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/rootfs.ext4
+9cfd8b0a2a45a26214447c889d3c1bb96a7791231f7f919bbf2b06dc63f0e61b  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/initrd.gz
+29cf5700516b7cd7f6125eecaae0ec50193663a1c43f8d5e7c53e4b938cd0cf6  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/sharing-init
+50fead1cc9dd3190e3c2fcd3f5f413cffa27c97f4fbca5092bd01c701c06b124  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/scripts/memory-lab/page-sharing/prepare_factory_fixture.sh

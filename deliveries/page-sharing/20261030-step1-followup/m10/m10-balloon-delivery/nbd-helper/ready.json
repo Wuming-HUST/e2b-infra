@@ -1,0 +1,9 @@
+{
+  "content_id": "sha256:1f9c6455e23d366f6eff1ef34f163bbaeac992dc1b9211ee9d4bf9312dff9837",
+  "event": "ready",
+  "layout_id": "fixture-128m-low-ram-4k-v1",
+  "leases": 2,
+  "logical_size": 201326592,
+  "path": "/dev/nbd0",
+  "pid": 123187
+}

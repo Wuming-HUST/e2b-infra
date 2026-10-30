@@ -1,0 +1,128 @@
+{
+  "checked_at": 1793364411.915855,
+  "all_own_VM_pids_exited": {
+    "B1-right-pid.json": {
+      "pid": 130569,
+      "exists": false
+    },
+    "B0-left-pid.json": {
+      "pid": 130532,
+      "exists": false
+    },
+    "B1-C-restored-pid.json": {
+      "pid": 130611,
+      "exists": false
+    },
+    "B1-left-pid.json": {
+      "pid": 130561,
+      "exists": false
+    },
+    "B1-B-restored-pid.json": {
+      "pid": 130591,
+      "exists": false
+    },
+    "cold-pid.json": {
+      "pid": 130501,
+      "exists": false
+    },
+    "B0-C-restored-pid.json": {
+      "pid": 130552,
+      "exists": false
+    },
+    "B0-B-restored-pid.json": {
+      "pid": 130543,
+      "exists": false
+    }
+  },
+  "all_own_slots_removed": {
+    "25000": {
+      "namespace_exists": false,
+      "veth_exists": false
+    },
+    "25001": {
+      "namespace_exists": false,
+      "veth_exists": false
+    },
+    "25002": {
+      "namespace_exists": false,
+      "veth_exists": false
+    },
+    "25003": {
+      "namespace_exists": false,
+      "veth_exists": false
+    },
+    "25004": {
+      "namespace_exists": false,
+      "veth_exists": false
+    }
+  },
+  "RAM_native_rehashed": {
+    "B0-C-checkpoint.json": {
+      "sha256": "dbc665c18836723a96d92a2ea69237656a170f69e9802e58093c6714b50c4e9b",
+      "size": 268435456,
+      "native_equals_export_receipt": true
+    },
+    "B0-B-checkpoint.json": {
+      "sha256": "c9417993264690ccfa843caa5d3d845f31a57dacc157949d6c35683f679ae9b2",
+      "size": 268435456,
+      "native_equals_export_receipt": true
+    },
+    "A-checkpoint.json": {
+      "sha256": "aad989f4efa7fd6c2b388bfaaca154384bf9f1f554674150ed38c871d65c7ec8",
+      "size": 268435456,
+      "native_equals_export_receipt": true
+    },
+    "B1-B-checkpoint.json": {
+      "sha256": "0bd9203d2c17f40583ec4e3c80ebdb260415c9b9e9b81d136b6e9598cfb6eb55",
+      "size": 268435456,
+      "native_equals_export_receipt": true
+    },
+    "B1-C-checkpoint.json": {
+      "sha256": "65c1de2a6ce0c0a2e82e4ca7e2bab3f88f980f78a23f4683baa9a56cc911fa5e",
+      "size": 268435456,
+      "native_equals_export_receipt": true
+    }
+  },
+  "B0_actual_file_backings": {
+    "B0-left-file-backing.json": {
+      "actual_proc_mapping": "ffff84000000-ffff94000000 rw-p 00000000 103:07 4107434                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/aad989f4efa7fd6c2b388bfaaca154384bf9f1f554674150ed38c871d65c7ec8.raw",
+      "inode": 4107434,
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/aad989f4efa7fd6c2b388bfaaca154384bf9f1f554674150ed38c871d65c7ec8.raw",
+      "regular_file": true
+    },
+    "B0-B-restored-file-backing.json": {
+      "actual_proc_mapping": "ffffa0000000-ffffb0000000 rw-p 00000000 103:07 4107461                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/c9417993264690ccfa843caa5d3d845f31a57dacc157949d6c35683f679ae9b2.raw",
+      "inode": 4107461,
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/c9417993264690ccfa843caa5d3d845f31a57dacc157949d6c35683f679ae9b2.raw",
+      "regular_file": true
+    },
+    "B0-C-restored-file-backing.json": {
+      "actual_proc_mapping": "ffff6c000000-ffff7c000000 rw-p 00000000 103:07 4107484                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/dbc665c18836723a96d92a2ea69237656a170f69e9802e58093c6714b50c4e9b.raw",
+      "inode": 4107484,
+      "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-02/B0/file-memory/dbc665c18836723a96d92a2ea69237656a170f69e9802e58093c6714b50c4e9b.raw",
+      "regular_file": true
+    }
+  },
+  "B1_shared_backing": {
+    "left": "/dev/nbd0",
+    "right": "/dev/nbd0",
+    "same_backing": true
+  },
+  "B1_distinct_live_backings": {
+    "A": "/dev/nbd0",
+    "B": "/dev/nbd1",
+    "distinct_live_backings": true
+  },
+  "released_NBD_pids": {
+    "/dev/nbd1": {
+      "kernel_pid": null
+    },
+    "/dev/nbd0": {
+      "kernel_pid": null
+    }
+  },
+  "rootfs_source_unchanged": true,
+  "integration_test_source_sha256": "8d1ef92951ae6405496fc5deab1f949ede6a6671037a094132970b88d0c8a66d",
+  "fixture_extractor_source_sha256": "e0223120befa566b5ee4f3b186fbac1df6ca2c15a183171d36acd90ec555d693",
+  "initial_kernel_detach_observation": "factory-run-02-postrun-initial.json"
+}

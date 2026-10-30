@@ -1,0 +1,24 @@
+#!/bin/sh
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+mount -t tmpfs tmpfs /run
+mkdir -p /run/e2b /workspace /sys/fs/cgroup /dev/pts
+mount -t devpts devpts /dev/pts
+mount -t cgroup2 none /sys/fs/cgroup || true
+echo "+cpu +memory" > /sys/fs/cgroup/cgroup.subtree_control || true
+MD=/lib/modules/6.1.0-50-arm64/kernel
+for m in net/core/failover drivers/net/net_failover drivers/net/virtio_net; do
+  insmod "$MD/$m.ko" 2>/dev/null || true
+done
+ip link set lo up
+IP=
+for arg in $(cat /proc/cmdline); do
+  case "$arg" in ip=*) IP=${arg#ip=}; IP=${IP%%:*};; esac
+done
+test -n "$IP" || { echo SHARING_INIT_MISSING_IP; exec sh; }
+ip link set eth0 up
+ip addr add "$IP/30" dev eth0
+ulimit -n 8192
+# Only MMDS/log transport differs; process/filesystem APIs are real envd.
+/usr/local/bin/envd -isnotfc > /dev/console 2>&1 &
+echo "SHARING_INIT_READY ip=$IP envd=$!"
+while true; do wait; sleep 1; done

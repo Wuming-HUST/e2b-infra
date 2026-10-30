@@ -1,0 +1,5 @@
+{
+  "left": "/dev/nbd0",
+  "right": "/dev/nbd0",
+  "same_backing": true
+}

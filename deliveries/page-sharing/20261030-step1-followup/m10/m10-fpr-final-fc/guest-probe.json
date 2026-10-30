@@ -1,0 +1,38 @@
+{
+  "/proc/config.gz": "open /proc/config.gz: no such file or directory",
+  "/proc/meminfo": "MemTotal:         163104 kB\nMemFree:          142344 kB\nMemAvailable:     145916 kB\nBuffers:               0 kB\nCached:             3100 kB\nSwapCached:            0 kB\nActive:              380 kB\nInactive:           3160 kB\nActive(anon):        380 kB\nInactive(anon):     3160 kB\nActive(file):          0 kB\nInactive(file):        0 kB\nUnevictable:           0 kB\nMlocked:               0 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:                 0 kB\nWriteback:             0 kB\nAnonPages:           480 kB\nMapped:             1780 kB\nShmem:              3100 kB\nKReclaimable:       7892 kB\nSlab:              13340 kB\nSReclaimable:       7892 kB\nSUnreclaim:         5448 kB\nKernelStack:         720 kB\nPageTables:           64 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:       81552 kB\nCommitted_AS:      43704 kB\nVmallocTotal:   133143592960 kB\nVmallocUsed:        1356 kB\nVmallocChunk:          0 kB\nPercpu:              136 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nCmaTotal:          65536 kB\nCmaFree:           65152 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\n",
+  "/proc/modules": "virtio_balloon 28672 0 - Live 0xffffa77514c27000\nvirtio_mmio 24576 0 - Live 0xffffa77514c1b000\n",
+  "/proc/version": "Linux version 6.1.0-50-arm64 (debian-kernel@lists.debian.org) (gcc-12 (Debian 12.2.0-14+deb12u1) 12.2.0, GNU ld (GNU Binutils for Debian) 2.40) #1 SMP Debian 6.1.176-1 (2026-07-02)\n",
+  "/sys/bus/virtio/devices": {
+    "error": "<nil>",
+    "names": [
+      "virtio0"
+    ]
+  },
+  "/sys/bus/virtio/drivers/virtio_balloon": {
+    "error": "<nil>",
+    "names": [
+      "bind",
+      "module",
+      "uevent",
+      "unbind",
+      "virtio0"
+    ]
+  },
+  "/sys/module/virtio_balloon": {
+    "error": "<nil>",
+    "names": [
+      "coresize",
+      "drivers",
+      "holders",
+      "initsize",
+      "initstate",
+      "notes",
+      "refcnt",
+      "sections",
+      "taint",
+      "uevent"
+    ]
+  },
+  "event": "probe"
+}

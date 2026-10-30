@@ -1,0 +1,24 @@
+{
+  "pid": 125524,
+  "started": 1793363308.382552,
+  "command": [
+    "sudo",
+    "-n",
+    "env",
+    "PATH=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-deps/usr/sbin:/home/coder/.local/bin:/tmp/coder-script-data/bin:/home/coder/.local/bin/:/home/coder/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/tmp/coder.dzB3qx",
+    "E2B_SHARING_INTEGRATION_DIR=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-run-01",
+    "E2B_SHARING_FC=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/firecracker-ordering",
+    "E2B_SHARING_KERNEL=/home/coder/tide-repro/assets/vmlinuz",
+    "E2B_SHARING_ROOTFS=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v1/rootfs.ext4",
+    "E2B_SHARING_INITRD=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v1/initrd.gz",
+    "E2B_SHARING_TRACE_FIXTURE=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json",
+    "E2B_SHARING_INIT=/sbin/sharing-init",
+    "E2B_SHARING_SLOT_BASE=25000",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-integration.test",
+    "-test.run",
+    "^TestSharingFactoryIntegration$",
+    "-test.v",
+    "-test.timeout",
+    "10m"
+  ]
+}

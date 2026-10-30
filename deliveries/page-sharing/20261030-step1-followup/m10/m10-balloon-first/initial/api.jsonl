@@ -1,0 +1,7 @@
+{"method": "PUT", "path": "/machine-config", "body": {"vcpu_count": 1, "mem_size_mib": 192}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/boot-source", "body": {"kernel_image_path": "/home/coder/tide-repro/assets/vmlinuz", "initrd_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-balloon-first/guest-initrd.gz", "boot_args": "console=ttyS0 reboot=k panic=1 pci=off"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/balloon", "body": {"amount_mib": 0, "deflate_on_oom": false, "stats_polling_interval_s": 1, "free_page_reporting": false}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "InstanceStart"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/balloon/statistics", "body": null, "status": 200, "response": "{\"target_pages\":0,\"actual_pages\":0,\"target_mib\":0,\"actual_mib\":0,\"swap_in\":0,\"swap_out\":0,\"major_faults\":0,\"minor_faults\":185,\"free_memory\":145756160,\"total_memory\":167018496,\"available_memory\":149401600,\"disk_caches\":3174400,\"hugetlb_allocations\":0,\"hugetlb_failures\":0}"}
+{"method": "PATCH", "path": "/vm", "body": {"state": "Paused"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/snapshot/create", "body": {"snapshot_type": "Full", "snapshot_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-balloon-first/A.state", "mem_file_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-balloon-first/A.ram"}, "status": 204, "response": ""}

@@ -1,0 +1,5 @@
+{
+  "event": "lease_released",
+  "path": "/dev/nbd0",
+  "remaining": 1
+}

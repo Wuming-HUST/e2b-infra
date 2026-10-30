@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "vm_pids": [
+    123276,
+    123289,
+    123291,
+    123308,
+    123311
+  ],
+  "vm_returncodes": [
+    -15,
+    -15,
+    -15,
+    -15,
+    -15
+  ],
+  "helper_pids": [
+    123279
+  ],
+  "helper_returncodes": [
+    0
+  ]
+}

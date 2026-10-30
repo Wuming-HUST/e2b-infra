@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-30",
+  "infra": {
+    "branch": "feat/shared-nbd-memory-20261030",
+    "base": "d15315d801dbc6e3986a3890751f91aa21ec4aa8",
+    "core_implementation": "fa6e5cedb71bde93e86f9e03bcd9a1fc0d9621cc",
+    "followup_implementation": "f70ca4950b331b28999af64470afcbd91a484fb2"
+  },
+  "firecracker": {
+    "branch": "feat/shared-nbd-memory-20261030",
+    "base": "8da283e3bfc876167fde8f45e541bec0bfad0e9a",
+    "freeze_implementation": "0ce25136688b6d68e9c27c9e176bf0ebcf930a03",
+    "followup_implementation": "a977afa86d0da2ad96216b0d9daf6d72428015d1",
+    "binary_sha256": "8830ff065716e073b74bed06fe073356ffff839eef5fe6039f3905b2b5149349"
+  },
+  "remote_root": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030",
+  "ram_export_mode": "full_logical",
+  "checkpoint_format": 1,
+  "implementation_and_factory_integration": "passed",
+  "complete_original_trace": "unaccepted",
+  "latest_M09_two_page_swap_precondition": "unaccepted_one_of_two_pages_swapped",
+  "step_1_overall": "unaccepted",
+  "step_2": "not_started",
+  "source_match_paths": {
+    "infra": 65,
+    "firecracker_rust_cargo": 331
+  }
+}

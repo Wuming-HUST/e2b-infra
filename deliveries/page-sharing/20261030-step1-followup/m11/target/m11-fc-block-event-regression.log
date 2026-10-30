@@ -1,0 +1,6 @@
+
+running 1 test
+test devices::virtio::block::virtio::event_handler::tests::test_event_handler ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 514 filtered out; finished in 0.05s
+

@@ -1,0 +1,10 @@
+
+running 5 tests
+test devices::virtio::vsock::device::tests::test_checkpoint_vsock_empty_queue_never_becomes_success ... ok
+test devices::virtio::vsock::device::tests::test_checkpoint_vsock_reset_is_idempotent_until_resume ... ok
+test devices::virtio::vsock::device::tests::test_checkpoint_vsock_write_failure_is_not_published ... ok
+test persist::tests::test_checkpoint_flush_failure_publishes_no_state_or_ram ... ok
+test persist::tests::test_checkpoint_captures_async_block_completion_before_gic ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 510 filtered out; finished in 0.02s
+

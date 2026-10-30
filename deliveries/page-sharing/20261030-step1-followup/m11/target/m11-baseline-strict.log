@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/scripts/memory-lab/page-sharing/m11_check.py", line 217, in <module>
+    if __name__=='__main__': main()
+                             ^^^^^^
+  File "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/scripts/memory-lab/page-sharing/m11_check.py", line 194, in main
+    progress.append(wait_progress(vm,progress[-1] if progress else None))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-tools/scripts/memory-lab/page-sharing/m11_check.py", line 113, in wait_progress
+    raise TimeoutError(f'no block/network progress: {got}')
+TimeoutError: no block/network progress: {'completed': [96, 101, 98, 103], 'errors': 0, 'event': 'status', 'rx_bytes': 61824000, 'rx_packets': 44160, 'stages': [2, 1, 1, 2]}

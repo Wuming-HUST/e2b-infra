@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "variants": {
+    "B0-file": {
+      "freeze_iterations": 3,
+      "restore_io_and_network_progress": true,
+      "errors": 0
+    },
+    "B1-nbd": {
+      "freeze_iterations": 3,
+      "restore_io_and_network_progress": true,
+      "errors": 0
+    }
+  },
+  "oracle": "3 full-RAM/disk stable samples per freeze, same-frozen-state FC full dump, every written raw-disk record, restored block and RX progress",
+  "scope": "Async virtio-blk raw disk + TAP network, not application rootfs trace or vsock",
+  "sender_packets": 16615
+}

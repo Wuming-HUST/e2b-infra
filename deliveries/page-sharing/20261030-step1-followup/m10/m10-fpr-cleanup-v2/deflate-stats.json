@@ -1,0 +1,18 @@
+[
+  {
+    "target_pages": 0,
+    "actual_pages": 0,
+    "target_mib": 0,
+    "actual_mib": 0,
+    "swap_in": 0,
+    "swap_out": 0,
+    "major_faults": 0,
+    "minor_faults": 10615,
+    "free_memory": 144334848,
+    "total_memory": 167018496,
+    "available_memory": 148000768,
+    "disk_caches": 3182592,
+    "hugetlb_allocations": 0,
+    "hugetlb_failures": 0
+  }
+]

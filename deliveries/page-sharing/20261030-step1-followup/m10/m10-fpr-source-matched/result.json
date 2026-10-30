@@ -1,0 +1,48 @@
+{
+  "status": "passed",
+  "mechanism": "actual guest free-page-reporting with balloon target=actual=0",
+  "guest_kernel": "Linux version 6.1.0-50-arm64 (debian-kernel@lists.debian.org) (gcc-12 (Debian 12.2.0-14+deb12u1) 12.2.0, GNU ld (GNU Binutils for Debian) 2.40) #1 SMP Debian 6.1.176-1 (2026-07-02)\n",
+  "parent_nonzero_candidates": 10240,
+  "discarded_pages": 7680,
+  "rewritten_discarded_pages": 1536,
+  "unwritten": {
+    "mode": "full_logical",
+    "sha256": "96de526f0bc20c332ed1577c2c24675cbccb07f87ea5e5ffc03794690a27a7bd",
+    "bytes": 201326592,
+    "seconds": 0.31569487499655224,
+    "pid": 131042
+  },
+  "rewritten": {
+    "mode": "full_logical",
+    "sha256": "796e2fa66b5f9b7d93a25279cbc8f448b089b56d77ba9ab37af85e7c2c09b97a",
+    "bytes": 201326592,
+    "seconds": 0.2622147820002283,
+    "pid": 131042
+  },
+  "other": {
+    "mode": "full_logical",
+    "sha256": "24b1ede6c6025c6a042a19d582dc17f78d5f6fa1254aa6b2a1216d6b26776b14",
+    "bytes": 201326592,
+    "seconds": 0.36124707899580244,
+    "pid": 131044
+  },
+  "restored": {
+    "discard-unwritten": {
+      "mode": "full_logical",
+      "sha256": "87dae19e7c853e6a191db28d3fd151e59c6240d0f8661e5a88e9a584d324d854",
+      "bytes": 201326592,
+      "seconds": 0.23111996600346174,
+      "pid": 131106
+    },
+    "discard-rewritten": {
+      "mode": "full_logical",
+      "sha256": "b16aab8cd6f9d1233e77ebc902387b791e262e8e9240428e8b5568c8b3d05a27",
+      "bytes": 201326592,
+      "seconds": 0.23662647799937986,
+      "pid": 131109
+    }
+  },
+  "source_sha256": "7ab2d055b544e8a2c95ad567cf742b1bf3dc31da9f86c3eb326104d9e4f24132",
+  "free_page_reporting": true,
+  "scope": "M10 balloon/FPR path, independent full-logical exporter/native dump; orchestrator integration is separate"
+}

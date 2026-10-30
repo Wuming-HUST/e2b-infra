@@ -1,0 +1,47 @@
+2026-10-30T12:43:17.979872470 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T12:43:17.980003620 [anonymous-instance:main] Listening on API socket ("/tmp/psg-s92rrp04/fc.sock").
+2026-10-30T12:43:17.984087654 [anonymous-instance:fc_api] API server started.
+2026-10-30T12:43:17.987759439 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-source-matched/A.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/dev/nbd0\"}, \"enable_diff_snapshots\": false, \"resume_vm\": false}".
+2026-10-30T12:43:17.987804709 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:43:17.987915908 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T12:43:17.987918308 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T12:43:18.008820988 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 21002 us.
+2026-10-30T12:43:18.009051138 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:18.009063978 [anonymous-instance:fc_api] 'load snapshot' API request took 21309 us.
+2026-10-30T12:43:18.009731987 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T12:43:18.009932067 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T12:43:18.010150276 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:43:18.010356656 [anonymous-instance:main] 'resume vm' VMM action took 426 us.
+2026-10-30T12:43:18.010576116 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:18.010588956 [anonymous-instance:fc_api] 'resume vm' API request took 859 us.
+PSG {"event":"read","sha256":["4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd","c4e4416b00b3648466f272e781d2bbc5d7b2ef19a55ec3a565417f599ba1ae79","3472c45e8a3bf5c75cc1f5d6d73c1b005c152e83c58b37e099849151a71973f7","ab0befc5f6960968e802438bed9249a2311ccf45a7648ab4a924c56a317621ec"]}
+2026-10-30T12:43:18.105806808 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T12:43:18.106332018 [anonymous-instance:main] 'pause vm' VMM action took 303 us.
+2026-10-30T12:43:18.106572707 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:18.106585577 [anonymous-instance:fc_api] 'pause vm' API request took 781 us.
+2026-10-30T12:43:18.121205826 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T12:43:18.121653115 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T12:43:18.189007748 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T12:43:18.189230288 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T12:43:18.189471828 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:43:18.189704487 [anonymous-instance:main] 'resume vm' VMM action took 476 us.
+2026-10-30T12:43:18.189729057 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:43:18.189732287 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:43:18.189942097 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:18.189956637 [anonymous-instance:fc_api] 'resume vm' API request took 951 us.
+PSG {"event":"write","page":1,"value":165}
+PSG {"event":"zero","page":2,"value":0}
+2026-10-30T12:43:18.194641170 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T12:43:18.195156449 [anonymous-instance:main] 'pause vm' VMM action took 295 us.
+2026-10-30T12:43:18.195392819 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:18.195405629 [anonymous-instance:fc_api] 'pause vm' API request took 766 us.
+2026-10-30T12:43:18.258986647 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-source-matched/NBD.private.state\"}".
+2026-10-30T12:43:18.259216857 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:43:18.262696832 [anonymous-instance:main] 'create full snapshot' VMM action took 3463 us.
+2026-10-30T12:43:18.262936182 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:18.262950112 [anonymous-instance:fc_api] 'create full snapshot' API request took 3966 us.
+2026-10-30T12:43:20.518005128 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-source-matched/NBD.private.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/kvm-source-matched/NBD.private.native.ram\"}".
+2026-10-30T12:43:20.518642447 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:43:20.562602044 [anonymous-instance:main] 'create full snapshot' VMM action took 43858 us.
+2026-10-30T12:43:20.563105763 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:43:20.563147263 [anonymous-instance:fc_api] 'create full snapshot' API request took 45178 us.

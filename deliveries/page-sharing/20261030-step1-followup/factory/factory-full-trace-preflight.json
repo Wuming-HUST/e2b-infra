@@ -1,0 +1,62 @@
+{
+  "checked_at": 1793364537.2632403,
+  "input_image": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/rootfs.ext4",
+  "read_only_debugfs": true,
+  "paths": {
+    "/app": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/app: File not found by ext2_lookup \n"
+    },
+    "/bin/bash": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/bin/bash: File not found by ext2_lookup \n"
+    },
+    "/usr/bin/cargo": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/usr/bin/cargo: File not found by ext2_lookup \n"
+    },
+    "/root/.cargo/bin/cargo": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/root/.cargo/bin/cargo: File not found by ext2_lookup \n"
+    },
+    "/usr/bin/rustc": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/usr/bin/rustc: File not found by ext2_lookup \n"
+    },
+    "/usr/bin/java": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/usr/bin/java: File not found by ext2_lookup \n"
+    },
+    "/usr/bin/javac": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/usr/bin/javac: File not found by ext2_lookup \n"
+    },
+    "/usr/bin/gcc": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/usr/bin/gcc: File not found by ext2_lookup \n"
+    },
+    "/usr/bin/python3": {
+      "exists": true,
+      "stdout": "Inode: 4989   Type: symlink    Mode:  0777   Flags: 0x0\nGeneration: 0    Version: 0x00000000:00000000\nUser:     0   Group:     0   Project:     0   Size: 10\nFile ACL: 0\nLinks: 1   Blockcount: 0\nFragment:  Address: 0    Number: 0    Size: 0\n ctime: 0x6ae2a636:00000000 -- Thu Oct 29 01:49:42 2026\n atime: 0x6ae2a636:00000000 -- Thu Oct 29 01:49:42 2026\n mtime: 0x6ad9e89a:00000000 -- Thu Oct 22 10:42:34 2026\ncrtime: 0x6ae2a637:00000000 -- Thu Oct 29 01:49:43 2026\nSize of extra inode fields: 32\nInode checksum: 0x9a52fc9a\nFast link dest: \"python3.12\"\n",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n"
+    },
+    "/usr/local/bin/envd": {
+      "exists": true,
+      "stdout": "Inode: 6563   Type: regular    Mode:  0755   Flags: 0x80000\nGeneration: 0    Version: 0x00000000:00000000\nUser:     0   Group:     0   Project:     0   Size: 14294337\nFile ACL: 0\nLinks: 1   Blockcount: 27672\nFragment:  Address: 0    Number: 0    Size: 0\n ctime: 0x6ae2a636:00000000 -- Thu Oct 29 01:49:42 2026\n atime: 0x6ae2a636:00000000 -- Thu Oct 29 01:49:42 2026\n mtime: 0x6ae2a636:00000000 -- Thu Oct 29 01:49:42 2026\ncrtime: 0x6ae2a637:00000000 -- Thu Oct 29 01:49:43 2026\nSize of extra inode fields: 32\nInode checksum: 0xaf9b7da9\nEXTENTS:\n(ETB0):98974, (0-1014):96348-97362, (1024-1964):97363-98303, (1965-2276):98561-98872, (2288-2387):98873-98972, (2400):98973, (2401-3489):98975-100063\n",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n"
+    },
+    "/root/.cargo/registry": {
+      "exists": false,
+      "stdout": "",
+      "stderr": "debugfs 1.47.0 (5-Feb-2023)\n/root/.cargo/registry: File not found by ext2_lookup \n"
+    }
+  }
+}

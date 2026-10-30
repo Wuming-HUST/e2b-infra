@@ -1,0 +1,598 @@
+diff --git i/src/vmm/src/device_manager/mmio.rs w/src/vmm/src/device_manager/mmio.rs
+index cd202ee37..c3bd30ecf 100644
+--- i/src/vmm/src/device_manager/mmio.rs
++++ w/src/vmm/src/device_manager/mmio.rs
+@@ -11,7 +11,7 @@ use std::num::NonZeroU32;
+ use std::sync::{Arc, Mutex};
+ 
+ #[cfg(target_arch = "x86_64")]
+-use acpi_tables::{Aml, aml};
++use acpi_tables::{aml, Aml};
+ use kvm_ioctls::{IoEventAddress, VmFd};
+ use linux_loader::cmdline as kernel_cmdline;
+ #[cfg(target_arch = "x86_64")]
+@@ -20,10 +20,10 @@ use log::info;
+ use serde::{Deserialize, Serialize};
+ use vm_allocator::AllocPolicy;
+ 
++use super::persist::DevicePersistError;
+ use super::resources::ResourceAllocator;
+ use crate::arch::DeviceType;
+ use crate::arch::DeviceType::Virtio;
+-use crate::devices::BusDevice;
+ #[cfg(target_arch = "aarch64")]
+ use crate::devices::legacy::RTCDevice;
+ use crate::devices::pseudo::BootTimer;
+@@ -33,8 +33,9 @@ use crate::devices::virtio::device::VirtioDevice;
+ use crate::devices::virtio::mmio::MmioTransport;
+ use crate::devices::virtio::net::Net;
+ use crate::devices::virtio::rng::Entropy;
+-use crate::devices::virtio::vsock::{TYPE_VSOCK, Vsock, VsockUnixBackend};
++use crate::devices::virtio::vsock::{Vsock, VsockUnixBackend, TYPE_VSOCK};
+ use crate::devices::virtio::{TYPE_BALLOON, TYPE_BLOCK, TYPE_NET, TYPE_RNG};
++use crate::devices::BusDevice;
+ #[cfg(target_arch = "x86_64")]
+ use crate::vstate::memory::GuestAddress;
+ 
+@@ -488,7 +489,7 @@ impl MMIODeviceManager {
+                         .as_mut_any()
+                         .downcast_mut::<Vsock<VsockUnixBackend>>()
+                         .unwrap()
+-                        .external_snapshot_frozen = frozen;
++                        .set_external_snapshot_frozen(frozen);
+                 }
+                 TYPE_RNG => {
+                     device
+@@ -509,6 +510,28 @@ impl MMIODeviceManager {
+         });
+     }
+ 
++    /// Drain device operations before capturing vCPU/interrupt-controller state.
++    /// Async block completions update guest RAM and raise interrupts, so doing
++    /// this only while serializing devices would pair old GIC state with new RAM.
++    pub fn prepare_save_devices(&self) -> Result<(), DevicePersistError> {
++        self.for_each_virtio_device(|_, _, _, dev| {
++            let mut device = dev.lock().expect("Poisoned lock");
++            if let Some(block) = device.as_mut_any().downcast_mut::<Block>() {
++                if !block.is_vhost_user() {
++                    block.prepare_save().map_err(DevicePersistError::Block)?;
++                }
++            } else if let Some(vsock) = device
++                .as_mut_any()
++                .downcast_mut::<Vsock<VsockUnixBackend>>()
++            {
++                vsock
++                    .prepare_snapshot()
++                    .map_err(DevicePersistError::PrepareVsock)?;
++            }
++            Ok(())
++        })
++    }
++
+     /// Artificially kick devices as if they had external events.
+     pub fn kick_devices(&self) {
+         info!("Artificially kick devices.");
+@@ -591,13 +614,13 @@ mod tests {
+     use vmm_sys_util::eventfd::EventFd;
+ 
+     use super::*;
+-    use crate::Vm;
+-    use crate::devices::virtio::ActivateError;
+     use crate::devices::virtio::device::{IrqTrigger, VirtioDevice};
+     use crate::devices::virtio::queue::Queue;
++    use crate::devices::virtio::ActivateError;
+     use crate::test_utils::multi_region_mem_raw;
+     use crate::vstate::kvm::Kvm;
+     use crate::vstate::memory::{GuestAddress, GuestMemoryMmap};
++    use crate::Vm;
+ 
+     const QUEUE_SIZES: &[u16] = &[64];
+ 
+@@ -826,11 +849,9 @@ mod tests {
+                 &id,
+             )
+             .unwrap();
+-        assert!(
+-            device_manager
+-                .get_device(DeviceType::Virtio(type_id), &id)
+-                .is_some()
+-        );
++        assert!(device_manager
++            .get_device(DeviceType::Virtio(type_id), &id)
++            .is_some());
+         assert_eq!(
+             addr,
+             device_manager.id_to_dev_info[&(DeviceType::Virtio(type_id), id.clone())].addr
+@@ -844,11 +865,9 @@ mod tests {
+         );
+ 
+         let id = "bar";
+-        assert!(
+-            device_manager
+-                .get_device(DeviceType::Virtio(type_id), id)
+-                .is_none()
+-        );
++        assert!(device_manager
++            .get_device(DeviceType::Virtio(type_id), id)
++            .is_none());
+ 
+         let dummy2 = Arc::new(Mutex::new(DummyDevice::new()));
+         let id2 = String::from("foo2");
+diff --git i/src/vmm/src/device_manager/persist.rs w/src/vmm/src/device_manager/persist.rs
+index eb63c3927..ef0020abb 100644
+--- i/src/vmm/src/device_manager/persist.rs
++++ w/src/vmm/src/device_manager/persist.rs
+@@ -8,38 +8,37 @@ use std::sync::{Arc, Mutex};
+ 
+ use event_manager::{MutEventSubscriber, SubscriberOps};
+ use kvm_ioctls::VmFd;
+-use log::{error, warn};
++use log::warn;
+ use serde::{Deserialize, Serialize};
+ use vm_allocator::AllocPolicy;
+ 
+ use super::acpi::ACPIDeviceManager;
+ use super::mmio::*;
+ use super::resources::ResourceAllocator;
+-use crate::EventManager;
+ #[cfg(target_arch = "aarch64")]
+ use crate::arch::DeviceType;
+ use crate::devices::acpi::vmgenid::{VMGenIDState, VMGenIdConstructorArgs, VmGenId, VmGenIdError};
+ use crate::devices::virtio::balloon::persist::{BalloonConstructorArgs, BalloonState};
+ use crate::devices::virtio::balloon::{Balloon, BalloonError};
+-use crate::devices::virtio::block::BlockError;
+ use crate::devices::virtio::block::device::Block;
+ use crate::devices::virtio::block::persist::{BlockConstructorArgs, BlockState};
++use crate::devices::virtio::block::BlockError;
+ use crate::devices::virtio::device::VirtioDevice;
+ use crate::devices::virtio::mmio::MmioTransport;
+-use crate::devices::virtio::net::Net;
+ use crate::devices::virtio::net::persist::{
+     NetConstructorArgs, NetPersistError as NetError, NetState,
+ };
++use crate::devices::virtio::net::Net;
+ use crate::devices::virtio::persist::{MmioTransportConstructorArgs, MmioTransportState};
+-use crate::devices::virtio::rng::Entropy;
+ use crate::devices::virtio::rng::persist::{
+     EntropyConstructorArgs, EntropyPersistError as EntropyError, EntropyState,
+ };
++use crate::devices::virtio::rng::Entropy;
+ use crate::devices::virtio::vsock::persist::{
+     VsockConstructorArgs, VsockState, VsockUdsConstructorArgs,
+ };
+ use crate::devices::virtio::vsock::{
+-    TYPE_VSOCK, Vsock, VsockError, VsockUnixBackend, VsockUnixBackendError,
++    Vsock, VsockError, VsockUnixBackend, VsockUnixBackendError, TYPE_VSOCK,
+ };
+ use crate::devices::virtio::{TYPE_BALLOON, TYPE_BLOCK, TYPE_NET, TYPE_RNG};
+ use crate::mmds::data_store::MmdsVersion;
+@@ -47,6 +46,7 @@ use crate::resources::{ResourcesError, VmResources};
+ use crate::snapshot::Persist;
+ use crate::vmm_config::mmds::MmdsConfigError;
+ use crate::vstate::memory::GuestMemoryMmap;
++use crate::EventManager;
+ 
+ /// Errors for (de)serialization of the MMIO device manager.
+ #[derive(Debug, thiserror::Error, displaydoc::Display)]
+@@ -66,6 +66,8 @@ pub enum DevicePersistError {
+     Net(#[from] NetError),
+     /// Vsock: {0}
+     Vsock(#[from] VsockError),
++    /// Cannot prepare vsock checkpoint: {0}
++    PrepareVsock(crate::devices::DeviceError),
+     /// VsockUnixBackend: {0}
+     VsockUnixBackend(#[from] VsockUnixBackendError),
+     /// MmdsConfig: {0}
+@@ -350,7 +352,9 @@ impl<'a> Persist<'a> for MMIODeviceManager {
+                              snapshotting yet"
+                         );
+                     } else {
+-                        block.prepare_save();
++                        // Vmm::save_state drains completions before capturing
++                        // vCPU/GIC state. Serialization must not change RAM or
++                        // interrupt state after that checkpoint boundary.
+                         states.block_devices.push(ConnectedBlockState {
+                             device_id: devid.clone(),
+                             device_state: block.save(),
+@@ -382,14 +386,7 @@ impl<'a> Persist<'a> for MMIODeviceManager {
+                         .downcast_mut::<Vsock<VsockUnixBackend>>()
+                         .unwrap();
+ 
+-                    // Send Transport event to reset connections if device
+-                    // is activated.
+-                    if vsock.is_activated() {
+-                        vsock.send_transport_reset_event().unwrap_or_else(|err| {
+-                            error!("Failed to send reset transport event: {:?}", err);
+-                        });
+-                    }
+-
++                    // Transport reset was prepared before vCPU/GIC capture.
+                     // Save state after potential notification to the guest. This
+                     // way we save changes to the queue the notification can cause.
+                     let vsock_state = VsockState {
+diff --git i/src/vmm/src/devices/virtio/block/device.rs w/src/vmm/src/devices/virtio/block/device.rs
+index bf3043bcd..c5bad4f1e 100644
+--- i/src/vmm/src/devices/virtio/block/device.rs
++++ w/src/vmm/src/devices/virtio/block/device.rs
+@@ -4,10 +4,10 @@
+ use event_manager::{EventOps, Events, MutEventSubscriber};
+ use vmm_sys_util::eventfd::EventFd;
+ 
+-use super::BlockError;
+ use super::persist::{BlockConstructorArgs, BlockState};
+ use super::vhost_user::device::{VhostUserBlock, VhostUserBlockConfig};
+ use super::virtio::device::{VirtioBlock, VirtioBlockConfig};
++use super::BlockError;
+ use crate::devices::virtio::device::{IrqTrigger, VirtioDevice};
+ use crate::devices::virtio::queue::Queue;
+ use crate::devices::virtio::{ActivateError, TYPE_BLOCK};
+@@ -76,10 +76,10 @@ impl Block {
+         }
+     }
+ 
+-    pub fn prepare_save(&mut self) {
++    pub fn prepare_save(&mut self) -> Result<(), BlockError> {
+         match self {
+-            Self::Virtio(b) => b.prepare_save(),
+-            Self::VhostUser(b) => b.prepare_save(),
++            Self::Virtio(b) => b.prepare_save().map_err(BlockError::VirtioBackend),
++            Self::VhostUser(_) => Err(BlockError::InvalidBlockBackend),
+         }
+     }
+ 
+diff --git i/src/vmm/src/devices/virtio/block/virtio/device.rs w/src/vmm/src/devices/virtio/block/virtio/device.rs
+index 15b484e8a..c54c92aa9 100644
+--- i/src/vmm/src/devices/virtio/block/virtio/device.rs
++++ w/src/vmm/src/devices/virtio/block/virtio/device.rs
+@@ -556,15 +556,19 @@ impl VirtioBlock {
+     }
+ 
+     /// Prepare device for being snapshotted.
+-    pub fn prepare_save(&mut self) {
++    pub fn prepare_save(&mut self) -> Result<(), VirtioBlockError> {
+         if !self.is_activated() {
+-            return;
++            return Ok(());
+         }
+ 
+-        self.drain_and_flush(false);
++        self.disk
++            .file_engine
++            .drain_and_flush(false)
++            .map_err(VirtioBlockError::FileEngine)?;
+         if let FileEngine::Async(ref _engine) = self.disk.file_engine {
+             self.process_async_completion_queue();
+         }
++        Ok(())
+     }
+ }
+ 
+@@ -1637,7 +1641,7 @@ mod tests {
+             // Add a batch of flush requests.
+             add_flush_requests_batch(&mut block, &vq, 5);
+             simulate_queue_event(&mut block, None);
+-            block.prepare_save();
++            block.prepare_save().unwrap();
+ 
+             // Check that all the pending flush requests were processed during `prepare_save()`.
+             check_flush_requests_batch(5, &vq);
+diff --git i/src/vmm/src/devices/virtio/vsock/device.rs w/src/vmm/src/devices/virtio/vsock/device.rs
+index dc1a4be21..76b51829e 100644
+--- i/src/vmm/src/devices/virtio/vsock/device.rs
++++ w/src/vmm/src/devices/virtio/vsock/device.rs
+@@ -27,14 +27,14 @@ use vmm_sys_util::eventfd::EventFd;
+ 
+ use super::super::super::DeviceError;
+ use super::defs::uapi;
+-use super::packet::{VSOCK_PKT_HDR_SIZE, VsockPacketRx, VsockPacketTx};
+-use super::{VsockBackend, defs};
+-use crate::devices::virtio::ActivateError;
++use super::packet::{VsockPacketRx, VsockPacketTx, VSOCK_PKT_HDR_SIZE};
++use super::{defs, VsockBackend};
+ use crate::devices::virtio::device::{DeviceState, IrqTrigger, IrqType, VirtioDevice};
+ use crate::devices::virtio::generated::virtio_config::{VIRTIO_F_IN_ORDER, VIRTIO_F_VERSION_1};
+ use crate::devices::virtio::queue::Queue as VirtQueue;
+-use crate::devices::virtio::vsock::VsockError;
+ use crate::devices::virtio::vsock::metrics::METRICS;
++use crate::devices::virtio::vsock::VsockError;
++use crate::devices::virtio::ActivateError;
+ use crate::logger::IncMetric;
+ use crate::utils::byte_order;
+ use crate::vstate::memory::{Bytes, GuestMemoryMmap};
+@@ -70,6 +70,8 @@ pub struct Vsock<B> {
+     pub(crate) activate_evt: EventFd,
+     pub(crate) device_state: DeviceState,
+     pub(crate) external_snapshot_frozen: bool,
++    /// Runtime-only idempotency for repeated state/RAM captures while paused.
++    pub(crate) checkpoint_reset_sent: bool,
+ 
+     pub rx_packet: VsockPacketRx,
+     pub tx_packet: VsockPacketTx,
+@@ -107,6 +109,7 @@ where
+             activate_evt: EventFd::new(libc::EFD_NONBLOCK).map_err(VsockError::EventFd)?,
+             device_state: DeviceState::Inactive,
+             external_snapshot_frozen: false,
++            checkpoint_reset_sent: false,
+             rx_packet: VsockPacketRx::new()?,
+             tx_packet: VsockPacketTx::default(),
+         })
+@@ -237,6 +240,22 @@ where
+         have_used
+     }
+ 
++    /// Finish reset notification before capturing interrupt-controller state.
++    pub fn prepare_snapshot(&mut self) -> Result<(), DeviceError> {
++        if matches!(self.device_state, DeviceState::Activated(_)) && !self.checkpoint_reset_sent {
++            self.send_transport_reset_event()?;
++            self.checkpoint_reset_sent = true;
++        }
++        Ok(())
++    }
++
++    pub(crate) fn set_external_snapshot_frozen(&mut self, frozen: bool) {
++        self.external_snapshot_frozen = frozen;
++        if !frozen {
++            self.checkpoint_reset_sent = false;
++        }
++    }
++
+     // Send TRANSPORT_RESET_EVENT to driver. According to specs, the driver shuts down established
+     // connections and the guest_cid configuration field is fetched again. Existing listen sockets
+     // remain but their CID is updated to reflect the current guest_cid.
+@@ -251,11 +270,11 @@ where
+         })?;
+ 
+         mem.write_obj::<u32>(VIRTIO_VSOCK_EVENT_TRANSPORT_RESET, head.addr)
+-            .unwrap_or_else(|err| error!("Failed to write virtio vsock reset event: {:?}", err));
++            .map_err(|_| DeviceError::MalformedDescriptor)?;
+ 
+-        queue.add_used(head.index, head.len).unwrap_or_else(|err| {
+-            error!("Failed to add used descriptor {}: {}", head.index, err);
+-        });
++        queue
++            .add_used(head.index, head.len)
++            .map_err(DeviceError::QueueError)?;
+         queue.advance_used_ring_idx();
+ 
+         self.signal_used_queue()?;
+@@ -364,6 +383,57 @@ mod tests {
+     use crate::devices::virtio::vsock::defs::uapi;
+     use crate::devices::virtio::vsock::test_utils::TestContext;
+ 
++    #[test]
++    fn test_checkpoint_vsock_reset_is_idempotent_until_resume() {
++        use crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE;
++        use crate::vstate::memory::GuestAddress;
++        let ctx = TestContext::new();
++        let mut handler = ctx.create_event_handler_context();
++        handler.guest_evvq.dtable[0].set(0x500000, 4, VIRTQ_DESC_F_WRITE, 0);
++        handler.guest_evvq.avail.ring[0].set(0);
++        handler.guest_evvq.avail.idx.set(1);
++        handler.device.activate(ctx.mem.clone()).unwrap();
++        handler.device.set_external_snapshot_frozen(true);
++        handler.device.prepare_snapshot().unwrap();
++        assert_eq!(handler.guest_evvq.used.idx.get(), 1);
++        assert_eq!(ctx.mem.read_obj::<u32>(GuestAddress(0x500000)).unwrap(), 0);
++        assert!(handler.device.irq_trigger.has_pending_irq(IrqType::Vring));
++        handler.device.prepare_snapshot().unwrap();
++        assert_eq!(handler.guest_evvq.used.idx.get(), 1);
++        handler.device.set_external_snapshot_frozen(false);
++        assert!(!handler.device.checkpoint_reset_sent);
++        handler.guest_evvq.avail.ring[1].set(0);
++        handler.guest_evvq.avail.idx.set(2);
++        handler.device.prepare_snapshot().unwrap();
++        assert_eq!(handler.guest_evvq.used.idx.get(), 2);
++    }
++
++    #[test]
++    fn test_checkpoint_vsock_empty_queue_never_becomes_success() {
++        let ctx = TestContext::new();
++        let mut handler = ctx.create_event_handler_context();
++        handler.device.activate(ctx.mem.clone()).unwrap();
++        assert!(handler.device.prepare_snapshot().is_err());
++        assert!(!handler.device.checkpoint_reset_sent);
++        assert!(handler.device.prepare_snapshot().is_err());
++        assert_eq!(handler.guest_evvq.used.idx.get(), 0);
++    }
++
++    #[test]
++    fn test_checkpoint_vsock_write_failure_is_not_published() {
++        use crate::devices::virtio::queue::VIRTQ_DESC_F_WRITE;
++        let ctx = TestContext::new();
++        let mut handler = ctx.create_event_handler_context();
++        // Descriptor covers one valid byte, but the reset event needs four.
++        handler.guest_evvq.dtable[0].set((ctx.mem_size - 1) as u64, 1, VIRTQ_DESC_F_WRITE, 0);
++        handler.guest_evvq.avail.ring[0].set(0);
++        handler.guest_evvq.avail.idx.set(1);
++        handler.device.activate(ctx.mem.clone()).unwrap();
++        assert!(handler.device.prepare_snapshot().is_err());
++        assert!(!handler.device.checkpoint_reset_sent);
++        assert_eq!(handler.guest_evvq.used.idx.get(), 0);
++    }
++
+     #[test]
+     fn test_virtio_device() {
+         let mut ctx = TestContext::new();
+diff --git i/src/vmm/src/lib.rs w/src/vmm/src/lib.rs
+index 7037ff28e..8aed3a473 100644
+--- i/src/vmm/src/lib.rs
++++ w/src/vmm/src/lib.rs
+@@ -506,6 +506,9 @@ impl Vmm {
+     /// Saves the state of a paused Microvm.
+     pub fn save_state(&mut self, vm_info: &VmInfo) -> Result<MicrovmState, MicrovmStateError> {
+         use self::MicrovmStateError::SaveVmState;
++        self.mmio_device_manager
++            .prepare_save_devices()
++            .map_err(MicrovmStateError::SaveDevices)?;
+         let vcpu_states = self.save_vcpu_states()?;
+         let kvm_state = self.kvm.save_state();
+         let vm_state = {
+diff --git i/src/vmm/src/persist.rs w/src/vmm/src/persist.rs
+index a17741c8a..1daa8c4bc 100644
+--- i/src/vmm/src/persist.rs
++++ w/src/vmm/src/persist.rs
+@@ -22,9 +22,9 @@ use crate::arch::aarch64::vcpu::get_manufacturer_id_from_host;
+ use crate::builder::{self, BuildMicrovmFromSnapshotError};
+ use crate::cpu_config::templates::StaticCpuTemplate;
+ #[cfg(target_arch = "x86_64")]
+-use crate::cpu_config::x86_64::cpuid::CpuidTrait;
+-#[cfg(target_arch = "x86_64")]
+ use crate::cpu_config::x86_64::cpuid::common::get_vendor_id_from_host;
++#[cfg(target_arch = "x86_64")]
++use crate::cpu_config::x86_64::cpuid::CpuidTrait;
+ use crate::device_manager::persist::{ACPIDeviceManagerState, DevicePersistError, DeviceStates};
+ use crate::logger::{info, warn};
+ use crate::resources::VmResources;
+@@ -40,7 +40,7 @@ use crate::vstate::memory;
+ use crate::vstate::memory::{GuestMemoryState, GuestRegionMmap, MemoryError};
+ use crate::vstate::vcpu::{VcpuSendEventError, VcpuState};
+ use crate::vstate::vm::VmState;
+-use crate::{EventManager, Vmm, vstate};
++use crate::{vstate, EventManager, Vmm};
+ 
+ /// Holds information related to the VM that is not part of VmState.
+ #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+@@ -119,6 +119,8 @@ pub enum MicrovmStateError {
+     NotAllowed(String),
+     /// Cannot restore devices: {0}
+     RestoreDevices(DevicePersistError),
++    /// Cannot prepare devices for a consistent checkpoint: {0}
++    SaveDevices(DevicePersistError),
+     /// Cannot save Vcpu state: {0}
+     SaveVcpuState(vstate::vcpu::VcpuError),
+     /// Cannot save Vm state: {0}
+@@ -621,12 +623,11 @@ mod tests {
+     use vmm_sys_util::tempfile::TempFile;
+ 
+     use super::*;
+-    use crate::Vmm;
+     #[cfg(target_arch = "x86_64")]
+     use crate::builder::tests::insert_vmgenid_device;
+     use crate::builder::tests::{
+-        CustomBlockConfig, default_kernel_cmdline, default_vmm, insert_balloon_device,
+-        insert_block_devices, insert_net_device, insert_vsock_device,
++        default_kernel_cmdline, default_vmm, insert_balloon_device, insert_block_devices,
++        insert_net_device, insert_vsock_device, CustomBlockConfig,
+     };
+     #[cfg(target_arch = "aarch64")]
+     use crate::construct_kvm_mpidrs;
+@@ -636,6 +637,119 @@ mod tests {
+     use crate::vmm_config::net::NetworkInterfaceConfig;
+     use crate::vmm_config::vsock::tests::default_config;
+     use crate::vstate::memory::GuestMemoryRegionState;
++    use crate::Vmm;
++
++    #[cfg(target_arch = "aarch64")]
++    #[test]
++    fn test_checkpoint_captures_async_block_completion_before_gic() {
++        use std::sync::{Arc, Mutex};
++
++        use crate::devices::virtio::block::device::Block;
++        use crate::devices::virtio::block::virtio::device::FileEngineType;
++        use crate::devices::virtio::block::virtio::test_utils::{
++            default_block_with_path, read_blk_req_descriptors, set_queue,
++        };
++        use crate::devices::virtio::device::VirtioDevice;
++        use crate::devices::virtio::mmio::MmioTransport;
++        use crate::devices::virtio::test_utils::{default_mem, VirtQueue};
++        use crate::vstate::memory::{Bytes, GuestAddress};
++
++        let disk = TempFile::new().unwrap();
++        disk.as_file().set_len(4096).unwrap();
++        std::os::unix::fs::FileExt::write_at(disk.as_file(), &[0x7a; 4096], 0).unwrap();
++        let mut vmm = default_vmm();
++        let mem = default_mem();
++        let vq = VirtQueue::new(GuestAddress(0), &mem, 16);
++        let mut block = default_block_with_path(
++            disk.as_path().to_str().unwrap().to_string(),
++            FileEngineType::Async,
++        );
++        set_queue(&mut block, 0, vq.create_queue());
++        read_blk_req_descriptors(&vq);
++        block.activate(mem.clone()).unwrap();
++        let block = Arc::new(Mutex::new(Block::Virtio(block)));
++        let mut cmdline = default_kernel_cmdline();
++        vmm.mmio_device_manager
++            .register_mmio_virtio_for_boot(
++                vmm.vm.fd(),
++                &mut vmm.resource_allocator,
++                "async-checkpoint".to_string(),
++                MmioTransport::new(mem.clone(), block.clone(), false),
++                &mut cmdline,
++            )
++            .unwrap();
++        let before = vmm.vm.save_state(&[]).unwrap();
++        block.lock().unwrap().process_virtio_queues();
++        assert_eq!(vq.used.idx.get(), 0, "completion must still be pending");
++
++        let state = vmm.save_state(&VmInfo::default()).unwrap();
++        assert_eq!(vq.used.idx.get(), 1);
++        let mut data = [0; 4096];
++        mem.read_slice(&mut data, GuestAddress(0x2000)).unwrap();
++        assert_eq!(data, [0x7a; 4096]);
++        // GIC distributor IRQ state must include the completion that updated
++        // the used ring and read buffer. Capturing GIC first loses this IRQ on
++        // restore even though block/RAM serialization contains the completion.
++        let chunks = |state: &crate::arch::aarch64::gic::GicState| {
++            state
++                .dist
++                .iter()
++                .map(|r| r.chunks.clone())
++                .collect::<Vec<_>>()
++        };
++        assert_ne!(chunks(&state.vm_state.gic), chunks(&before.gic));
++        assert_eq!(
++            chunks(&state.vm_state.gic),
++            chunks(&vmm.vm.save_state(&[]).unwrap().gic),
++            "captured GIC must match the post-drain interrupt boundary"
++        );
++    }
++
++    #[test]
++    fn test_checkpoint_flush_failure_publishes_no_state_or_ram() {
++        use crate::devices::virtio::block::device::Block;
++        use crate::devices::virtio::block::virtio::device::FileEngineType;
++        use crate::devices::virtio::block::virtio::test_utils::default_block_with_path;
++        use crate::devices::virtio::device::VirtioDevice;
++        use crate::devices::virtio::mmio::MmioTransport;
++        use crate::devices::virtio::test_utils::default_mem;
++        use std::sync::{Arc, Mutex};
++        for native in [false, true] {
++            let mut vmm = default_vmm();
++            let mem = default_mem();
++            // /dev/null supports the fixture's open/seek but rejects fsync with
++            // EINVAL, so this exercises a real flush error without mocking it.
++            let mut block = default_block_with_path("/dev/null".to_string(), FileEngineType::Sync);
++            block.activate(mem.clone()).unwrap();
++            let mut cmdline = default_kernel_cmdline();
++            vmm.mmio_device_manager
++                .register_mmio_virtio_for_boot(
++                    vmm.vm.fd(),
++                    &mut vmm.resource_allocator,
++                    "bad-flush".to_string(),
++                    MmioTransport::new(mem, Arc::new(Mutex::new(Block::Virtio(block))), false),
++                    &mut cmdline,
++                )
++                .unwrap();
++            let mut state = TempFile::new().unwrap();
++            state.remove().unwrap();
++            let mut ram = TempFile::new().unwrap();
++            ram.remove().unwrap();
++            let params = CreateSnapshotParams {
++                snapshot_type: Default::default(),
++                snapshot_path: state.as_path().to_path_buf(),
++                mem_file_path: native.then(|| ram.as_path().to_path_buf()),
++            };
++            assert!(matches!(
++                create_snapshot(&mut vmm, &VmInfo::default(), &params),
++                Err(CreateSnapshotError::MicrovmState(
++                    MicrovmStateError::SaveDevices(_)
++                ))
++            ));
++            assert!(!state.as_path().exists());
++            assert!(!ram.as_path().exists());
++        }
++    }
+ 
+     fn default_vmm_with_devices() -> Vmm {
+         let mut event_manager = EventManager::new().expect("Cannot create EventManager");

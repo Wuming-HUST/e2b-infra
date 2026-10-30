@@ -1,0 +1,5 @@
+{"method": "PUT", "path": "/machine-config", "body": {"vcpu_count": 1, "mem_size_mib": 192}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/boot-source", "body": {"kernel_image_path": "/home/coder/tide-repro/assets/vmlinuz", "initrd_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m10-probe/guest-initrd.gz", "boot_args": "console=ttyS0 reboot=k panic=1 pci=off"}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/balloon", "body": {"amount_mib": 0, "deflate_on_oom": false, "stats_polling_interval_s": 1, "free_page_reporting": false}, "status": 204, "response": ""}
+{"method": "PUT", "path": "/actions", "body": {"action_type": "InstanceStart"}, "status": 204, "response": ""}
+{"method": "GET", "path": "/balloon/statistics", "body": null, "status": 200, "response": "{\"target_pages\":0,\"actual_pages\":0,\"target_mib\":0,\"actual_mib\":0}"}

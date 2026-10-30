@@ -1,0 +1,61 @@
+{
+  "success": true,
+  "cleanup_requested": true,
+  "all_vm_exits_confirmed": true,
+  "quarantined": false,
+  "vm_status": [
+    {
+      "pid": 126693,
+      "returncode": -15,
+      "exit_confirmed": true
+    },
+    {
+      "pid": 126706,
+      "returncode": -15,
+      "exit_confirmed": true
+    },
+    {
+      "pid": 126708,
+      "returncode": -15,
+      "exit_confirmed": true
+    },
+    {
+      "pid": 126786,
+      "returncode": -15,
+      "exit_confirmed": true
+    },
+    {
+      "pid": 126789,
+      "returncode": -15,
+      "exit_confirmed": true
+    }
+  ],
+  "helper_status": [
+    {
+      "pid": 126696,
+      "returncode": 0
+    }
+  ],
+  "unknown_vm_receipts": [],
+  "errors": [],
+  "vm_pids": [
+    126693,
+    126706,
+    126708,
+    126786,
+    126789
+  ],
+  "vm_returncodes": [
+    -15,
+    -15,
+    -15,
+    -15,
+    -15
+  ],
+  "helper_pids": [
+    126696
+  ],
+  "helper_returncodes": [
+    0
+  ]
+}

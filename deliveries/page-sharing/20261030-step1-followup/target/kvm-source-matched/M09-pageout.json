@@ -1,0 +1,697 @@
+{
+  "status": "unaccepted",
+  "pid": 130399,
+  "vm": "nbd-left",
+  "advice": "MADV_PAGEOUT",
+  "advice_value": 21,
+  "flags": 0,
+  "syscall_provenance": "golang.org/x/sys v0.40.0 unix/zsysnum_linux_{arm64,amd64}.go and zerrors_linux.go",
+  "scope": "two COW marker pages in this run's nbd-left only; no pressure or system configuration changes",
+  "requested_bytes": 8192,
+  "samples": [
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ],
+    [
+      {
+        "present": false,
+        "swapped": true,
+        "pfn": 4194304,
+        "exclusive": false,
+        "file_or_shared_anon": false
+      },
+      {
+        "present": true,
+        "swapped": false,
+        "pfn": 2729607804,
+        "exclusive": true,
+        "file_or_shared_anon": false
+      }
+    ]
+  ],
+  "addresses": [
+    281473062236160,
+    281473062232064
+  ],
+  "before": [
+    {
+      "present": true,
+      "swapped": false,
+      "pfn": 2699766777,
+      "exclusive": true,
+      "file_or_shared_anon": false
+    },
+    {
+      "present": true,
+      "swapped": false,
+      "pfn": 2729607804,
+      "exclusive": true,
+      "file_or_shared_anon": false
+    }
+  ],
+  "syscall_number": 440,
+  "returned_bytes": 8192,
+  "reason": "both marker PTEs did not actually swap; syscall success is insufficient",
+  "oracles": {
+    "exported_marker_bytes": "passed",
+    "native_full_ram_hash": "passed",
+    "restored_guest_markers": "passed"
+  }
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "completed": [
+      463,
+      456,
+      452,
+      352
+    ],
+    "errors": 0,
+    "event": "status",
+    "rx_bytes": 497000,
+    "rx_packets": 355,
+    "stages": [
+      3,
+      1,
+      1,
+      2
+    ]
+  },
+  {
+    "completed": [
+      466,
+      459,
+      456,
+      355
+    ],
+    "errors": 0,
+    "event": "status",
+    "rx_bytes": 590800,
+    "rx_packets": 422,
+    "stages": [
+      2,
+      1,
+      1,
+      2
+    ]
+  },
+  {
+    "completed": [
+      470,
+      461,
+      459,
+      359
+    ],
+    "errors": 0,
+    "event": "status",
+    "rx_bytes": 1331400,
+    "rx_packets": 951,
+    "stages": [
+      1,
+      1,
+      1,
+      1
+    ]
+  }
+]

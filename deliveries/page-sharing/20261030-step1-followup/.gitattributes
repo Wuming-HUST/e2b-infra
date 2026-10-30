@@ -1,0 +1,7 @@
+* -text
+*.log -whitespace
+*.patch -whitespace
+*.csv -whitespace
+*.state binary
+*.snap binary
+discard-host-maps.txt -whitespace

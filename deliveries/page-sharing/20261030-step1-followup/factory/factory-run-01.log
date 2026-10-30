@@ -1,0 +1,17 @@
+2026/10/30 12:28:28 Using host network cidr cidr 10.11.0.0/16
+2026/10/30 12:28:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 12:28:28 Using vrt network cidr 10.12.0.0/16
+2026/10/30 12:28:28 Using network slot size: 32766
+=== RUN   TestSharingFactoryIntegration
+[LaunchDarkly] 2026/10/30 12:28:28 INFO: Starting LaunchDarkly client 7.13.0
+[LaunchDarkly] 2026/10/30 12:28:31 WARN: Unexpected error while sending events: Post "https://events.launchdarkly.com/diagnostic": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+[LaunchDarkly] 2026/10/30 12:28:31 WARN: Will retry posting events after 1.000000 second
+[LaunchDarkly] 2026/10/30 12:28:34 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+[LaunchDarkly] 2026/10/30 12:28:34 WARN: Received HTTP error 401 (invalid SDK key) for sending events - giving up permanently
+    sharing_integration_linux_test.go:208: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:208
+        	Error:      	Received unexpected error:
+        	            	failed to init new envd: failed to init envd: context deadline exceeded with cause: context deadline exceeded
+        	Test:       	TestSharingFactoryIntegration
+--- FAIL: TestSharingFactoryIntegration (480.46s)
+FAIL

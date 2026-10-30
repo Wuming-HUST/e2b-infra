@@ -1,0 +1,46 @@
+{
+  "evidence": "read-only local original-trace asset inventory",
+  "source": {
+    "path": "/Users/yangshengxin/Documents/Projects/04.Agentic/SWE-bench/swe-marathon/swe-marathon-logs/v1.1/biofabric-rust-rewrite/biofabric-rust-rewrite-897c0fc8-381/task-biofabric-rust-rewrite-897c__C5Hw78j/agent/trajectory.json",
+    "size_bytes": 19706437,
+    "sha256": "6345988d0e84ca897b54a875fa6b4a4fe879b620ad095d3a61bfde825490d9e2",
+    "steps": 1028,
+    "tool_calls": {
+      "Bash": 575,
+      "Read": 269,
+      "TaskCreate": 12,
+      "Write": 44,
+      "Edit": 104,
+      "TaskUpdate": 26,
+      "TaskOutput": 21,
+      "TaskStop": 1
+    }
+  },
+  "agent_directory_entries": {
+    "trajectory.json": 19706437,
+    "claude-code.txt": 102338369
+  },
+  "referenced_session_paths": [
+    "/logs/agent/sessions/projects/-app/6160c7d1-61f9-4524-82ab-90ee7be654a4/tool-results/bng4mw15j.txt",
+    "/logs/agent/sessions/projects/-app/6160c7d1-61f9-4524-82ab-90ee7be654a4/tool-results/byokxoyzf.txt",
+    "/logs/agent/sessions/projects/-app/memory",
+    "/logs/agent/sessions/projects/-app/memory/",
+    "/logs/agent/sessions/projects/-app/memory/MEMORY.md",
+    "/logs/agent/sessions/projects/-app/memory/biofabric-alignment-scoring.md",
+    "/logs/agent/sessions/projects/-app/memory/biofabric-cluster-layout.md",
+    "/logs/agent/sessions/projects/-app/memory/biofabric-controltop-deviation.md",
+    "/logs/agent/sessions/projects/-app/memory/biofabric-extract-submodel.md",
+    "/logs/agent/sessions/projects/-app/memory/biofabric-similarity-layout.md"
+  ],
+  "environment": {
+    "path": "/Users/yangshengxin/Documents/Projects/04.Agentic/SWE-bench/swe-marathon/tasks/biofabric-rust-rewrite/environment",
+    "dockerfile_sha256": "bc533ef588675811038ce3f6c02ddf4c021f20fe4ad53806d015c948e1194613",
+    "starter_Cargo_lock_exists": false,
+    "starter_public_goldens_files": [
+      "starter/tests/parity/goldens/.gitkeep"
+    ],
+    "hidden_files": 6,
+    "golden_generation_files": 3
+  },
+  "boundary": "Dockerfile and original trace exist locally; a fully built task guest, generated goldens/lockfile/cache and full original task/background-tool replay driver were not created or accepted by this Factory source-edit test."
+}

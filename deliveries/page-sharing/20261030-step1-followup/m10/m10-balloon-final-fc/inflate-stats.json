@@ -1,0 +1,50 @@
+[
+  {
+    "target_pages": 24576,
+    "actual_pages": 0,
+    "target_mib": 96,
+    "actual_mib": 0,
+    "swap_in": 0,
+    "swap_out": 0,
+    "major_faults": 0,
+    "minor_faults": 10619,
+    "free_memory": 103215104,
+    "total_memory": 167018496,
+    "available_memory": 106881024,
+    "disk_caches": 3182592,
+    "hugetlb_allocations": 0,
+    "hugetlb_failures": 0
+  },
+  {
+    "target_pages": 24576,
+    "actual_pages": 19200,
+    "target_mib": 96,
+    "actual_mib": 75,
+    "swap_in": 0,
+    "swap_out": 0,
+    "major_faults": 0,
+    "minor_faults": 10619,
+    "free_memory": 103215104,
+    "total_memory": 167018496,
+    "available_memory": 106881024,
+    "disk_caches": 3182592,
+    "hugetlb_allocations": 0,
+    "hugetlb_failures": 0
+  },
+  {
+    "target_pages": 24576,
+    "actual_pages": 24576,
+    "target_mib": 96,
+    "actual_mib": 96,
+    "swap_in": 0,
+    "swap_out": 0,
+    "major_faults": 0,
+    "minor_faults": 10619,
+    "free_memory": 103215104,
+    "total_memory": 167018496,
+    "available_memory": 106881024,
+    "disk_caches": 3182592,
+    "hugetlb_allocations": 0,
+    "hugetlb_failures": 0
+  }
+]

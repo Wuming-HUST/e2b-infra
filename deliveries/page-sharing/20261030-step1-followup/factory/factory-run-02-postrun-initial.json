@@ -1,0 +1,10 @@
+{
+  "evidence": "first independent postrun observer exited 1 on kernel pid assertion, after all own FC processes and slots already absent",
+  "observed_kernel_pids": {
+    "/dev/nbd0": "1387949",
+    "/dev/nbd1": null
+  },
+  "later_readonly_full_nbd_enumeration": "no sysfs nbd pid entries",
+  "no_manual_disconnect_or_kill": true,
+  "interpretation": "Kernel detach is asynchronous; a process exit alone is not proof of immediate kernel detach."
+}

@@ -1,0 +1,37 @@
+{
+  "samples": [
+    {
+      "ram_sha256": "f21739e9e1877019b7f51a3b2b18d112f5c79fdf8a7cb0f6437fac851775701b",
+      "disk_sha256": "6dd0b642044d1a64a0470f5c6b219316a9e93770709b616179b581174b60e6eb",
+      "sender_packets": 13663,
+      "monotonic": 40703.928833436
+    },
+    {
+      "ram_sha256": "f21739e9e1877019b7f51a3b2b18d112f5c79fdf8a7cb0f6437fac851775701b",
+      "disk_sha256": "6dd0b642044d1a64a0470f5c6b219316a9e93770709b616179b581174b60e6eb",
+      "sender_packets": 14089,
+      "monotonic": 40704.273989935
+    },
+    {
+      "ram_sha256": "f21739e9e1877019b7f51a3b2b18d112f5c79fdf8a7cb0f6437fac851775701b",
+      "disk_sha256": "6dd0b642044d1a64a0470f5c6b219316a9e93770709b616179b581174b60e6eb",
+      "sender_packets": 14514,
+      "monotonic": 40704.624641335
+    }
+  ],
+  "injected_during_freeze": 1682,
+  "disk_oracle": {
+    "valid_records_per_worker": [
+      64,
+      64,
+      64,
+      64
+    ],
+    "sha256": "6dd0b642044d1a64a0470f5c6b219316a9e93770709b616179b581174b60e6eb"
+  },
+  "state_sha256": "5d8c2ef8a7cc7b33da1b343a3de9e99b98293886897135a3f1764f75cb3fd3c0",
+  "external_equals_native": true,
+  "ram": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-final/B1-nbd-2-sample2.ram",
+  "state": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-final/B1-nbd-2.state",
+  "disk": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-final/B1-nbd-2.disk"
+}

@@ -1,0 +1,99 @@
+2026-10-30T12:37:32.404124401 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-30T12:37:32.404237801 [anonymous-instance:main] Listening on API socket ("/tmp/psg-4jd8wcvk/fc.sock").
+2026-10-30T12:37:32.408020735 [anonymous-instance:fc_api] API server started.
+2026-10-30T12:37:32.408088815 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/load" with body "{\"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/seed.state\", \"mem_backend\": {\"backend_type\": \"File\", \"backend_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/seed-sample2.ram\"}, \"enable_diff_snapshots\": false, \"resume_vm\": false}".
+2026-10-30T12:37:32.408304165 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:32.408434725 [anonymous-instance:main] Host CPU manufacturer ID: 72
+2026-10-30T12:37:32.408437415 [anonymous-instance:main] Snapshot CPU manufacturer ID: 72
+2026-10-30T12:37:32.415659844 [anonymous-instance:main] [DevPreview] Async file IO is in development preview.
+2026-10-30T12:37:32.420516017 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview - 'load snapshot' VMM action took 12198 us.
+2026-10-30T12:37:32.420547577 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:32.420563537 [anonymous-instance:fc_api] 'load snapshot' API request took 12479 us.
+2026-10-30T12:37:32.421876545 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T12:37:32.422087625 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T12:37:32.422100545 [anonymous-instance:main] kick net io.
+2026-10-30T12:37:32.422122465 [anonymous-instance:main] kick block io.
+2026-10-30T12:37:32.422351815 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:37:32.422609724 [anonymous-instance:fc_vcpu 1] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:37:32.422639474 [anonymous-instance:main] 'resume vm' VMM action took 556 us.
+2026-10-30T12:37:32.422657944 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:32.422663204 [anonymous-instance:fc_api] 'resume vm' API request took 788 us.
+PSG {"completed":[302,323,383,285],"errors":0,"event":"status","rx_bytes":144200,"rx_packets":103,"stages":[2,1,3,3]}
+PSG {"completed":[304,325,383,286],"errors":0,"event":"status","rx_bytes":148400,"rx_packets":106,"stages":[1,1,1,1]}
+PSG {"completed":[433,473,499,449],"errors":0,"event":"status","rx_bytes":253400,"rx_packets":181,"stages":[3,1,1,1]}
+2026-10-30T12:37:32.480565371 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T12:37:32.480836880 [anonymous-instance:main] 'pause vm' VMM action took 23 us.
+2026-10-30T12:37:32.481031360 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:32.481044220 [anonymous-instance:fc_api] 'pause vm' API request took 482 us.
+2026-10-30T12:37:32.481961639 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-0.state\"}".
+2026-10-30T12:37:32.482180908 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:32.489927817 [anonymous-instance:main] 'create full snapshot' VMM action took 7734 us.
+2026-10-30T12:37:32.490148727 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:32.490164477 [anonymous-instance:fc_api] 'create full snapshot' API request took 8205 us.
+2026-10-30T12:37:32.490830056 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T12:37:32.491273035 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T12:37:33.528202569 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-0.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-0.native.ram\"}".
+2026-10-30T12:37:33.528479409 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:33.598704507 [anonymous-instance:main] 'create full snapshot' VMM action took 70208 us.
+2026-10-30T12:37:33.598934917 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:33.598946087 [anonymous-instance:fc_api] 'create full snapshot' API request took 70757 us.
+2026-10-30T12:37:36.180202763 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T12:37:36.180473062 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T12:37:36.180492972 [anonymous-instance:main] kick net io.
+2026-10-30T12:37:36.181227671 [anonymous-instance:main] kick block io.
+2026-10-30T12:37:36.181501711 [anonymous-instance:fc_vcpu 1] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:37:36.181802660 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:37:36.182044710 [anonymous-instance:main] 'resume vm' VMM action took 1577 us.
+2026-10-30T12:37:36.182072390 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:36.182101670 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:36.182104610 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:36.182107220 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:36.182266050 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:36.182276690 [anonymous-instance:fc_api] 'resume vm' API request took 2078 us.
+PSG {"completed":[436,475,501,453],"errors":0,"event":"status","rx_bytes":436800,"rx_packets":312,"stages":[1,2,1,1]}
+2026-10-30T12:37:36.185289685 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T12:37:36.185486905 [anonymous-instance:main] 'pause vm' VMM action took 25 us.
+2026-10-30T12:37:36.185733865 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:36.185745235 [anonymous-instance:fc_api] 'pause vm' API request took 458 us.
+2026-10-30T12:37:36.186048374 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-1.state\"}".
+2026-10-30T12:37:36.186260754 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:36.191417917 [anonymous-instance:main] 'create full snapshot' VMM action took 5145 us.
+2026-10-30T12:37:36.191649306 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:36.191662726 [anonymous-instance:fc_api] 'create full snapshot' API request took 5616 us.
+2026-10-30T12:37:36.192398355 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T12:37:36.192857184 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T12:37:37.242881959 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-1.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-1.native.ram\"}".
+2026-10-30T12:37:37.243125019 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:37.317664912 [anonymous-instance:main] 'create full snapshot' VMM action took 74525 us.
+2026-10-30T12:37:37.317903651 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:37.317917001 [anonymous-instance:fc_api] 'create full snapshot' API request took 75040 us.
+2026-10-30T12:37:39.784246793 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Resumed\"}".
+2026-10-30T12:37:39.784497422 [anonymous-instance:main] Artificially kick devices.
+2026-10-30T12:37:39.784511102 [anonymous-instance:main] kick net io.
+2026-10-30T12:37:39.784606522 [anonymous-instance:main] kick block io.
+2026-10-30T12:37:39.784864292 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:37:39.785164151 [anonymous-instance:fc_vcpu 1] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-30T12:37:39.785412231 [anonymous-instance:main] 'resume vm' VMM action took 921 us.
+2026-10-30T12:37:39.785639421 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:39.785652191 [anonymous-instance:fc_api] 'resume vm' API request took 1411 us.
+2026-10-30T12:37:39.785864230 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:39.785955420 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:39.785964140 [anonymous-instance:main] Got a spurious notification from api thread
+2026-10-30T12:37:39.785966910 [anonymous-instance:main] Got a spurious notification from api thread
+PSG {"completed":[438,477,502,455],"errors":0,"event":"status","rx_bytes":1096200,"rx_packets":783,"stages":[1,1,1,1]}
+2026-10-30T12:37:39.789018666 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\": \"Paused\"}".
+2026-10-30T12:37:39.789622515 [anonymous-instance:main] 'pause vm' VMM action took 297 us.
+2026-10-30T12:37:39.789832945 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:39.789843795 [anonymous-instance:fc_api] 'pause vm' API request took 828 us.
+2026-10-30T12:37:39.790191194 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-2.state\"}".
+2026-10-30T12:37:39.790403874 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:39.795766146 [anonymous-instance:main] 'create full snapshot' VMM action took 5350 us.
+2026-10-30T12:37:39.795991226 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:39.796004056 [anonymous-instance:fc_api] 'create full snapshot' API request took 5816 us.
+2026-10-30T12:37:39.796688575 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-30T12:37:39.797128634 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.
+2026-10-30T12:37:40.801776005 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_type\": \"Full\", \"snapshot_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-2.native.state\", \"mem_file_path\": \"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/m11-source-matched/B0-file-2.native.ram\"}".
+2026-10-30T12:37:40.802020424 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-30T12:37:40.869848496 [anonymous-instance:main] 'create full snapshot' VMM action took 67812 us.
+2026-10-30T12:37:40.870090736 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-30T12:37:40.870104096 [anonymous-instance:fc_api] 'create full snapshot' API request took 68334 us.

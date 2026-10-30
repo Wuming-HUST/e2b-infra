@@ -1,0 +1,2617 @@
+From f70ca4950b331b28999af64470afcbd91a484fb2 Mon Sep 17 00:00:00 2001
+From: yangshengxin <yangshengxin@yangshengxindeMacBook-Air.local>
+Date: Fri, 30 Oct 2026 20:49:26 +0800
+Subject: [PATCH] test(sandbox): verify shared RAM checkpoints through real
+ Factory lifecycle
+
+---
+ .../internal/sandbox/fc/boot_source_test.go   |  47 ++
+ .../internal/sandbox/fc/client.go             |   3 +-
+ .../internal/sandbox/fc/process.go            |   6 +-
+ .../sandbox/sharing_integration_linux_test.go | 526 ++++++++++++++++++
+ scripts/memory-lab/page-sharing/README.md     |  72 +++
+ .../biofabric-source-edit-slice.json          | 239 ++++++++
+ .../memory-lab/page-sharing/check-software.sh |   2 +-
+ scripts/memory-lab/page-sharing/kvm_check.py  |   4 +-
+ scripts/memory-lab/page-sharing/m10.md        |  34 ++
+ scripts/memory-lab/page-sharing/m10_check.py  | 374 +++++++++++++
+ .../page-sharing/m10_cleanup_test.py          |  92 +++
+ scripts/memory-lab/page-sharing/m10_guest.go  | 234 ++++++++
+ scripts/memory-lab/page-sharing/m11.md        |  25 +
+ scripts/memory-lab/page-sharing/m11_check.py  | 223 ++++++++
+ scripts/memory-lab/page-sharing/m11_guest.go  | 222 ++++++++
+ scripts/memory-lab/page-sharing/m11_setup.sh  |  22 +
+ .../page-sharing/prepare_factory_fixture.sh   |  59 ++
+ .../prepare_factory_network_deps.sh           |  24 +
+ .../memory-lab/page-sharing/trace_slice.py    | 212 +++++++
+ 19 files changed, 2415 insertions(+), 5 deletions(-)
+ create mode 100644 packages/orchestrator/internal/sandbox/fc/boot_source_test.go
+ create mode 100644 packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go
+ create mode 100644 scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json
+ create mode 100644 scripts/memory-lab/page-sharing/m10.md
+ create mode 100644 scripts/memory-lab/page-sharing/m10_check.py
+ create mode 100644 scripts/memory-lab/page-sharing/m10_cleanup_test.py
+ create mode 100644 scripts/memory-lab/page-sharing/m10_guest.go
+ create mode 100644 scripts/memory-lab/page-sharing/m11.md
+ create mode 100644 scripts/memory-lab/page-sharing/m11_check.py
+ create mode 100644 scripts/memory-lab/page-sharing/m11_guest.go
+ create mode 100755 scripts/memory-lab/page-sharing/m11_setup.sh
+ create mode 100755 scripts/memory-lab/page-sharing/prepare_factory_fixture.sh
+ create mode 100755 scripts/memory-lab/page-sharing/prepare_factory_network_deps.sh
+ create mode 100644 scripts/memory-lab/page-sharing/trace_slice.py
+
+diff --git a/packages/orchestrator/internal/sandbox/fc/boot_source_test.go b/packages/orchestrator/internal/sandbox/fc/boot_source_test.go
+new file mode 100644
+index 000000000..38f95d91d
+--- /dev/null
++++ b/packages/orchestrator/internal/sandbox/fc/boot_source_test.go
+@@ -0,0 +1,47 @@
++package fc
++
++import (
++	"context"
++	"encoding/json"
++	"net"
++	"net/http"
++	"path/filepath"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestBootSourceOptionalInitrd(t *testing.T) {
++	for _, initrd := range []string{"", "/fixtures/guest initrd.gz"} {
++		t.Run(initrd, func(t *testing.T) {
++			path := filepath.Join(t.TempDir(), "fc.sock")
++			listener, err := net.Listen("unix", path)
++			require.NoError(t, err)
++			bodies := make(chan map[string]any, 1)
++			server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				if r.Method != http.MethodPut || r.URL.Path != "/boot-source" {
++					http.Error(w, "unexpected API", http.StatusNotFound)
++					return
++				}
++				var body map[string]any
++				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
++					http.Error(w, err.Error(), http.StatusBadRequest)
++					return
++				}
++				bodies <- body
++				w.WriteHeader(http.StatusNoContent)
++			})}
++			go server.Serve(listener)
++			defer server.Close()
++			require.NoError(t, newApiClient(path).setBootSource(context.Background(), "init=/sbin/init", "/fixtures/vmlinuz", initrd))
++			body := <-bodies
++			require.Equal(t, "/fixtures/vmlinuz", body["kernel_image_path"])
++			require.Equal(t, "init=/sbin/init", body["boot_args"])
++			if initrd == "" {
++				require.NotContains(t, body, "initrd_path")
++			} else {
++				require.Equal(t, initrd, body["initrd_path"])
++			}
++		})
++	}
++}
+diff --git a/packages/orchestrator/internal/sandbox/fc/client.go b/packages/orchestrator/internal/sandbox/fc/client.go
+index d07d256d9..db7fedf71 100644
+--- a/packages/orchestrator/internal/sandbox/fc/client.go
++++ b/packages/orchestrator/internal/sandbox/fc/client.go
+@@ -160,11 +160,12 @@ func (c *apiClient) setMmds(ctx context.Context, metadata *MmdsMetadata) error {
+ 	return nil
+ }
+ 
+-func (c *apiClient) setBootSource(ctx context.Context, kernelArgs string, kernelPath string) error {
++func (c *apiClient) setBootSource(ctx context.Context, kernelArgs string, kernelPath string, initrdPath string) error {
+ 	bootSourceConfig := operations.PutGuestBootSourceParams{
+ 		Context: ctx,
+ 		Body: &models.BootSource{
+ 			BootArgs:        kernelArgs,
++			InitrdPath:      initrdPath,
+ 			KernelImagePath: &kernelPath,
+ 		},
+ 	}
+diff --git a/packages/orchestrator/internal/sandbox/fc/process.go b/packages/orchestrator/internal/sandbox/fc/process.go
+index 50682b019..ceaa5cdef 100644
+--- a/packages/orchestrator/internal/sandbox/fc/process.go
++++ b/packages/orchestrator/internal/sandbox/fc/process.go
+@@ -36,6 +36,10 @@ import (
+ var tracer = otel.Tracer("github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc")
+ 
+ type ProcessOptions struct {
++	// InitrdPath is an optional host path for kernels whose rootfs drivers are modules.
++	// Empty keeps the existing kernel-only boot source.
++	InitrdPath string
++
+ 	// IoEngine is the io engine to use for the rootfs drive.
+ 	IoEngine *string
+ 
+@@ -335,7 +339,7 @@ func (p *Process) Create(
+ 	}
+ 
+ 	kernelArgs := args.String()
+-	err = p.client.setBootSource(ctx, kernelArgs, p.kernelPath)
++	err = p.client.setBootSource(ctx, kernelArgs, p.kernelPath, options.InitrdPath)
+ 	if err != nil {
+ 		fcStopErr := p.Stop(ctx)
+ 
+diff --git a/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go b/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go
+new file mode 100644
+index 000000000..71d65c95d
+--- /dev/null
++++ b/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go
+@@ -0,0 +1,526 @@
++//go:build linux
++
++package sandbox
++
++import (
++	"bytes"
++	"context"
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/hex"
++	"encoding/json"
++	"fmt"
++	"io"
++	"net"
++	"net/http"
++	"os"
++	"path/filepath"
++	"strconv"
++	"strings"
++	"sync"
++	"syscall"
++	"testing"
++	"time"
++
++	"connectrpc.com/connect"
++	"github.com/google/uuid"
++	"github.com/stretchr/testify/require"
++	"go.opentelemetry.io/otel/metric/noop"
++
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/cfg"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
++	blockmetrics "github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block/metrics"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/network"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
++	"github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata"
++	"github.com/e2b-dev/infra/packages/shared/pkg/consts"
++	featureflags "github.com/e2b-dev/infra/packages/shared/pkg/feature-flags"
++	sharedgrpc "github.com/e2b-dev/infra/packages/shared/pkg/grpc"
++	"github.com/e2b-dev/infra/packages/shared/pkg/grpc/envd/process"
++	"github.com/e2b-dev/infra/packages/shared/pkg/grpc/envd/process/processconnect"
++	"github.com/e2b-dev/infra/packages/shared/pkg/grpc/orchestrator"
++	"github.com/e2b-dev/infra/packages/shared/pkg/logger"
++	sbxlogger "github.com/e2b-dev/infra/packages/shared/pkg/logger/sandbox"
++	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
++	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
++	"github.com/e2b-dev/infra/packages/shared/pkg/stresstest"
++)
++
++// This is deliberately gated: it creates only its own VMs, NBD devices and
++// high-numbered network slots. It uses real envd and the production Factory,
++// Pause, upload and cache restore paths; it does not deploy platform services.
++func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
++	runDir := os.Getenv("E2B_SHARING_INTEGRATION_DIR")
++	if runDir == "" {
++		t.Skip("set E2B_SHARING_INTEGRATION_DIR and explicit fixture inputs on an isolated Linux KVM node")
++	}
++	require.Equal(t, 0, os.Geteuid(), "integration needs root for its own KVM/NBD/network resources")
++	require.True(t, filepath.IsAbs(runDir))
++	require.NoError(t, os.Mkdir(runDir, 0o700), "refuse to reuse an earlier run directory")
++	input := func(name string) string {
++		v := os.Getenv(name)
++		require.True(t, filepath.IsAbs(v), "%s must be an absolute input path", name)
++		_, err := os.Stat(v)
++		require.NoError(t, err, name)
++		return v
++	}
++	fcPath, kernel := input("E2B_SHARING_FC"), input("E2B_SHARING_KERNEL")
++	rootfsPath, initrd := input("E2B_SHARING_ROOTFS"), input("E2B_SHARING_INITRD")
++	fixturePath := input("E2B_SHARING_TRACE_FIXTURE")
++	init := os.Getenv("E2B_SHARING_INIT")
++	if init == "" {
++		init = "/sbin/sharing-init"
++	}
++	fixtureBytes, err := os.ReadFile(fixturePath)
++	require.NoError(t, err)
++	var fixture sharingTraceFixture
++	require.NoError(t, json.Unmarshal(fixtureBytes, &fixture))
++	require.False(t, fixture.CompleteOriginalTrace)
++	require.Equal(t, "6345988d0e84ca897b54a875fa6b4a4fe879b620ad095d3a61bfde825490d9e2", fixture.Source.SHA256)
++	require.Len(t, fixture.Tools, 5)
++	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
++	defer cancel()
++	// Allocate NBD with kernel IndexAny; do not enumerate or retarget devices
++	// that belong to another experiment on this shared node.
++	t.Setenv(stresstest.Env, "true")
++	sbxlogger.SetSandboxLoggerInternal(logger.NewNopLogger())
++	sbxlogger.SetSandboxLoggerExternal(logger.NewNopLogger())
++	flags := &featureflags.Client{}
++	netConfig, err := network.ParseConfig()
++	require.NoError(t, err)
++	baseIndex := 25000
++	if value := os.Getenv("E2B_SHARING_SLOT_BASE"); value != "" {
++		baseIndex, err = strconv.Atoi(value)
++		require.NoError(t, err)
++	}
++	store := &sharingNetworkStorage{config: netConfig, next: baseIndex, limit: baseIndex + 5}
++	networkPool := network.NewPool(2, 1, store, netConfig)
++	go networkPool.Populate(ctx)
++	devices, err := nbd.NewDevicePool()
++	require.NoError(t, err)
++	go devices.Populate(ctx)
++	t.Setenv("STORAGE_PROVIDER", "Local")
++	t.Setenv("LOCAL_TEMPLATE_STORAGE_BASE_PATH", filepath.Join(runDir, "objects"))
++	persistence, err := storage.GetTemplateStorageProvider(ctx, nil)
++	require.NoError(t, err)
++	var factories []*Factory
++	var caches []*template.Cache
++	t.Cleanup(func() {
++		cleanCtx := context.Background()
++		// Factory drain stops FC before releasing source leases and NBD devices.
++		for _, factory := range factories {
++			factory.BeginShutdown()
++		}
++		drained := true
++		for _, factory := range factories {
++			if err := factory.DrainMemoryBackings(cleanCtx); err != nil {
++				t.Errorf("factory drain failed; retain sources/pools for diagnosis: %v", err)
++				drained = false
++			}
++		}
++		if !drained {
++			return
++		}
++		for _, cache := range caches {
++			cache.Stop()
++		}
++		cancel()
++		if err := networkPool.Close(cleanCtx); err != nil {
++			t.Errorf("network cleanup: %v", err)
++		}
++		if err := devices.Close(cleanCtx); err != nil {
++			t.Errorf("NBD cleanup: %v", err)
++		}
++	})
++	configFor := func(mode string) cfg.Config {
++		base := filepath.Join(runDir, mode)
++		config := cfg.Config{BuilderConfig: cfg.BuilderConfig{
++			FirecrackerNetnsExecHelper: "disabled", FirecrackerVersionsDir: filepath.Join(base, "fc"),
++			HostKernelsDir: filepath.Join(base, "kernels"), SandboxDir: filepath.Join(runDir, "sandbox"),
++			OrchestratorBaseDir: base, DefaultCacheDir: filepath.Join(base, "build-cache"),
++			TemplatesDir: filepath.Join(base, "templates"), EnvdTimeout: 30 * time.Second,
++			FileMemoryBackendEnabled: true, FileMemoryBackendDir: filepath.Join(base, "file-memory"),
++			SharedNBDMemoryEnabled: mode == "B1", NetworkConfig: netConfig,
++			StorageConfig: storage.Config{SandboxCacheDir: filepath.Join(base, "rootfs-cow"),
++				SnapshotCacheDir: filepath.Join(base, "snapshot-cache"), TemplateCacheDir: filepath.Join(base, "template-cache")},
++		}}
++		for _, path := range []string{config.DefaultCacheDir, config.SandboxDir, config.StorageConfig.SandboxCacheDir,
++			config.StorageConfig.SnapshotCacheDir, config.StorageConfig.TemplateCacheDir,
++			filepath.Join(config.HostKernelsDir, "sharing"), filepath.Join(config.FirecrackerVersionsDir, "sharing")} {
++			require.NoError(t, os.MkdirAll(path, 0o700))
++		}
++		require.NoError(t, os.Symlink(fcPath, filepath.Join(config.FirecrackerVersionsDir, "sharing", fc.FirecrackerBinaryName)))
++		require.NoError(t, os.Symlink(kernel, filepath.Join(config.HostKernelsDir, "sharing", fc.SandboxKernelFile)))
++		return config
++	}
++	makeFactory := func(config cfg.Config) (*Factory, *template.Cache) {
++		metrics, err := blockmetrics.NewMetrics(noop.NewMeterProvider())
++		require.NoError(t, err)
++		cache, err := template.NewCache(config, flags, persistence, metrics)
++		require.NoError(t, err)
++		cache.Start(ctx)
++		caches = append(caches, cache)
++		factory := NewFactory(config.BuilderConfig, networkPool, devices, flags, nil, nil)
++		factories = append(factories, factory)
++		return factory, cache
++	}
++	b0Config := configFor("B0")
++	b0, b0Cache := makeFactory(b0Config)
++	b1, b1Cache := makeFactory(configFor("B1"))
++	config := Config{Vcpu: 1, RamMB: 256, HugePages: false, Network: &orchestrator.SandboxNetworkConfig{},
++		Envd:              EnvdMetadata{Vars: map[string]string{}, Version: "1.0.0"},
++		FirecrackerConfig: fc.Config{KernelVersion: "sharing", FirecrackerVersion: "sharing"}}
++	user, workdir, token := "root", "/workspace", "sharing-integration"
++	config.Envd.DefaultUser, config.Envd.DefaultWorkdir, config.Envd.AccessToken = &user, &workdir, &token
++	runtimeFor := func() RuntimeMetadata {
++		id := uuid.NewString()[:8]
++		return RuntimeMetadata{SandboxID: "sharing-" + id, ExecutionID: uuid.NewString(), TemplateID: "sharing-integration", TeamID: "sharing"}
++	}
++	// The initial disk is a read-only source. Only per-VM NBD COW files change.
++	baseID := uuid.New()
++	disk, err := block.NewLocal(rootfsPath, header.RootfsBlockSize, baseID)
++	require.NoError(t, err)
++	defer disk.Close()
++	baseDiskObject, err := persistence.OpenSeekable(ctx, storage.TemplateFiles{BuildID: baseID.String()}.StorageRootfsPath(), storage.RootFSObjectType)
++	require.NoError(t, err)
++	require.NoError(t, baseDiskObject.StoreFile(ctx, rootfsPath))
++	zeroRAM := filepath.Join(runDir, "cold-ram-size-only")
++	z, err := os.OpenFile(zeroRAM, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
++	require.NoError(t, err)
++	require.NoError(t, z.Truncate(int64(config.RamMB)*1024*1024))
++	require.NoError(t, z.Close())
++	ram, err := block.NewLocal(zeroRAM, 4096, baseID)
++	require.NoError(t, err)
++	defer ram.Close()
++	baseFiles, err := (storage.TemplateFiles{BuildID: baseID.String()}).CacheFiles(b0Config.StorageConfig)
++	require.NoError(t, err)
++	base := template.NewLocalTemplate(baseFiles, disk, ram)
++	serial, err := os.OpenFile(filepath.Join(runDir, "cold-serial.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
++	require.NoError(t, err)
++	defer serial.Close()
++	cold, err := b0.CreateSandbox(ctx, config, runtimeFor(), base, 10*time.Minute, "", fc.ProcessOptions{
++		InitScriptPath: init, InitrdPath: initrd, KernelLogs: true, Stdout: serial, Stderr: serial}, nil)
++	require.NoError(t, err)
++	sharingRecordPID(t, runDir, "cold", cold)
++	t.Log("cold VM created; waiting for real envd")
++	require.NoError(t, cold.WaitForEnvd(ctx, time.Minute))
++	sharingRunTools(t, ctx, cold, fixture.Tools[:2], runDir)
++	sharingCheckFiles(t, ctx, cold, fixture.Checkpoints["after_writes"].ExpectedFiles)
++	pauseUpload := func(name string, sbx *Sandbox) string {
++		t.Logf("%s: freeze, compare native RAM, production Pause and upload", name)
++		_, err := sharingExec(ctx, sbx, "sync")
++		require.NoError(t, err)
++		sbx.Checks.Stop()
++		require.NoError(t, sbx.process.Pause(ctx))
++		prefix := filepath.Join(runDir, name)
++		// External checkpoint freezes every device writer. The native full dump
++		// and production Pause export below observe this same frozen RAM state.
++		require.NoError(t, sbx.process.CreateSnapshot(ctx, prefix+"-freeze.snap"))
++		require.NoError(t, sharingFCRequest(ctx, sbx, "/snapshot/create", map[string]any{
++			"snapshot_type": "Full", "snapshot_path": prefix + "-native.snap", "mem_file_path": prefix + "-native.ram"}))
++		buildID := uuid.NewString()
++		meta := metadata.Template{Version: metadata.CurrentVersion, Template: metadata.TemplateMetadata{
++			BuildID: buildID, KernelVersion: "sharing", FirecrackerVersion: "sharing"}}
++		snapshot, err := sbx.Pause(ctx, meta)
++		require.NoError(t, err)
++		defer snapshot.Close(context.Background())
++		memPath, err := snapshot.MemfileDiff.CachePath()
++		require.NoError(t, err)
++		nativeHash, nativeSize := sharingHashFile(t, prefix+"-native.ram")
++		exportedHash, exportedSize := sharingHashFile(t, memPath)
++		require.Equal(t, nativeSize, exportedSize)
++		require.Equal(t, nativeHash, exportedHash, "native and production full_logical export differ")
++		require.NoError(t, snapshot.Upload(ctx, persistence, storage.TemplateFiles{BuildID: buildID}))
++		sharingReceipt(t, prefix+"-checkpoint.json", map[string]any{"build_id": buildID,
++			"ram_sha256": exportedHash, "ram_size": exportedSize, "native_same_frozen_state": true})
++		return buildID
++	}
++	aID := pauseUpload("A", cold)
++	resume := func(name, buildID string, factory *Factory, cache *template.Cache) *Sandbox {
++		t.Logf("%s: cache template and resume", name)
++		// A completed snapshot is used as a reusable template here. Passing
++		// isSnapshot=true deliberately disables the File backend in production.
++		tmpl, err := cache.GetTemplate(ctx, buildID, false, false)
++		require.NoError(t, err)
++		var fileRAM string
++		if factory == b0 {
++			require.Eventually(t, func() bool {
++				var ready bool
++				fileRAM, ready = template.FileMemoryBackendPath(tmpl)
++				return ready
++			}, 30*time.Second, 10*time.Millisecond, "B0 File RAM must materialize before restore")
++		}
++		now := time.Now()
++		sbx, err := factory.ResumeSandbox(ctx, tmpl, config, runtimeFor(), now, now.Add(10*time.Minute), nil)
++		require.NoError(t, err)
++		sharingRecordPID(t, runDir, name, sbx)
++		if factory == b0 {
++			_, leased := sbx.Resources.memory.(*leasedMemory)
++			require.False(t, leased, "B0 must not use shared NBD")
++			sharingCheckFileRAMMapping(t, runDir, name, sbx, fileRAM)
++		}
++		require.NoError(t, sbx.WaitForEnvd(ctx, time.Minute))
++		return sbx
++	}
++	// Both modes start from the exact same A disk/RAM/state and use the same
++	// parameters, tool payloads and byte oracles. No baseline consumes B1 markers.
++	for _, mode := range []string{"B0", "B1"} {
++		factory, cache := b0, b0Cache
++		if mode == "B1" {
++			factory, cache = b1, b1Cache
++		}
++		left := resume(mode+"-left", aID, factory, cache)
++		sharingCheckFiles(t, ctx, left, fixture.Checkpoints["after_writes"].ExpectedFiles)
++		var right *Sandbox
++		if mode == "B1" {
++			right = resume(mode+"-right", aID, factory, cache)
++			lm, ok := left.Resources.memory.(*leasedMemory)
++			require.True(t, ok, "B1 must actually hold a shared NBD lease")
++			rm, ok := right.Resources.memory.(*leasedMemory)
++			require.True(t, ok)
++			require.Equal(t, lm.lease.Path(), rm.lease.Path())
++			require.True(t, strings.HasPrefix(lm.lease.Path(), "/dev/nbd"))
++			sharingReceipt(t, filepath.Join(runDir, "B1-shared-backing.json"), map[string]any{
++				"left": lm.lease.Path(), "right": rm.lease.Path(), "same_backing": true})
++		}
++		sharingRunTools(t, ctx, left, fixture.Tools[2:], runDir)
++		sharingCheckFiles(t, ctx, left, fixture.Checkpoints["after_edits"].ExpectedFiles)
++		if right != nil {
++			sharingCheckFiles(t, ctx, right, fixture.Checkpoints["after_writes"].ExpectedFiles)
++		}
++		bID := pauseUpload(mode+"-B", left)
++		if right != nil {
++			// Pausing/stopping left releases one lease; right must remain usable.
++			sharingCheckFiles(t, ctx, right, fixture.Checkpoints["after_writes"].ExpectedFiles)
++		}
++		second := resume(mode+"-B-restored", bID, factory, cache)
++		sharingCheckFiles(t, ctx, second, fixture.Checkpoints["after_edits"].ExpectedFiles)
++		if right != nil {
++			oldRAM, oldOK := right.Resources.memory.(*leasedMemory)
++			newRAM, newOK := second.Resources.memory.(*leasedMemory)
++			require.True(t, oldOK && newOK)
++			require.NotEqual(t, oldRAM.lease.Path(), newRAM.lease.Path(), "distinct live template identities need distinct NBD backing")
++			sharingCheckFiles(t, ctx, right, fixture.Checkpoints["after_writes"].ExpectedFiles)
++			sharingReceipt(t, filepath.Join(runDir, "B1-distinct-backing.json"), map[string]any{
++				"A": oldRAM.lease.Path(), "B": newRAM.lease.Path(), "distinct_live_backings": true})
++			require.NoError(t, right.Close(ctx))
++			sharingCheckFiles(t, ctx, second, fixture.Checkpoints["after_edits"].ExpectedFiles)
++		}
++		cID := pauseUpload(mode+"-C", second)
++		third := resume(mode+"-C-restored", cID, factory, cache)
++		sharingCheckFiles(t, ctx, third, fixture.Checkpoints["after_edits"].ExpectedFiles)
++		require.NoError(t, third.Close(ctx))
++		sharingReceipt(t, filepath.Join(runDir, mode+"-result.json"), map[string]any{
++			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true,
++			"trace_derived_source_edit_fixture": true, "complete_original_trace": false})
++	}
++	sharingReceipt(t, filepath.Join(runDir, "result.json"), map[string]any{
++		"result": "passed", "factory_create_resume_pause_upload_cache_restore": true,
++		"B0_B1_same_source_edit_payloads": true, "complete_original_trace": false})
++}
++
++type sharingTraceFixture struct {
++	CompleteOriginalTrace bool `json:"complete_original_trace"`
++	Source                struct {
++		SHA256 string `json:"sha256"`
++	} `json:"source"`
++	Tools       []sharingTraceTool `json:"tools"`
++	Checkpoints map[string]struct {
++		ExpectedFiles []sharingExpectedFile `json:"expected_files"`
++	} `json:"checkpoints"`
++}
++type sharingTraceTool struct {
++	StepID int             `json:"step_id"`
++	CallID string          `json:"call_id"`
++	Name   string          `json:"name"`
++	Params json.RawMessage `json:"params"`
++}
++type sharingExpectedFile struct {
++	FilePath  string `json:"file_path"`
++	SHA256    string `json:"sha256"`
++	SizeBytes int    `json:"size_bytes"`
++}
++
++func sharingRunTools(t *testing.T, ctx context.Context, sbx *Sandbox, tools []sharingTraceTool, runDir string) {
++	t.Helper()
++	for _, tool := range tools {
++		// Real envd launches /bin/sh and Python only transports the preserved
++		// original tool arguments. Its exact-match Edit contract fails closed.
++		program := `import base64,json,pathlib,sys
++p=json.loads(base64.b64decode(sys.argv[1])); f=pathlib.Path(p["file_path"])
++if sys.argv[2]=="Write":
++ f.parent.mkdir(parents=True,exist_ok=True); f.write_bytes(p["content"].encode("utf-8"))
++else:
++ b=f.read_bytes(); old=p["old_string"].encode("utf-8"); new=p["new_string"].encode("utf-8")
++ assert old and b.count(old)>0 and (p.get("replace_all",False) or b.count(old)==1), "ambiguous original Edit"
++ f.write_bytes(b.replace(old,new) if p.get("replace_all",False) else b.replace(old,new,1))
++`
++		cmd := "python3 -c " + sharingQuote(program) + " " + sharingQuote(base64.StdEncoding.EncodeToString(tool.Params)) + " " + sharingQuote(tool.Name)
++		_, err := sharingExec(ctx, sbx, cmd)
++		require.NoError(t, err, "original step %d call %s", tool.StepID, tool.CallID)
++		sharingReceipt(t, filepath.Join(runDir, sbx.Runtime.SandboxID+"-step-"+strconv.Itoa(tool.StepID)+".json"), map[string]any{
++			"step_id": tool.StepID, "call_id": tool.CallID, "name": tool.Name, "end_event": true, "exit_code": 0})
++	}
++}
++
++func sharingExec(ctx context.Context, sbx *Sandbox, command string) ([]byte, error) {
++	hc := &http.Client{Transport: SandboxHttpTransport}
++	client := processconnect.NewProcessClient(hc, fmt.Sprintf("http://%s:%d", sbx.Slot.HostIPString(), consts.DefaultEnvdServerPort))
++	req := connect.NewRequest(&process.StartRequest{Process: &process.ProcessConfig{Cmd: "/bin/sh", Args: []string{"-c", command}}})
++	sharedgrpc.SetUserHeader(req.Header(), "root")
++	if sbx.Config.Envd.AccessToken != nil {
++		req.Header().Set("X-Access-Token", *sbx.Config.Envd.AccessToken)
++	}
++	stream, err := client.Start(ctx, req)
++	if err != nil {
++		return nil, err
++	}
++	defer stream.Close()
++	var stdout, stderr bytes.Buffer
++	for stream.Receive() {
++		event := stream.Msg().GetEvent()
++		if event == nil {
++			continue
++		}
++		switch e := event.GetEvent().(type) {
++		case *process.ProcessEvent_Data:
++			if e.Data != nil {
++				stdout.Write(e.Data.GetStdout())
++				stderr.Write(e.Data.GetStderr())
++			}
++		case *process.ProcessEvent_End:
++			if e.End == nil || !e.End.GetExited() || e.End.GetExitCode() != 0 {
++				return nil, fmt.Errorf("envd nonzero or incomplete End: %v stderr=%s", e.End, stderr.String())
++			}
++			return stdout.Bytes(), nil
++		}
++	}
++	return nil, fmt.Errorf("envd stream ended without successful End: %v stderr=%s", stream.Err(), stderr.String())
++}
++
++func sharingCheckFiles(t *testing.T, ctx context.Context, sbx *Sandbox, files []sharingExpectedFile) {
++	t.Helper()
++	require.Len(t, files, 2)
++	for _, expected := range files {
++		encoded, err := sharingExec(ctx, sbx, "base64 "+sharingQuote(expected.FilePath))
++		require.NoError(t, err)
++		data, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(string(encoded)), ""))
++		require.NoError(t, err)
++		require.Len(t, data, expected.SizeBytes)
++		digest := sha256.Sum256(data)
++		require.Equal(t, expected.SHA256, hex.EncodeToString(digest[:]), expected.FilePath)
++	}
++}
++
++func sharingFCRequest(ctx context.Context, sbx *Sandbox, path string, body any) error {
++	data, err := json.Marshal(body)
++	if err != nil {
++		return err
++	}
++	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
++		return (&net.Dialer{}).DialContext(ctx, "unix", sbx.files.SandboxFirecrackerSocketPath())
++	}}
++	defer transport.CloseIdleConnections()
++	req, err := http.NewRequestWithContext(ctx, http.MethodPut, "http://localhost"+path, bytes.NewReader(data))
++	if err != nil {
++		return err
++	}
++	req.Header.Set("Content-Type", "application/json")
++	res, err := (&http.Client{Transport: transport}).Do(req)
++	if err != nil {
++		return err
++	}
++	defer res.Body.Close()
++	payload, err := io.ReadAll(res.Body)
++	if err != nil {
++		return err
++	}
++	if res.StatusCode != http.StatusNoContent {
++		return fmt.Errorf("FC %s status=%d body=%s", path, res.StatusCode, payload)
++	}
++	return nil
++}
++
++func sharingHashFile(t *testing.T, path string) (string, int64) {
++	t.Helper()
++	f, err := os.Open(path)
++	require.NoError(t, err)
++	defer f.Close()
++	h := sha256.New()
++	n, err := io.Copy(h, f)
++	require.NoError(t, err)
++	return hex.EncodeToString(h.Sum(nil)), n
++}
++func sharingQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'" }
++func sharingReceipt(t *testing.T, path string, value any) {
++	t.Helper()
++	data, err := json.MarshalIndent(value, "", "  ")
++	require.NoError(t, err)
++	require.NoError(t, os.WriteFile(path, append(data, '\n'), 0o600))
++}
++func sharingRecordPID(t *testing.T, dir, name string, sbx *Sandbox) {
++	t.Helper()
++	pid, err := sbx.process.Pid()
++	require.NoError(t, err)
++	sharingReceipt(t, filepath.Join(dir, name+"-pid.json"), map[string]any{"pid": pid, "sandbox_id": sbx.Runtime.SandboxID,
++		"namespace": sbx.Slot.NamespaceID(), "api_socket": sbx.files.SandboxFirecrackerSocketPath()})
++}
++
++func sharingCheckFileRAMMapping(t *testing.T, dir, name string, sbx *Sandbox, path string) {
++	t.Helper()
++	info, err := os.Stat(path)
++	require.NoError(t, err)
++	require.True(t, info.Mode().IsRegular(), "B0 RAM backing must be a regular file")
++	stat, ok := info.Sys().(*syscall.Stat_t)
++	require.True(t, ok)
++	pid, err := sbx.process.Pid()
++	require.NoError(t, err)
++	maps, err := os.ReadFile(fmt.Sprintf("/proc/%d/maps", pid))
++	require.NoError(t, err)
++	require.NoError(t, os.WriteFile(filepath.Join(dir, name+"-ram-maps.log"), maps, 0o600))
++	var matched string
++	for _, line := range strings.Split(string(maps), "\n") {
++		fields := strings.Fields(line)
++		if len(fields) < 6 || fields[1] != "rw-p" || strings.Join(fields[5:], " ") != path {
++			continue
++		}
++		inode, err := strconv.ParseUint(fields[4], 10, 64)
++		require.NoError(t, err)
++		if inode == stat.Ino {
++			matched = line
++			break
++		}
++	}
++	require.NotEmpty(t, matched, "B0 FC must actually map the expected File RAM inode MAP_PRIVATE")
++	sharingReceipt(t, filepath.Join(dir, name+"-file-backing.json"), map[string]any{
++		"path": path, "regular_file": true, "inode": stat.Ino, "actual_proc_mapping": matched})
++}
++
++type sharingNetworkStorage struct {
++	mu          sync.Mutex
++	config      network.Config
++	next, limit int
++}
++
++func (s *sharingNetworkStorage) Acquire(ctx context.Context) (*network.Slot, error) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	if err := ctx.Err(); err != nil {
++		return nil, err
++	}
++	if s.next >= s.limit {
++		<-ctx.Done()
++		return nil, ctx.Err()
++	}
++	i := s.next
++	s.next++
++	for _, path := range []string{fmt.Sprintf("/var/run/netns/ns-%d", i), fmt.Sprintf("/sys/class/net/veth-%d", i)} {
++		if _, err := os.Lstat(path); !os.IsNotExist(err) {
++			return nil, fmt.Errorf("refuse occupied network slot %d: %s", i, path)
++		}
++	}
++	return network.NewSlot(strconv.Itoa(i), i, s.config)
++}
++func (*sharingNetworkStorage) Release(*network.Slot) error { return nil }
+diff --git a/scripts/memory-lab/page-sharing/README.md b/scripts/memory-lab/page-sharing/README.md
+index b3748089a..5fcca9072 100644
+--- a/scripts/memory-lab/page-sharing/README.md
++++ b/scripts/memory-lab/page-sharing/README.md
+@@ -76,3 +76,75 @@ Target KVM results remain separate from Go package tests and orchestrator E2E
+ acceptance. These fixtures do not test guest block/network completion races,
+ FPR/balloon, memory pressure, remote object storage, or application traces.
+ Real swap is tested only when the optional M09 receipt says `mechanism_only`.
++
++The additional `m10_check.py` and `m11_check.py` runners cover actual
++balloon/FPR discard and concurrent Async block/TAP receive respectively.
++Their fixtures, preconditions and independent oracles are described in
++`m10.md` and `m11.md`. They remain separate from application acceptance.
++
++## Real Factory integration
++
++`TestSharingFactoryIntegration` in the sandbox package runs real envd through
++the production Factory, Pause, local-storage upload, template cache and restore
++paths. It is opt-in, needs root/KVM/NBD/network privileges, and uses only new
++run artifacts and its own network slots. Set `E2B_UNRESTRICTED_STRESS=true` to
++select kernel-allocated NBD indices (the test also sets it explicitly).
++
++Inputs are absolute paths in `E2B_SHARING_FC`, `E2B_SHARING_KERNEL`,
++`E2B_SHARING_ROOTFS`, `E2B_SHARING_INITRD` and `E2B_SHARING_TRACE_FIXTURE`.
++`E2B_SHARING_INTEGRATION_DIR` must name a new directory. The optional guest init
++path is `E2B_SHARING_INIT` (default `/sbin/sharing-init`). The guest needs real
++envd, `/bin/sh`, Python 3 and base64, plus the matching block/network drivers.
++The test does not install applications or start platform services.
++
++`prepare_factory_fixture.sh EXISTING_TEMPLATE NEW_DIRECTORY` copies the
++existing ARM64 envd image and creates the init script/initrd in that directory.
++It targets the recorded Debian `6.1.0-50-arm64` module layout; it is not a
++general guest image builder. `prepare_factory_network_deps.sh NEW_DIRECTORY`
++can unpack a SHA-pinned openEuler ARM64 iptables RPM into a task directory;
++prepend the printed directory to the test's PATH. System packages stay intact.
++
++```sh
++# Build once with the Linux target toolchain and dependency caches.
++cd packages/orchestrator
++go test -c -o /absolute/path/to/sharing-sandbox.test ./internal/sandbox
++# Set the explicit inputs above, then run in a fresh directory.
++sudo -n --preserve-env=PATH,E2B_SHARING_FC,E2B_SHARING_KERNEL,E2B_SHARING_ROOTFS,E2B_SHARING_INITRD,E2B_SHARING_TRACE_FIXTURE,E2B_SHARING_INTEGRATION_DIR \
++  /absolute/path/to/sharing-sandbox.test \
++  -test.run '^TestSharingFactoryIntegration$' -test.v -test.timeout 10m
++```
++
++Both B0 regular-file RAM and B1 shared-NBD RAM restore the same initial
++checkpoint and compare the original source-edit fixture's complete file hashes.
++Each mode executes A→B→C through upload and cache restore. Same-freeze native
++full RAM dumps provide an independent oracle for the actual Pause export.
++B1 also checks two concurrent holders and writable rootfs isolation. These five
++original tools do not establish complete original trace compatibility.
++
++## Original source-edit slice
++
++`biofabric-source-edit-slice.json` preserves the complete original arguments of
++five BioFabric trace tools: Write steps 50/55 and Edit steps 60/63/65. The source
++SHA, original call IDs, excluded steps, and full-file SHA/size oracles are stored
++in the fixture. This is a trace-derived file editing check; it does not execute
++the excluded compilation commands or establish complete original trace parity.
++
++Run the two Write calls before the checkpoint, verify `after_writes`, pause and
++restore, verify the same files again, and then run the three Edit calls and
++verify `after_edits`. Preserve absolute paths and UTF-8 bytes. An Edit without
++`replace_all` must match exactly once. The included original Read parameters
++are optional validation probes; their earlier historical observations describe
++different file contents and are not the checkpoint oracle.
++
++```sh
++python3 scripts/memory-lab/page-sharing/trace_slice.py verify \
++  --fixture scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json
++```
++
++This checks fixture and oracle consistency. Add `--source /path/to/agent/trajectory.json`
++to verify exact extraction against the pinned original trace. To check actual
++downloaded guest files, add `--phase after_writes` or `--phase after_edits` and
++`--directory /path/to/downloaded-root`; files must retain their paths below
++that directory. The `expected` subcommand writes the independently computed
++phase files into a new directory. `extract --source ... --output ...` creates
++a fresh fixture and refuses to overwrite an existing file.
+diff --git a/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json b/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json
+new file mode 100644
+index 000000000..e97fd47ce
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json
+@@ -0,0 +1,239 @@
++{
++  "schema_version": 1,
++  "fixture_id": "biofabric-381-source-edit-50-65-v1",
++  "evidence_type": "trace_derived_source_edit_fixture",
++  "complete_original_trace": false,
++  "source": {
++    "trace_id": "biofabric-rust-rewrite-897c0fc8-381",
++    "normalized_file": "agent/trajectory.json",
++    "sha256": "6345988d0e84ca897b54a875fa6b4a4fe879b620ad095d3a61bfde825490d9e2",
++    "size_bytes": 19706437,
++    "original_steps": 1028,
++    "original_tool_calls": 1052
++  },
++  "scope": {
++    "preserved": "Exact original call IDs, step IDs and full tool arguments; UTF-8 file bytes and absolute paths.",
++    "precondition": "Destination parent directories exist; both files are completely established by the original Write calls.",
++    "checkpoint": "Execute Write steps 50 and 55; pause, publish and restore; execute Edit steps 60, 63 and 65.",
++    "oracle": "Independent byte application of the original arguments; compare both full files before checkpoint, after restore and after edits.",
++    "not_tested": "Compilation, Rust/Java dependencies, original task outcome, agent task management, original timing, or complete trace compatibility."
++  },
++  "tools": [
++    {
++      "step_id": 50,
++      "call_id": "call_4ddcd8df06ba4b95bc244c91",
++      "name": "Write",
++      "phase": "before_checkpoint",
++      "params": {
++        "file_path": "/app/crates/core/src/model/link.rs",
++        "content": "//! Link (edge) representation.\n\nuse super::NodeId;\nuse serde::{Deserialize, Serialize};\nuse std::fmt;\n\n/// Normalize a key the way BioFabric does: uppercase, spaces removed.\n/// Mirrors `org.systemsbiology.biofabric.util.DataUtil.normKey`.\npub(crate) fn norm_key(key: &str) -> String {\n    let mut out = String::with_capacity(key.len());\n    for c in key.chars() {\n        if c == ' ' {\n            continue;\n        }\n        for u in c.to_uppercase() {\n            out.push(u);\n        }\n    }\n    out\n}\n\n/// A link (edge) between two nodes.\n#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]\npub struct Link {\n    pub source: NodeId,\n    pub target: NodeId,\n    pub relation: String,\n    pub directed: Option<bool>,\n    pub is_shadow: bool,\n}\n\nimpl Link {\n    /// Create a new link.\n    pub fn new(\n        source: impl Into<NodeId>,\n        target: impl Into<NodeId>,\n        relation: impl Into<String>,\n    ) -> Self {\n        Self {\n            source: source.into(),\n            target: target.into(),\n            relation: relation.into(),\n            directed: None,\n            is_shadow: false,\n        }\n    }\n\n    /// Create a new link with shadow status.\n    pub fn with_shadow(\n        source: impl Into<NodeId>,\n        target: impl Into<NodeId>,\n        relation: impl Into<String>,\n        is_shadow: bool,\n    ) -> Self {\n        Self {\n            source: source.into(),\n            target: target.into(),\n            relation: relation.into(),\n            directed: None,\n            is_shadow,\n        }\n    }\n\n    /// Check if this is a self-loop (feedback link).\n    pub fn is_feedback(&self) -> bool {\n        self.source == self.target\n    }\n\n    /// Create a flipped version of this link (swap source and target).\n    ///\n    /// # Panics\n    /// Panics if this is a feedback link (self-loop).\n    pub fn flipped(&self) -> Self {\n        if self.is_feedback() {\n            panic!(\"Cannot flip a feedback link\");\n        }\n        Self {\n            source: self.target.clone(),\n            target: self.source.clone(),\n            relation: self.relation.clone(),\n            directed: self.directed,\n            is_shadow: self.is_shadow,\n        }\n    }\n\n    /// Create the shadow version of this link.\n    ///\n    /// Returns `None` for feedback links (self-loops), which have no\n    /// meaningful shadow. The shadow keeps the same source and target\n    /// as the original (only the shadow flag changes), matching the\n    /// Java `buildLinkAndShadow` behaviour.\n    pub fn to_shadow(&self) -> Option<Self> {\n        if self.is_feedback() {\n            return None;\n        }\n        Some(Self {\n            source: self.source.clone(),\n            target: self.target.clone(),\n            relation: self.relation.clone(),\n            directed: self.directed,\n            is_shadow: true,\n        })\n    }\n\n    /// Case-insensitive (normalized) relation comparison.\n    pub fn relation_eq(&self, other: &Link) -> bool {\n        norm_key(&self.relation) == norm_key(&other.relation)\n    }\n\n    /// Check if this link and another form a shadow pair.\n    ///\n    /// A shadow pair consists of a regular link and its shadow copy:\n    /// same source, same target, same relation, opposite shadow flag.\n    pub fn is_shadow_pair(&self, other: &Link) -> bool {\n        if self == other {\n            return false;\n        }\n        if self.source != other.source {\n            return false;\n        }\n        if self.target != other.target {\n            return false;\n        }\n        if !self.relation_eq(other) {\n            return false;\n        }\n        // directed compatibility:\n        match (self.directed, other.directed) {\n            (None, None) => {}\n            (Some(a), Some(b)) => {\n                if a != b {\n                    return false;\n                }\n            }\n            _ => return false,\n        }\n        if self.is_shadow == other.is_shadow {\n            return false;\n        }\n        true\n    }\n\n    /// Check if this link is synonymous with another.\n    ///\n    /// Two links are synonymous if they represent the same undirected edge,\n    /// possibly with source and target swapped. Directed links are never\n    /// synonymous with anything but themselves.\n    pub fn is_synonymous(&self, other: &Link) -> bool {\n        if self == other {\n            return true;\n        }\n        // Directed links are never synonymous:\n        if self.directed == Some(true) || other.directed == Some(true) {\n            return false;\n        }\n        if !self.relation_eq(other) {\n            return false;\n        }\n        if self.is_shadow != other.is_shadow {\n            return false;\n        }\n        if self.source != other.target {\n            return false;\n        }\n        self.target == other.source\n    }\n}\n\nimpl fmt::Display for Link {\n    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {\n        // Mirrors FabricLink.toEOAString:\n        //   \"<src> <shdw>(<rel>) <trg>\"  (shadow)\n        //   \"<src> (<rel>) <trg>\"        (regular)\n        write!(self.source, f)?;\n        if self.is_shadow {\n            write!(f, \" shdw\")?;\n        } else {\n            write!(f, \" \")?;\n        }\n        write!(f, \"({}) \", self.relation)?;\n        write!(self.target, f)\n    }\n}\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n"
++      }
++    },
++    {
++      "step_id": 55,
++      "call_id": "call_13c2a9e63d394ed8b1656659",
++      "name": "Write",
++      "phase": "before_checkpoint",
++      "params": {
++        "file_path": "/app/crates/core/src/model/network.rs",
++        "content": "//! Network (graph) container.\n\nuse super::link::norm_key;\nuse super::{Link, Node, NodeId};\nuse indexmap::{IndexMap, IndexSet};\nuse serde::{Deserialize, Serialize};\nuse std::collections::HashSet;\n\n/// Adjacency index for node-to-link lookup.\n#[derive(Debug, Clone, Default)]\npub struct AdjacencyIndex {\n    pub by_node: IndexMap<NodeId, Vec<usize>>,\n    pub is_built: bool,\n}\n\n/// Network metadata.\n#[derive(Debug, Clone, Default, Serialize, Deserialize)]\npub struct NetworkMetadata {\n    pub is_directed: bool,\n    pub is_bipartite: Option<bool>,\n    pub is_dag: Option<bool>,\n    pub name: Option<String>,\n    pub description: Option<String>,\n}\n\n/// Network (graph) containing nodes and links.\n#[derive(Debug, Clone, Default, Serialize, Deserialize)]\npub struct Network {\n    #[serde(with = \"indexmap::map::serde_seq\")]\n    nodes: IndexMap<NodeId, Node>,\n    links: Vec<Link>,\n    lone_nodes: IndexSet<NodeId>,\n    #[serde(default)]\n    pub metadata: NetworkMetadata,\n    #[serde(skip)]\n    adjacency: AdjacencyIndex,\n}\n\nimpl Network {\n    /// Create a new empty network.\n    pub fn new() -> Self {\n        Self::default()\n    }\n\n    /// Create a network with pre-allocated capacity.\n    pub fn with_capacity(node_capacity: usize, link_capacity: usize) -> Self {\n        Self {\n            nodes: IndexMap::with_capacity(node_capacity),\n            links: Vec::with_capacity(link_capacity),\n            lone_nodes: IndexSet::with_capacity(node_capacity),\n            metadata: NetworkMetadata::default(),\n            adjacency: AdjacencyIndex::default(),\n        }\n    }\n\n    // =========================================================================\n    // Node operations\n    // =========================================================================\n\n    /// Add a node to the network.\n    pub fn add_node(&mut self, node: Node) {\n        self.nodes.entry(node.id.clone()).or_insert(node);\n        self.invalidate_adjacency();\n    }\n\n    /// Add a node by ID, creating a Node if it doesn't exist.\n    pub fn add_node_by_id(&mut self, id: impl Into<NodeId>) -> &Node {\n        let id = id.into();\n        self.nodes.entry(id.clone()).or_insert_with(|| Node::new(id));\n        self.invalidate_adjacency();\n        // Borrow checker workaround:\n        self.nodes.get(&id).unwrap()\n    }\n\n    /// Get a node by its ID.\n    pub fn get_node(&self, id: &NodeId) -> Option<&Node> {\n        self.nodes.get(id)\n    }\n\n    /// Check if a node exists in the network.\n    pub fn contains_node(&self, id: &NodeId) -> bool {\n        self.nodes.contains_key(id)\n    }\n\n    /// Get the number of nodes.\n    pub fn node_count(&self) -> usize {\n        self.nodes.len()\n    }\n\n    /// Iterate over all nodes.\n    pub fn nodes(&self) -> impl Iterator<Item = &Node> {\n        self.nodes.values()\n    }\n\n    /// Iterate over all node IDs.\n    pub fn node_ids(&self) -> impl Iterator<Item = &NodeId> {\n        self.nodes.keys()\n    }\n\n    /// Add a lone node (a node with no edges).\n    pub fn add_lone_node(&mut self, id: impl Into<NodeId>) {\n        let id = id.into();\n        self.nodes.entry(id.clone()).or_insert_with(|| Node::new(id.clone()));\n        self.lone_nodes.insert(id);\n        self.invalidate_adjacency();\n    }\n\n    /// Get lone nodes (nodes with no edges).\n    pub fn lone_nodes(&self) -> &IndexSet<NodeId> {\n        &self.lone_nodes\n    }\n\n    // =========================================================================\n    // Link operations\n    // =========================================================================\n\n    /// Add a link to the network.\n    pub fn add_link(&mut self, link: Link) {\n        // Ensure both endpoints exist as nodes:\n        self.nodes\n            .entry(link.source.clone())\n            .or_insert_with(|| Node::new(link.source.clone()));\n        self.nodes\n            .entry(link.target.clone())\n            .or_insert_with(|| Node::new(link.target.clone()));\n        self.links.push(link);\n        self.invalidate_adjacency();\n    }\n\n    /// Get the number of links.\n    pub fn link_count(&self) -> usize {\n        self.links.len()\n    }\n\n    /// Iterate over all links.\n    pub fn links(&self) -> impl Iterator<Item = &Link> {\n        self.links.iter()\n    }\n\n    /// Get links as a slice.\n    pub fn links_slice(&self) -> &[Link] {\n        &self.links\n    }\n\n    /// Get mutable access to links.\n    pub fn links_mut(&mut self) -> &mut Vec<Link> {\n        &mut self.links\n    }\n\n    // =========================================================================\n    // Query operations\n    // =========================================================================\n\n    /// Get all links incident to a node (as source or target).\n    pub fn links_for_node(&self, node_id: &NodeId) -> Vec<&Link> {\n        self.links\n            .iter()\n            .filter(|l| &l.source == node_id || &l.target == node_id)\n            .collect()\n    }\n\n    /// Get the degree of a node (number of incident links).\n    pub fn degree(&self, node_id: &NodeId) -> usize {\n        self.links\n            .iter()\n            .filter(|l| &l.source == node_id || &l.target == node_id)\n            .count()\n    }\n\n    /// Get neighbors of a node.\n    pub fn neighbors(&self, node_id: &NodeId) -> HashSet<&NodeId> {\n        let mut out: HashSet<&NodeId> = HashSet::new();\n        for l in &self.links {\n            if &l.source == node_id {\n                out.insert(&l.target);\n            }\n            if &l.target == node_id {\n                out.insert(&l.source);\n            }\n        }\n        out\n    }\n\n    /// Get all unique relation types in the network.\n    pub fn relation_types(&self) -> HashSet<&str> {\n        self.links.iter().map(|l| l.relation.as_str()).collect()\n    }\n\n    /// Get a node mutably by ID.\n    pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {\n        self.nodes.get_mut(id)\n    }\n\n    /// Set an attribute on a node (convenience wrapper).\n    pub fn set_node_attribute(\n        &mut self,\n        node_id: &NodeId,\n        key: impl Into<String>,\n        value: impl Into<String>,\n    ) -> bool {\n        if let Some(node) = self.nodes.get_mut(node_id) {\n            node.set_attribute(key, value);\n            true\n        } else {\n            false\n        }\n    }\n\n    // =========================================================================\n    // Shadow link generation\n    // =========================================================================\n\n    /// Generate shadow links for all non-feedback, non-shadow links.\n    ///\n    /// Returns the number of shadow links added.\n    pub fn generate_shadows(&mut self) -> usize {\n        let new_shadows: Vec<Link> = self\n            .links\n            .iter()\n            .filter(|l| !l.is_shadow && !l.is_feedback())\n            .filter_map(|l| l.to_shadow())\n            .filter(|s| !self.links.iter().any(|e| e == s))\n            .collect();\n        let count = new_shadows.len();\n        for s in new_shadows {\n            self.add_link(s);\n        }\n        count\n    }\n\n    /// Check whether shadow links have already been generated.\n    pub fn has_shadows(&self) -> bool {\n        self.links.iter().any(|l| l.is_shadow)\n    }\n\n    /// Count of shadow links in the network.\n    pub fn shadow_count(&self) -> usize {\n        self.links.iter().filter(|l| l.is_shadow).count()\n    }\n\n    /// Count of non-shadow links.\n    pub fn regular_link_count(&self) -> usize {\n        self.links.iter().filter(|l| !l.is_shadow).count()\n    }\n\n    // =========================================================================\n    // Adjacency index\n    // =========================================================================\n\n    fn invalidate_adjacency(&mut self) {\n        self.adjacency.is_built = false;\n    }\n\n    /// Access the adjacency index if it has been built.\n    pub fn adjacency_index(&self) -> Option<&IndexMap<NodeId, Vec<usize>>> {\n        if self.adjacency.is_built {\n            Some(&self.adjacency.by_node)\n        } else {\n            None\n        }\n    }\n\n    /// Rebuild the adjacency index.\n    pub fn rebuild_adjacency_index(&mut self) {\n        let mut by_node: IndexMap<NodeId, Vec<usize>> = IndexMap::new();\n        for (i, l) in self.links.iter().enumerate() {\n            by_node.entry(l.source.clone()).or_default().push(i);\n            by_node.entry(l.target.clone()).or_default().push(i);\n        }\n        self.adjacency = AdjacencyIndex {\n            by_node,\n            is_built: true,\n        };\n    }\n\n    /// Whether the adjacency index is built and valid.\n    pub fn has_adjacency_index(&self) -> bool {\n        self.adjacency.is_built\n    }\n\n    // =========================================================================\n    // Metadata detection\n    // =========================================================================\n\n    /// Detect whether the network contains directed edges and update metadata.\n    pub fn detect_directed(&mut self) {\n        self.metadata.is_directed = self.links.iter().any(|l| l.directed == Some(true));\n    }\n\n    /// Detect whether the network is bipartite (two-colorable) and update metadata.\n    pub fn detect_bipartite(&mut self) -> bool {\n        // Build undirected adjacency over non-shadow links:\n        let mut adj: IndexMap<NodeId, Vec<NodeId>> = IndexMap::new();\n        for l in &self.links {\n            if l.is_shadow {\n                continue;\n            }\n            adj.entry(l.source.clone()).or_default().push(l.target.clone());\n            adj.entry(l.target.clone()).or_default().push(l.source.clone());\n        }\n        let mut color: IndexMap<NodeId, i32> = IndexMap::new();\n        let is_bip = match self.two_color(&adj, &mut color) {\n            Ok(()) => true,\n            Err(()) => false,\n        };\n        self.metadata.is_bipartite = Some(is_bip);\n        is_bip\n    }\n\n    fn two_color(\n        &self,\n        adj: &IndexMap<NodeId, Vec<NodeId>>,\n        color: &mut IndexMap<NodeId, i32>,\n    ) -> Result<(), ()> {\n        // Visit nodes in network order:\n        for n in self.nodes.keys() {\n            if color.contains_key(n) {\n                continue;\n            }\n            color.insert(n.clone(), 0);\n            let mut stack = vec![n.clone()];\n            while let Some(u) = stack.pop() {\n                let cu = *color.get(&u).unwrap();\n                if let Some(nbrs) = adj.get(&u) {\n                    for v in nbrs {\n                        match color.get(v) {\n                            None => {\n                                color.insert(v.clone(), 1 - cu);\n                                stack.push(v.clone());\n                            }\n                            Some(&cv) => {\n                                if cv == cu {\n                                    return Err(());\n                                }\n                            }\n                        }\n                    }\n                }\n            }\n        }\n        Ok(())\n    }\n\n    /// Detect whether the network is a DAG and update metadata.\n    pub fn detect_dag(&mut self) -> bool {\n        // Treat links with directed == Some(true) as directed edges; everything\n        // else is undirected (and thus not a DAG if it has any edge).\n        let has_directed = self.links.iter().any(|l| l.directed == Some(true));\n        let is_dag = if has_directed {\n            // Kahn's algorithm on directed edges only:\n            let mut indeg: IndexMap<NodeId, usize> = IndexMap::new();\n            let mut adj: IndexMap<NodeId, Vec<NodeId>> = IndexMap::new();\n            for l in &self.links {\n                if l.directed == Some(true) && !l.is_shadow {\n                    *indeg.entry(l.target.clone()).or_insert(0) += 1;\n                    adj.entry(l.source.clone()).or_default().push(l.target.clone());\n                }\n            }\n            for n in self.nodes.keys() {\n                indeg.entry(n.clone()).or_insert(0);\n            }\n            let mut queue: Vec<NodeId> = indeg\n                .iter()\n                .filter(|(_, &d)| d == 0)\n                .map(|(n, _)| n.clone())\n                .collect();\n            let mut visited = 0usize;\n            while let Some(u) = queue.pop() {\n                visited += 1;\n                if let Some(nbrs) = adj.get(&u) {\n                    for v in nbrs {\n                        if let Some(d) = indeg.get_mut(v) {\n                            *d -= 1;\n                            if *d == 0 {\n                                queue.push(v.clone());\n                            }\n                        }\n                    }\n                }\n            }\n            visited == self.nodes.len()\n        } else {\n            // No directed edges: a DAG only if there are no edges at all.\n            self.links.iter().all(|l| l.is_shadow) || self.links.is_empty()\n        };\n        self.metadata.is_dag = Some(is_dag);\n        is_dag\n    }\n\n    // =========================================================================\n    // Selection propagation helpers\n    // =========================================================================\n\n    /// Get nodes within N hops of a given node (BFS neighborhood).\n    pub fn n_hop_neighborhood(&self, start: &NodeId, max_hops: usize) -> HashSet<NodeId> {\n        let mut result: HashSet<NodeId> = HashSet::new();\n        let mut frontier: HashSet<NodeId> = HashSet::new();\n        frontier.insert(start.clone());\n        for _ in 0..max_hops {\n            let next = self.first_neighbors(&frontier);\n            if next.is_empty() {\n                break;\n            }\n            let added: Vec<_> = next.into_iter().filter(|n| !result.contains(n) && n != start).collect();\n            if added.is_empty() {\n                break;\n            }\n            for n in &added {\n                result.insert(n.clone());\n            }\n            frontier = added.into_iter().collect();\n        }\n        result\n    }\n\n    /// Get the first neighbors (1-hop) of a set of nodes.\n    pub fn first_neighbors(&self, nodes: &HashSet<NodeId>) -> HashSet<NodeId> {\n        let mut out: HashSet<NodeId> = HashSet::new();\n        for l in &self.links {\n            if nodes.contains(&l.source) {\n                out.insert(l.target.clone());\n            }\n            if nodes.contains(&l.target) {\n                out.insert(l.source.clone());\n            }\n        }\n        out\n    }\n\n    // =========================================================================\n    // Subnetwork extraction\n    // =========================================================================\n\n    /// Extract a subnetwork containing only the specified nodes.\n    pub fn extract_subnetwork(&self, node_ids: &HashSet<NodeId>) -> Network {\n        let mut sub = Network::new();\n        // Preserve original node order for the selected nodes:\n        for n in self.nodes.keys() {\n            if node_ids.contains(n) {\n                sub.add_node(Node::new(n.clone()));\n            }\n        }\n        for l in &self.links {\n            if node_ids.contains(&l.source) && node_ids.contains(&l.target) {\n                sub.add_link(l.clone());\n            }\n        }\n        // Lone nodes of the subnetwork:\n        for n in sub.nodes.keys() {\n            if sub.degree(n) == 0 {\n                sub.lone_nodes.insert(n.clone());\n            }\n        }\n        sub.metadata = self.metadata.clone();\n        sub\n    }\n\n    /// Extract the subnetwork reachable within N hops of a starting node.\n    pub fn extract_neighborhood(&self, start: &NodeId, max_hops: usize) -> Network {\n        let mut keep: HashSet<NodeId> = HashSet::new();\n        keep.insert(start.clone());\n        keep.extend(self.n_hop_neighborhood(start, max_hops));\n        self.extract_subnetwork(&keep)\n    }\n\n    // =========================================================================\n    // Link deduplication\n    // =========================================================================\n\n    /// Remove duplicate and synonymous non-directional links.\n    ///\n    /// Mirrors `BuildExtractorImpl.preprocessLinks`: exact duplicates are\n    /// dropped, and for synonymous undirected pairs the lexicographically\n    /// smaller orientation is kept.\n    pub fn deduplicate_links(&mut self) -> usize {\n        let original = std::mem::take(&mut self.links);\n        self.invalidate_adjacency();\n        let mut retained: Vec<Link> = Vec::new();\n\n        for next in &original {\n            let already = retained.iter().any(|r| r == next);\n            if already {\n                continue;\n            }\n            let is_dir = next.directed == Some(true);\n            if !is_dir && !next.is_feedback() {\n                let flip = next.flipped();\n                if retained.iter().any(|r| r == &flip) {\n                    // Keep lex-smaller orientation:\n                    if link_compare(next, &flip) < 0 {\n                        // replace flip with next\n                        if let Some(pos) = retained.iter().position(|r| r == &flip) {\n                            retained.remove(pos);\n                        }\n                        retained.push(next.clone());\n                    }\n                    // else: drop next\n                } else {\n                    retained.push(next.clone());\n                }\n            } else {\n                retained.push(next.clone());\n            }\n        }\n\n        let removed = original.len() - retained.len();\n        self.links = retained;\n        removed\n    }\n\n    // =========================================================================\n    // Comparison utilities\n    // =========================================================================\n\n    /// Compare the neighborhoods of two nodes.\n    pub fn compare_nodes(\n        &self,\n        node_a: &NodeId,\n        node_b: &NodeId,\n    ) -> Option<NodeComparison> {\n        if !self.contains_node(node_a) || !self.contains_node(node_b) {\n            return None;\n        }\n        let neighbors_of = |n: &NodeId| -> HashSet<NodeId> {\n            let mut s: HashSet<NodeId> = HashSet::new();\n            for l in &self.links {\n                if &l.source == n {\n                    s.insert(l.target.clone());\n                }\n                if &l.target == n {\n                    s.insert(l.source.clone());\n                }\n            }\n            s\n        };\n        let a_nbr = neighbors_of(node_a);\n        let b_nbr = neighbors_of(node_b);\n        let shared: HashSet<NodeId> = a_nbr.intersection(&b_nbr).cloned().collect();\n        let excl_a: HashSet<NodeId> = a_nbr.difference(&b_nbr).cloned().collect();\n        let excl_b: HashSet<NodeId> = b_nbr.difference(&a_nbr).cloned().collect();\n        let union_size = a_nbr.union(&b_nbr).count();\n        let jaccard = if union_size == 0 {\n            0.0\n        } else {\n            shared.len() as f64 / union_size as f64\n        };\n        Some(NodeComparison {\n            node_a: node_a.clone(),\n            node_b: node_b.clone(),\n            degree_a: a_nbr.len(),\n            degree_b: b_nbr.len(),\n            shared_neighbors: shared,\n            exclusive_a: excl_a,\n            exclusive_b: excl_b,\n            jaccard_similarity: jaccard,\n        })\n    }\n}\n\n/// Lexicographic comparison of two links, matching Java's `LinkComparator`.\nfn link_compare(a: &Link, b: &Link) -> std::cmp::Ordering {\n    use std::cmp::Ordering;\n    if a == b {\n        return Ordering::Equal;\n    }\n    let sa = norm_key(a.source.as_str());\n    let sb = norm_key(b.source.as_str());\n    if sa != sb {\n        return sa.cmp(&sb);\n    }\n    let ta = norm_key(a.target.as_str());\n    let tb = norm_key(b.target.as_str());\n    if ta != tb {\n        return ta.cmp(&tb);\n    }\n    if a.is_shadow != b.is_shadow {\n        return if a.is_shadow {\n            Ordering::Less\n        } else {\n            Ordering::Greater\n        };\n    }\n    let ra = norm_key(&a.relation);\n    let rb = norm_key(&b.relation);\n    if ra != rb {\n        return a.relation.cmp(&b.relation);\n    }\n    a.source.as_str().cmp(b.source.as_str())\n}\n\n/// Neighborhood comparison result.\n#[derive(Debug, Clone)]\npub struct NodeComparison {\n    pub node_a: NodeId,\n    pub node_b: NodeId,\n    pub degree_a: usize,\n    pub degree_b: usize,\n    pub shared_neighbors: HashSet<NodeId>,\n    pub exclusive_a: HashSet<NodeId>,\n    pub exclusive_b: HashSet<NodeId>,\n    pub jaccard_similarity: f64,\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_network_creation() {\n        let network = Network::new();\n        assert_eq!(network.node_count(), 0);\n        assert_eq!(network.link_count(), 0);\n    }\n}\n"
++      }
++    },
++    {
++      "step_id": 60,
++      "call_id": "call_b86af56480314c82944e5187",
++      "name": "Edit",
++      "phase": "after_restore",
++      "params": {
++        "replace_all": false,
++        "file_path": "/app/crates/core/src/model/link.rs",
++        "old_string": "        write!(self.source, f)?;\n        if self.is_shadow {\n            write!(f, \" shdw\")?;\n        } else {\n            write!(f, \" \")?;\n        }\n        write!(f, \"({}) \", self.relation)?;\n        write!(self.target, f)",
++        "new_string": "        write!(f, \"{}\", self.source)?;\n        if self.is_shadow {\n            write!(f, \" shdw\")?;\n        } else {\n            write!(f, \" \")?;\n        }\n        write!(f, \"({}) {}\", self.relation, self.target)"
++      }
++    },
++    {
++      "step_id": 63,
++      "call_id": "call_5b1a809063144a479bae4f55",
++      "name": "Edit",
++      "phase": "after_restore",
++      "params": {
++        "replace_all": false,
++        "file_path": "/app/crates/core/src/model/network.rs",
++        "old_string": "    pub fn add_node_by_id(&mut self, id: impl Into<NodeId>) -> &Node {\n        let id = id.into();\n        self.nodes.entry(id.clone()).or_insert_with(|| Node::new(id));\n        self.invalidate_adjacency();\n        // Borrow checker workaround:\n        self.nodes.get(&id).unwrap()\n    }",
++        "new_string": "    pub fn add_node_by_id(&mut self, id: impl Into<NodeId>) -> &Node {\n        let id = id.into();\n        self.nodes\n            .entry(id.clone())\n            .or_insert_with(|| Node::new(id.clone()));\n        self.invalidate_adjacency();\n        // Borrow checker workaround:\n        self.nodes.get(&id).unwrap()\n    }"
++      }
++    },
++    {
++      "step_id": 65,
++      "call_id": "call_ecf9273a896d455a8f80a5b8",
++      "name": "Edit",
++      "phase": "after_restore",
++      "params": {
++        "replace_all": false,
++        "file_path": "/app/crates/core/src/model/network.rs",
++        "old_string": "                    if link_compare(next, &flip) < 0 {",
++        "new_string": "                    if link_compare(next, &flip) == std::cmp::Ordering::Less {"
++      }
++    }
++  ],
++  "excluded_steps": [
++    {
++      "step_id": 51,
++      "tools": [
++        {
++          "call_id": "call_98b3ecefa50b40fdb553416c",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 52,
++      "tools": [
++        {
++          "call_id": "call_acbdd19c22294bbfa689e077",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 53,
++      "tools": [
++        {
++          "call_id": "call_3b888df221af4394ae724e5f",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 54,
++      "tools": [
++        {
++          "call_id": "call_c56e3d88dff6420ca942f946",
++          "name": "Read"
++        }
++      ]
++    },
++    {
++      "step_id": 56,
++      "tools": []
++    },
++    {
++      "step_id": 57,
++      "tools": [
++        {
++          "call_id": "call_979dbc0fdc7943da9b2687b6",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 58,
++      "tools": [
++        {
++          "call_id": "call_7ab3a803e3d14a35bf03448f",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 59,
++      "tools": [
++        {
++          "call_id": "call_995af8ed1ecc4fe182df4dfd",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 61,
++      "tools": [
++        {
++          "call_id": "call_f63b822c72524523b241f0ba",
++          "name": "TaskUpdate"
++        }
++      ]
++    },
++    {
++      "step_id": 62,
++      "tools": [
++        {
++          "call_id": "call_a71e1e1903b54595bdc0ddcf",
++          "name": "Bash"
++        }
++      ]
++    },
++    {
++      "step_id": 64,
++      "tools": [
++        {
++          "call_id": "call_f6e2387ea3f14de8b57a94e4",
++          "name": "Bash"
++        }
++      ]
++    }
++  ],
++  "excluded_ranges": [
++    {
++      "step_id_lt": 50
++    },
++    {
++      "step_id_gt": 65
++    }
++  ],
++  "exclusion_reason": "Explicitly selected file-edit fixture; skipped Bash/Read/TaskUpdate steps are not counted as passing original trace calls.",
++  "read_probes": [
++    {
++      "original_step_id": 13,
++      "call_id": "call_6b9344f81af8415eb145211a",
++      "name": "Read",
++      "params": {
++        "file_path": "/app/crates/core/src/model/network.rs"
++      },
++      "validation_only": true,
++      "historical_observation_reused": false
++    },
++    {
++      "original_step_id": 20,
++      "call_id": "call_392839277e1b4d50b05d51ae",
++      "name": "Read",
++      "params": {
++        "file_path": "/app/crates/core/src/model/link.rs"
++      },
++      "validation_only": true,
++      "historical_observation_reused": false
++    }
++  ],
++  "read_probe_contract": "Original Read parameters from steps 13 and 20 can be reapplied as validation-only probes. Their historical results describe an earlier state and must not be reused as the checkpoint oracle. Full-file bytes are authoritative.",
++  "checkpoints": {
++    "after_writes": {
++      "after_step_id": 55,
++      "expected_files": [
++        {
++          "file_path": "/app/crates/core/src/model/link.rs",
++          "sha256": "bd36def8fb83b17cffcf2f755c65e0013bacd0806874ded61c247a630cdb4f70",
++          "size_bytes": 5319
++        },
++        {
++          "file_path": "/app/crates/core/src/model/network.rs",
++          "sha256": "c0b329692ada6cca2a47b28f0d16fba8215413c65ce0e9259987a714442a09e7",
++          "size_bytes": 20607
++        }
++      ]
++    },
++    "after_edits": {
++      "after_step_id": 65,
++      "expected_files": [
++        {
++          "file_path": "/app/crates/core/src/model/link.rs",
++          "sha256": "7516eae396f202264f34743c57d9c393b99399b1810b6ae931bb8f157a02621b",
++          "size_bytes": 5307
++        },
++        {
++          "file_path": "/app/crates/core/src/model/network.rs",
++          "sha256": "9c7b1c59c2f5d5a10f95c42bec63d3b501f6502899a76f85652bc4eea616de88",
++          "size_bytes": 20665
++        }
++      ]
++    }
++  }
++}
+diff --git a/scripts/memory-lab/page-sharing/check-software.sh b/scripts/memory-lab/page-sharing/check-software.sh
+index 4cc63df25..9d955b683 100755
+--- a/scripts/memory-lab/page-sharing/check-software.sh
++++ b/scripts/memory-lab/page-sharing/check-software.sh
+@@ -16,7 +16,7 @@ run_check() {
+     printf '%s\t%d\n' "$name" "$rc" >>"$result_dir/exit-codes.tsv"
+     if ((rc != 0)); then status=1; fi
+ }
+-run_check contracts go test -p 2 ./internal/sandbox ./internal/sandbox/memorybacking ./internal/sandbox/nbd ./internal/sandbox/template ./internal/sandbox/uffd ./internal/sandbox/uffd/memory ./internal/sandbox/fc ./internal/sandbox/build ./internal/sandbox/block -run 'Test(NoopMemory|ProcessMemory|ExportMemoryRanges|LogicalReadAt|ReadonlyDispatch|Dispatch|WriteFull|ReadonlyMount|Registry|HTTP|LocalSource|FileMemory|Materialize|Mapping|FactoryLifecycle|SnapshotPaths|Checkpoint|Pinned|LocalDiffOwnership|DiffPin|OwnedMemoryView)' -count=1 -v
++run_check contracts go test -p 2 ./internal/sandbox ./internal/sandbox/memorybacking ./internal/sandbox/nbd ./internal/sandbox/template ./internal/sandbox/uffd ./internal/sandbox/uffd/memory ./internal/sandbox/fc ./internal/sandbox/build ./internal/sandbox/block -run 'Test(NoopMemory|ProcessMemory|ExportMemoryRanges|LogicalReadAt|ReadonlyDispatch|Dispatch|WriteFull|ReadonlyMount|Registry|HTTP|LocalSource|FileMemory|Materialize|Mapping|FactoryLifecycle|SnapshotPaths|Checkpoint|Pinned|LocalDiffOwnership|DiffPin|OwnedMemoryView|BootSourceOptionalInitrd)' -count=1 -v
+ run_check race go test -p 2 -race ./internal/sandbox/memorybacking ./internal/sandbox/nbd ./internal/sandbox ./internal/sandbox/build ./internal/sandbox/template -run 'Test(Registry|HTTP|LocalSource|ReadonlyDispatch|Dispatch|WriteFull|ReadonlyMount|FactoryLifecycle|SnapshotPaths|Checkpoint|Pinned|LocalDiffOwnership|DiffPin|OwnedMemoryView)' -count=1
+ run_check headers go test -p 2 ../shared/pkg/storage/header ./internal/template/metadata -count=1
+ run_check orchestrator go build -p 2 -o "$result_dir/orchestrator" .
+diff --git a/scripts/memory-lab/page-sharing/kvm_check.py b/scripts/memory-lab/page-sharing/kvm_check.py
+index 40ac1b5a9..05350a6a4 100644
+--- a/scripts/memory-lab/page-sharing/kvm_check.py
++++ b/scripts/memory-lab/page-sharing/kvm_check.py
+@@ -189,13 +189,13 @@ class VM:
+ 
+ 
+ class NBDHelper:
+-    def __init__(self, binary, source, run):
++    def __init__(self, binary, source, run, layout_id="fixture-128m-low-ram-4k-v1"):
+         self.directory = run / "nbd-helper"
+         self.directory.mkdir()
+         self.log = (self.directory / "stderr.log").open("wb", buffering=0)
+         self.stdout_log = (self.directory / "stdout.jsonl").open("wb", buffering=0)
+         self.buffer = bytearray()
+-        self.process = subprocess.Popen([str(binary), "--source", str(source), "--layout-id", "fixture-128m-low-ram-4k-v1"],
++        self.process = subprocess.Popen([str(binary), "--source", str(source), "--layout-id", layout_id],
+                                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.log)
+         save_json(self.directory / "pid.json", {"pid": self.process.pid})
+         self.ready = self.event("ready")
+diff --git a/scripts/memory-lab/page-sharing/m10.md b/scripts/memory-lab/page-sharing/m10.md
+new file mode 100644
+index 000000000..a78219271
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m10.md
+@@ -0,0 +1,34 @@
++# M10：真实 balloon/FPR discard 与恢复
++
++`m10_guest.go` / `m10_check.py` 是独立测试 fixture。它不改 host swap、全局 cache、原 guest 镜像或 guest rootfs，也不操作 runner 之外的 VM/NBD。需要 Linux KVM、NBD、root、4 KiB host/guest pages，以及与 guest kernel **精确匹配**的 `virtio_mmio.ko` 和 `virtio_balloon.ko`。
++
++```sh
++GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o guest-init-m10 m10_guest.go
++sudo python3 m10_check.py \
++  --firecracker /absolute/firecracker --kernel /absolute/vmlinuz \
++  --guest-binary /absolute/guest-init-m10 --nbd-helper /absolute/page-sharing-source \
++  --module-dir /absolute/matching/kernel/drivers/virtio \
++  --output /absolute/new-m10-balloon --cleanup-failed
++
++# 相同参数、独立 output；balloon target/actual 保持零，仅运行 guest FPR。
++sudo python3 m10_check.py \
++  --firecracker /absolute/firecracker --kernel /absolute/vmlinuz \
++  --guest-binary /absolute/guest-init-m10 --nbd-helper /absolute/page-sharing-source \
++  --module-dir /absolute/matching/kernel/drivers/virtio \
++  --output /absolute/new-m10-fpr --free-page-reporting --cleanup-failed
++```
++
++测试使用 192 MiB VM。guest 先分配 40 MiB arena 并填 `0x6b`，通过 guest pagemap 记录其 GPA。两个 VM 从同一只读 NBD source 恢复：
++
++- balloon 模式在源快照前释放 arena，目标 VM inflate 96 MiB；必须观察 `actual_mib=96`。
++- FPR 模式在源快照中保留 arena，只有目标 VM 恢复后释放；必须观察 balloon target/actual 均为 0，同时 FC `free_page_report_count/freed` 增长且 `fails=0`。
++- 只选择父源真实为 `0x6b`、目标 VM 实际被匿名 remap 且最终全零的页。FPR 期间 kernel 可以重新使用少数页；这些非零页不纳入未写 oracle。至少存在一个候选，否则失败。
++- 未写状态导出全部 192 MiB RAM，并与同一冻结状态的 FC native dump 比较完整 hash；再次 native dump 必须相同。
++- 目标 guest 在 deflate 后重新分配 100 MiB 并填 `0xa5`；必须实际复用至少一个前述 discard GPA。再次保存，核对这些页最终为 `0xa5`。
++- 两个 checkpoint 均再次恢复：未写页保持零，重写页保持 `0xa5`；guest 还会验证整个重写 arena hash。另一 VM 对应页必须保留 `0x6b`，不可变 source 完整 SHA256 不变。
++
++每个子进程有独立 `pid.json`，API/serial/设备 metrics 原始回执保留。`cleanup.json` 记录全部本次 VM/helper 的退出状态；失败默认保留现场，显式 `--cleanup-failed` 才逐个尝试结束本次 children。close 错误逐项记录；只有所有 VM 的退出均由本次 Popen 确认后才能 drain helper。存在未知映射时写入 `quarantine.json`，runner 留存并持续读取 helper stdout，避免断管 SIGPIPE 提前结束 RAM source；此状态不自动重试 VM、disconnect 或复用设备，需按 PID 回执人工调查。SIGINT/SIGTERM 只写回执而不丢弃未知映射 source。不要删除或重启状态不明的远端进程。
++
++该 fixture 证明真实 guest 驱动、FC File/NBD MAP_PRIVATE、discard、隔离和 native checkpoint 机制；`kvm_check.export_memory` 是独立 oracle，不代替编排器 `Sandbox.Pause` 集成测试或原应用 trace 验收。guest 实际版本由 `guest-probe.json` 记录，不能把 host 6.6 当作 guest 6.6。`/proc/config.gz` 缺失时保留缺失证据，模块实际加载、驱动绑定和成功 reporting 才是能力依据。
++
++失败清理合同可运行 `python3 m10_cleanup_test.py -v`；其 Fake VM/helper 不执行真实 signal、KVM 或 NBD 操作。
+diff --git a/scripts/memory-lab/page-sharing/m10_check.py b/scripts/memory-lab/page-sharing/m10_check.py
+new file mode 100644
+index 000000000..1d59a0f45
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m10_check.py
+@@ -0,0 +1,374 @@
++#!/usr/bin/env python3
++"""M10 actual guest balloon discard, source isolation and checkpoint oracle."""
++import argparse
++import gzip
++import hashlib
++import json
++import os
++import platform
++import select
++import signal
++import time
++from pathlib import Path
++import kvm_check as k
++
++
++def wait_balloon(vm, target, path):
++    """Require actual guest allocation, not merely the host requested target."""
++    samples = []
++    deadline = time.monotonic() + 30
++    while True:
++        stats = vm.api('GET', '/balloon/statistics')
++        samples.append(stats)
++        if stats['actual_mib'] == target:
++            k.save_json(path, samples)
++            return
++        if time.monotonic() >= deadline:
++            k.save_json(path, samples)
++            raise TimeoutError(f'balloon did not reach {target} MiB')
++        time.sleep(0.2)
++
++
++def checkpoint(vm, regions, run, name):
++    receipt = k.export_memory(vm, regions, run / (name + '.ram'))
++    vm.snapshot(run / (name + '.native.state'), run / (name + '.native.ram'))
++    if k.sha256_file(run / (name + '.native.ram')) != receipt['sha256']:
++        raise AssertionError(f'{name}: native oracle mismatch')
++    return receipt
++
++
++def configure_metrics(vm):
++    path = vm.directory / 'metrics.jsonl'
++    path.touch(exist_ok=False)
++    vm.api('PUT', '/metrics', {'metrics_path': str(path)})
++
++
++def remapped_offsets(vm, regions, candidates):
++    """Observe MAP_PRIVATE backing replaced by balloon/FPR anonymous mapping."""
++    anonymous = []
++    for line in Path(f'/proc/{vm.process.pid}/maps').read_text().splitlines():
++        fields = line.split()
++        bounds = [int(v, 16) for v in fields[0].split('-')]
++        if len(fields) < 6 or fields[5].startswith('[anon'):
++            anonymous.append(bounds)
++    return [off for off in candidates if any((lo <= k.host_address(regions, off) < hi for lo, hi in anonymous))]
++
++
++def cleanup_resources(vms, helpers, all_vms, all_helpers, run, success, requested):
++    """Never drain RAM source while a mapping user's exit is uncertain.
++
++    A close error does not prevent checking the other owned children. Polling
++    our Popen objects confirms exit without signalling or retrying unknown VMs.
++    A helper remains live, with its references and source, if any VM may map it.
++    """
++    errors = []
++    if requested:
++        for vm in reversed(vms):
++            try:
++                vm.close()
++            except Exception as error:
++                errors.append({'kind': 'vm', 'pid': vm.process.pid, 'error': repr(error)})
++    known_pids = {vm.process.pid for vm in all_vms}
++    unknown_receipts = []
++    # A constructor can write its PID before failing to return a VM object.
++    # Its receipt is ours, but lack of a Popen object means exit is unconfirmed.
++    for path in run.glob('*/pid.json'):
++        if path.parent.name == 'nbd-helper':
++            continue
++        record = json.loads(path.read_text())
++        if record['pid'] not in known_pids:
++            unknown_receipts.append({'receipt': str(path), 'pid': record['pid']})
++    vm_status = []
++    for vm in all_vms:
++        try:
++            status = vm.process.poll()
++            vm_status.append({'pid': vm.process.pid, 'returncode': status, 'exit_confirmed': status is not None})
++        except Exception as error:
++            vm_status.append({'pid': vm.process.pid, 'returncode': None, 'exit_confirmed': False})
++            errors.append({'kind': 'vm-poll', 'pid': vm.process.pid, 'error': repr(error)})
++    all_exited = not unknown_receipts and all(row['exit_confirmed'] for row in vm_status)
++    if requested and all_exited:
++        for helper in reversed(helpers):
++            try:
++                helper.close()
++            except Exception as error:
++                errors.append({'kind': 'helper', 'pid': helper.process.pid, 'error': repr(error)})
++    helper_status = [{'pid': helper.process.pid, 'returncode': helper.process.poll()} for helper in all_helpers]
++    receipt = {'success': success and not errors and all_exited,
++               'cleanup_requested': requested, 'all_vm_exits_confirmed': all_exited,
++               'quarantined': (not all_exited or bool(errors)) and any(row['returncode'] is None for row in helper_status),
++               'vm_status': vm_status, 'helper_status': helper_status,
++               'unknown_vm_receipts': unknown_receipts, 'errors': errors,
++               'vm_pids': [row['pid'] for row in vm_status],
++               'vm_returncodes': [row['returncode'] for row in vm_status],
++               'helper_pids': [row['pid'] for row in helper_status],
++               'helper_returncodes': [row['returncode'] for row in helper_status]}
++    k.save_json(run / 'cleanup.json', receipt)
++    if receipt['quarantined']:
++        k.save_json(run / 'quarantine.json', {
++            'status': 'quarantined', 'runner_pid': os.getpid(),
++            'reason': 'VM exit or helper teardown unconfirmed; helper/source retained without disconnect or reuse',
++            'cleanup': receipt,
++            'action': 'Inspect original PID receipts; stop only this run mapping users before helper/runner teardown'})
++    if errors:
++        k.save_json(run / 'result.json', {'status': 'failed', 'reason': 'cleanup error', 'cleanup': receipt})
++    return receipt
++
++
++def retain_quarantined_runner(receipt, helpers, run):
++    """Retain PIPE readers so an emit cannot kill a live source with SIGPIPE.
++
++    This is intentionally operator-managed: no retry, signal, disconnect or
++    device reuse follows an unknown mapping state. SIGINT/SIGTERM are recorded
++    without dropping the source's transport; investigate the PID receipts first.
++    """
++    def interrupted(signum, _frame):
++        try:
++            k.save_json(run / 'quarantine-signal.json', {'runner_pid': os.getpid(), 'signal': signum,
++                        'reason': 'mapping users unconfirmed; source remains held'})
++        except OSError:
++            pass  # Evidence I/O failure must not drop a live source PIPE.
++    signal.signal(signal.SIGTERM, interrupted)
++    signal.signal(signal.SIGINT, interrupted)
++    while True:
++        pipes = {helper.process.stdout: helper for helper in helpers
++                 if helper.process.poll() is None and not helper.process.stdout.closed}
++        if not pipes:
++            time.sleep(0.2)
++            continue
++        ready, _, _ = select.select(list(pipes), [], [], 0.2)
++        for stream in ready:
++            try:
++                data = os.read(stream.fileno(), 65536)
++            except OSError:
++                continue
++            if data:
++                try:
++                    pipes[stream].stdout_log.write(data)
++                except OSError:
++                    # A full evidence disk must not drop the live source PIPE.
++                    pass
++            else:
++                # EOF is evidence, not authorization to release any backing.
++                stream.close()
++
++
++def main():
++    p = argparse.ArgumentParser(description=__doc__)
++    for name in ('firecracker', 'kernel', 'guest-binary', 'nbd-helper', 'output'):
++        p.add_argument('--' + name, required=True, type=Path)
++    p.add_argument('--module-dir', required=True, type=Path)
++    p.add_argument('--free-page-reporting', action='store_true', help='exercise natural FPR with balloon target held at zero')
++    p.add_argument('--probe-only', action='store_true')
++    p.add_argument('--cleanup-failed', action='store_true')
++    a = p.parse_args()
++    for n in ('firecracker', 'kernel', 'guest_binary', 'nbd_helper'):
++        setattr(a, n, getattr(a, n).resolve(strict=True))
++    if os.sysconf('SC_PAGE_SIZE') != 4096:
++        p.error('M10 fixture requires 4096-byte host pages')
++    a.module_dir = a.module_dir.resolve(strict=True)
++    run = a.output.resolve()
++    run.mkdir(parents=True, exist_ok=False)
++    vms = []
++    helpers = []
++    all_vms = []
++    all_helpers = []
++    success = False
++    k.save_json(run / 'environment.json', {'uname': list(platform.uname()), 'host_page_size': os.sysconf('SC_PAGE_SIZE'), 'fc_sha256': k.sha256_file(a.firecracker), 'kernel_sha256': k.sha256_file(a.kernel), 'guest_sha256': k.sha256_file(a.guest_binary)})
++    k.make_initrd(a.guest_binary, run / 'guest-initrd.gz')
++    # Linux accepts concatenated newc archives inside one gzip stream. Only
++    # matching guest modules are copied into this new fixture.
++    data = gzip.decompress((run / 'guest-initrd.gz').read_bytes())
++    data = bytearray(data)
++    module_hashes = {}
++    for index, name in enumerate(('virtio_mmio', 'virtio_balloon', 'TRAILER!!!'), 100):
++        content = b'' if name == 'TRAILER!!!' else (a.module_dir / (name + '.ko')).read_bytes()
++        if content:
++            module_hashes[name] = hashlib.sha256(content).hexdigest()
++        filename = name if name == 'TRAILER!!!' else name + '.ko'
++        encoded = filename.encode() + b'\x00'
++        fields = [index, 0o100644, 0, 0, 1, 0, len(content), 0, 0, 0, 0, len(encoded), 0]
++        data.extend(b'070701' + b''.join((f'{v:08x}'.encode() for v in fields)))
++        data.extend(encoded)
++        data.extend(b'\x00' * (-len(data) % 4))
++        data.extend(content)
++        data.extend(b'\x00' * (-len(data) % 4))
++    with gzip.open(run / 'guest-initrd.gz', 'wb') as stream:
++        stream.write(data)
++    k.save_json(run / 'module-hashes.json', module_hashes)
++    try:
++        initial = k.VM(a, 'initial', run)
++        vms.append(initial)
++        all_vms.append(initial)
++        configure_metrics(initial)
++        initial.api('PUT', '/machine-config', {'vcpu_count': 1, 'mem_size_mib': 192})
++        initial.api('PUT', '/boot-source', {'kernel_image_path': str(a.kernel), 'initrd_path': str(run / 'guest-initrd.gz'), 'boot_args': 'console=ttyS0 reboot=k panic=1 pci=off'})
++        initial.api('PUT', '/balloon', {'amount_mib': 0, 'deflate_on_oom': False, 'stats_polling_interval_s': 1, 'free_page_reporting': a.free_page_reporting})
++        initial.api('PUT', '/actions', {'action_type': 'InstanceStart'})
++        probe = initial.event('probe')
++        k.save_json(run / 'guest-probe.json', probe)
++        ready = initial.event('ready')
++        k.save_json(run / 'guest-ready.json', ready)
++        if ready['page_size'] != 4096:
++            raise RuntimeError('M10 fixture requires 4096-byte guest pages')
++        k.save_json(run / 'balloon-initial.json', initial.api('GET', '/balloon/statistics'))
++        if a.probe_only:
++            success = True
++            k.save_json(run / 'result.json', {'status': 'probe-passed'})
++            return
++        allocation = initial.command('allocate 107 40')
++        k.save_json(run / 'parent-allocation.json', allocation)
++        if not a.free_page_reporting:
++            initial.command('release')
++        initial.api('PATCH', '/vm', {'state': 'Paused'})
++        initial.snapshot(run / 'A.state', run / 'A.ram')
++        source_hash = k.sha256_file(run / 'A.ram')
++        base = 0x80000000 if platform.machine() in ('aarch64', 'arm64') else 0
++        offsets = [gpa - base for gpa in allocation['gpas']]
++        if any((o < 0 or o + 4096 > 192 << 20 for o in offsets)):
++            raise RuntimeError('GPA outside fixture RAM')
++        with (run / 'A.ram').open('rb') as f:
++            candidates = []
++            for off in offsets:
++                f.seek(off)
++                if f.read(4096) == bytes([107]) * 4096:
++                    candidates.append(off)
++        if not candidates:
++            raise AssertionError('parent snapshot has no nonzero free-arena pages')
++        initial.close()
++        vms.remove(initial)
++        helper = k.NBDHelper(a.nbd_helper, run / 'A.ram', run, layout_id='fixture-192m-low-ram-4k-v1')
++        helpers.append(helper)
++        all_helpers.append(helper)
++        if helper.ready['content_id'] != 'sha256:' + source_hash:
++            raise AssertionError('wrong NBD source identity')
++        left = k.VM(a, 'balloon-left', run)
++        vms.append(left)
++        all_vms.append(left)
++        right = k.VM(a, 'balloon-right', run)
++        vms.append(right)
++        all_vms.append(right)
++        for vm in (left, right):
++            configure_metrics(vm)
++            vm.restore(run / 'A.state', Path(helper.ready['path']))
++            vm.api('PATCH', '/vm', {'state': 'Resumed'})
++            k.check_guest_markers(vm, 4096, [49, 50, 51, 52])
++        right.api('PATCH', '/vm', {'state': 'Paused'})
++        regions = left.mappings()
++        right_regions = right.mappings()
++        if a.free_page_reporting:
++            left.command('release')
++            deadline = time.monotonic() + 30
++            while True:
++                left.api('PUT', '/actions', {'action_type': 'FlushMetrics'})
++                if remapped_offsets(left, regions, candidates):
++                    break
++                if time.monotonic() >= deadline:
++                    raise TimeoutError('no FPR anonymous remap observed for released nonzero arena pages')
++                time.sleep(0.2)
++            stats = left.api('GET', '/balloon/statistics')
++            k.save_json(run / 'fpr-balloon-zero.json', stats)
++            if stats['actual_mib'] != 0 or stats['target_mib'] != 0:
++                raise AssertionError('FPR run unexpectedly inflated balloon')
++        else:
++            left.api('PATCH', '/balloon', {'amount_mib': 96})
++            wait_balloon(left, 96, run / 'inflate-stats.json')
++        left.api('PATCH', '/vm', {'state': 'Paused'})
++        left.snapshot(run / 'discard-unwritten.state')
++        maps = Path(f'/proc/{left.process.pid}/maps').read_text()
++        (run / 'discard-host-maps.txt').write_text(maps)
++        remapped = remapped_offsets(left, regions, candidates)
++        if not remapped:
++            raise AssertionError('no source-nonzero arena page actually anonymously remapped by balloon')
++        unwritten = checkpoint(left, regions, run, 'discard-unwritten')
++        with (run / 'discard-unwritten.ram').open('rb') as f:
++            discarded = []
++            for off in remapped:
++                f.seek(off)
++                if f.read(4096) == bytes(4096):
++                    discarded.append(off)
++        if not a.free_page_reporting and len(discarded) != len(remapped):
++            raise AssertionError('balloon remapped source-nonzero pages were not all zero before reuse')
++        if not discarded:
++            raise AssertionError('no actual zero page among source-nonzero anonymous remaps')
++        # In FPR mode the allocator can legitimately reuse some remapped
++        # pages before pause; only observed final-zero pages are selected.
++        k.save_json(run / 'discard-pages.json', {'parent_nonzero_candidates': len(candidates), 'discarded_pages': len(discarded), 'offsets': discarded, 'evidence': 'guest FPR with balloon held zero' if a.free_page_reporting else 'guest balloon actual_mib=96', 'byte_evidence': 'host file mapping replaced by anonymous VMA; same offsets source=0x6b and final bytes=zero'})
++        # Independent dump of the same frozen checkpoint must remain stable.
++        left.snapshot(run / 'discard-unwritten.repeat.state', run / 'discard-unwritten.repeat.ram')
++        if k.sha256_file(run / 'discard-unwritten.repeat.ram') != unwritten['sha256']:
++            raise AssertionError('frozen balloon checkpoint changed')
++        right.snapshot(run / 'other-unmodified.state')
++        other = checkpoint(right, right_regions, run, 'other-unmodified')
++        k.check_marker_file(run / 'other-unmodified.ram', discarded, 4096, [107] * len(discarded))
++        if k.sha256_file(run / 'A.ram') != source_hash:
++            raise AssertionError('balloon modified immutable source')
++        left.api('PATCH', '/vm', {'state': 'Resumed'})
++        left.api('PATCH', '/balloon', {'amount_mib': 0})
++        wait_balloon(left, 0, run / 'deflate-stats.json')
++        rewritten = left.command('allocate 165 100')
++        k.save_json(run / 'rewritten-allocation.json', rewritten)
++        rewritten_offsets = sorted(set(discarded) & {gpa - base for gpa in rewritten['gpas']})
++        if not rewritten_offsets:
++            raise AssertionError('guest did not reuse any previously discarded nonzero source page')
++        expected_arena = hashlib.sha256(bytes([165]) * (100 << 20)).hexdigest()
++        if left.command('arena-read')['sha256'] != expected_arena:
++            raise AssertionError('guest arena bytes differ after rewrite')
++        left.api('PATCH', '/vm', {'state': 'Paused'})
++        left.snapshot(run / 'discard-rewritten.state')
++        rewritten_receipt = checkpoint(left, regions, run, 'discard-rewritten')
++        k.check_marker_file(run / 'discard-rewritten.ram', rewritten_offsets, 4096, [165] * len(rewritten_offsets))
++        k.save_json(run / 'rewritten-pages.json', {'rewritten_discarded_pages': len(rewritten_offsets), 'offsets': rewritten_offsets})
++        left.api('PUT', '/actions', {'action_type': 'FlushMetrics'})
++        left.close()
++        vms.remove(left)
++        k.save_json(run / 'release-one.json', helper.release_one())
++        right.api('PATCH', '/vm', {'state': 'Resumed'})
++        k.check_guest_markers(right, 4096, [49, 50, 51, 52])
++        right.api('PATCH', '/vm', {'state': 'Paused'})
++        right.api('PUT', '/actions', {'action_type': 'FlushMetrics'})
++        right.close()
++        vms.remove(right)
++        helper.close()
++        helpers.remove(helper)
++        restored_receipts = {}
++        for name, check_offsets, value in (('discard-unwritten', discarded, 0), ('discard-rewritten', rewritten_offsets, 165)):
++            restored = k.VM(a, name + '-restored', run)
++            vms.append(restored)
++            all_vms.append(restored)
++            restored.restore(run / (name + '.state'), run / (name + '.ram'))
++            restored_regions = restored.mappings()
++            restored.snapshot(run / (name + '.restored.state'))
++            restored_receipts[name] = k.export_memory(restored, restored_regions, run / (name + '.restored.ram'))
++            k.check_marker_file(run / (name + '.restored.ram'), check_offsets, 4096, [value] * len(check_offsets))
++            restored.api('PATCH', '/vm', {'state': 'Resumed'})
++            k.check_guest_markers(restored, 4096, [49, 50, 51, 52])
++            if name == 'discard-rewritten' and restored.command('arena-read')['sha256'] != expected_arena:
++                raise AssertionError('restored guest rewritten arena mismatch')
++            restored.close()
++            vms.remove(restored)
++        if k.sha256_file(run / 'A.ram') != source_hash:
++            raise AssertionError('final source hash changed')
++        metrics = {}
++        for name in ('balloon-left', 'balloon-right'):
++            rows = [json.loads(line) for line in (run / name / 'metrics.jsonl').read_text().splitlines() if line]
++            metrics[name] = {'free_page_report_count': sum((row.get('balloon', {}).get('free_page_report_count', 0) for row in rows)), 'free_page_report_freed': sum((row.get('balloon', {}).get('free_page_report_freed', 0) for row in rows)), 'free_page_report_fails': sum((row.get('balloon', {}).get('free_page_report_fails', 0) for row in rows))}
++        k.save_json(run / 'metrics-summary.json', metrics)
++        if a.free_page_reporting and (not metrics['balloon-left']['free_page_report_count'] or metrics['balloon-left']['free_page_report_fails']):
++            raise AssertionError('FPR missing successful device metrics or has processing errors')
++        success = True
++        k.save_json(run / 'result.json', {'status': 'passed', 'mechanism': 'actual guest free-page-reporting with balloon target=actual=0' if a.free_page_reporting else 'actual guest virtio-balloon inflation/deflation, not synthetic host madvise', 'guest_kernel': probe['/proc/version'], 'parent_nonzero_candidates': len(candidates), 'discarded_pages': len(discarded), 'rewritten_discarded_pages': len(rewritten_offsets), 'unwritten': unwritten, 'rewritten': rewritten_receipt, 'other': other, 'restored': restored_receipts, 'source_sha256': source_hash, 'free_page_reporting': a.free_page_reporting, 'scope': 'M10 balloon/FPR path, independent full-logical exporter/native dump; orchestrator integration is separate'})
++    except BaseException as e:
++        k.save_json(run / 'result.json', {'status': 'failed', 'type': type(e).__name__, 'error': str(e)})
++        raise
++    finally:
++        receipt = cleanup_resources(vms, helpers, all_vms, all_helpers, run,
++                                    success, success or a.cleanup_failed)
++        if receipt['quarantined']:
++            retain_quarantined_runner(receipt, helpers, run)
++        if success and receipt['errors']:
++            raise RuntimeError('M10 cleanup failed; inspect cleanup.json')
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/memory-lab/page-sharing/m10_cleanup_test.py b/scripts/memory-lab/page-sharing/m10_cleanup_test.py
+new file mode 100644
+index 000000000..2850271ce
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m10_cleanup_test.py
+@@ -0,0 +1,92 @@
++#!/usr/bin/env python3
++"""Failure contracts: an uncertain VM must never lose its live RAM source."""
++import json
++from pathlib import Path
++import tempfile
++import unittest
++
++from m10_check import cleanup_resources
++
++
++class Process:
++    def __init__(self, pid):
++        self.pid = pid
++        self.returncode = None
++
++    def poll(self):
++        return self.returncode
++
++
++class VM:
++    def __init__(self, pid, fail=False, exited_on_error=False):
++        self.process = Process(pid)
++        self.fail = fail
++        self.exited_on_error = exited_on_error
++        self.attempted = False
++
++    def close(self):
++        self.attempted = True
++        if self.fail:
++            if self.exited_on_error:
++                self.process.returncode = -15
++            raise RuntimeError('injected close failure')
++        self.process.returncode = -15
++
++
++class Helper:
++    def __init__(self, pid):
++        self.process = Process(pid)
++        self.closed = False
++
++    def close(self):
++        self.closed = True
++        self.process.returncode = 0
++
++
++class CleanupContract(unittest.TestCase):
++    def test_one_unknown_mapping_preserves_source_and_checks_other_children(self):
++        own = [VM(1), VM(2, fail=True), VM(3)]
++        helper = Helper(4)
++        with tempfile.TemporaryDirectory() as directory:
++            run = Path(directory)
++            receipt = cleanup_resources(own, [helper], own, [helper], run, False, True)
++            self.assertTrue(all(vm.attempted for vm in own))
++            self.assertFalse(helper.closed)
++            self.assertTrue(receipt['quarantined'])
++            self.assertFalse(receipt['all_vm_exits_confirmed'])
++            self.assertEqual(json.loads((run / 'result.json').read_text())['status'], 'failed')
++            self.assertEqual(json.loads((run / 'quarantine.json').read_text())['status'], 'quarantined')
++
++    def test_non_mapping_close_error_does_not_prevent_safe_source_drain(self):
++        own = [VM(1, fail=True, exited_on_error=True), VM(2)]
++        helper = Helper(3)
++        with tempfile.TemporaryDirectory() as directory:
++            receipt = cleanup_resources(own, [helper], own, [helper], Path(directory), True, True)
++            self.assertTrue(receipt['all_vm_exits_confirmed'])
++            self.assertTrue(helper.closed)
++            self.assertFalse(receipt['success'])
++            self.assertEqual(len(receipt['errors']), 1)
++
++    def test_partial_constructor_pid_is_not_treated_as_confirmed_exit(self):
++        helper = Helper(2)
++        with tempfile.TemporaryDirectory() as directory:
++            run = Path(directory)
++            child = run / 'constructor-failed'
++            child.mkdir()
++            (child / 'pid.json').write_text(json.dumps({'pid': 1}))
++            receipt = cleanup_resources([], [helper], [], [helper], run, False, True)
++            self.assertFalse(helper.closed)
++            self.assertTrue(receipt['quarantined'])
++            self.assertEqual(receipt['unknown_vm_receipts'][0]['pid'], 1)
++
++    def test_failed_run_without_cleanup_authorization_keeps_children(self):
++        vm, helper = VM(1), Helper(2)
++        with tempfile.TemporaryDirectory() as directory:
++            receipt = cleanup_resources([vm], [helper], [vm], [helper], Path(directory), False, False)
++            self.assertFalse(vm.attempted)
++            self.assertFalse(helper.closed)
++            self.assertTrue(receipt['quarantined'])
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/scripts/memory-lab/page-sharing/m10_guest.go b/scripts/memory-lab/page-sharing/m10_guest.go
+new file mode 100644
+index 000000000..d8d475ae6
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m10_guest.go
+@@ -0,0 +1,234 @@
++//go:build linux
++
++// Standalone /init for the isolated M10 balloon discard oracle. Build with
++// GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o guest-init guest.go.
++package main
++
++import (
++	"bufio"
++	"crypto/sha256"
++	"encoding/binary"
++	"encoding/hex"
++	"encoding/json"
++	"fmt"
++	"os"
++	"strconv"
++	"strings"
++	"syscall"
++	"unsafe"
++)
++
++func emit(value any) {
++	data, _ := json.Marshal(value)
++	fmt.Printf("PSG %s\n", data)
++}
++
++func fatal(err error) {
++	emit(map[string]any{"event": "error", "error": err.Error()})
++	for {
++		syscall.Pause()
++	}
++}
++
++func main() {
++	for _, dir := range []string{"/proc", "/dev", "/sys"} {
++		if err := os.MkdirAll(dir, 0o755); err != nil {
++			fatal(err)
++		}
++	}
++	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
++		fatal(err)
++	}
++	if err := syscall.Mount("devtmpfs", "/dev", "devtmpfs", 0, ""); err != nil {
++		fatal(err)
++	}
++	// Reattach stdio explicitly after mounting /dev. This also works if the
++	// boot kernel could not open an initial console before executing /init.
++	console, err := os.OpenFile("/dev/console", os.O_RDWR, 0)
++	if err != nil {
++		fatal(err)
++	}
++	defer console.Close()
++	for fd := 0; fd < 3; fd++ {
++		if fd != int(console.Fd()) {
++			if err := syscall.Dup3(int(console.Fd()), fd, 0); err != nil {
++				fatal(err)
++			}
++		}
++	}
++	var term syscall.Termios
++	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, os.Stdin.Fd(), syscall.TCGETS, uintptr(unsafe.Pointer(&term))); errno == 0 {
++		term.Lflag &^= syscall.ICANON | syscall.ECHO | syscall.ISIG
++		term.Iflag &^= syscall.ICRNL | syscall.INLCR | syscall.IXON
++		term.Oflag &^= syscall.OPOST
++		term.Cc[syscall.VMIN], term.Cc[syscall.VTIME] = 1, 0
++		_, _, _ = syscall.Syscall(syscall.SYS_IOCTL, os.Stdin.Fd(), syscall.TCSETS, uintptr(unsafe.Pointer(&term)))
++	}
++	if err := syscall.Mount("sysfs", "/sys", "sysfs", 0, ""); err != nil {
++		fatal(err)
++	}
++	for _, name := range []string{"virtio_mmio", "virtio_balloon"} {
++		f, e := os.Open("/" + name + ".ko")
++		if e != nil {
++			fatal(e)
++		}
++		param := []byte{0}
++		_, _, errno := syscall.Syscall(syscall.SYS_FINIT_MODULE, f.Fd(), uintptr(unsafe.Pointer(&param[0])), 0)
++		f.Close()
++		if errno != 0 {
++			fatal(fmt.Errorf("finit_module %s: %v", name, errno))
++		}
++	}
++	probe := map[string]any{"event": "probe"}
++	for _, p := range []string{"/proc/version", "/proc/config.gz", "/proc/modules", "/proc/meminfo"} {
++		data, err := os.ReadFile(p)
++		if err != nil {
++			probe[p] = err.Error()
++		} else {
++			probe[p] = string(data)
++		}
++	}
++	for _, p := range []string{"/sys/bus/virtio/devices", "/sys/bus/virtio/drivers/virtio_balloon", "/sys/module/virtio_balloon"} {
++		files, err := os.ReadDir(p)
++		names := []string{}
++		for _, f := range files {
++			names = append(names, f.Name())
++		}
++		probe[p] = map[string]any{"names": names, "error": fmt.Sprint(err)}
++	}
++	emit(probe)
++	var arena []byte
++	pageSize := os.Getpagesize()
++	pages, err := syscall.Mmap(-1, 0, 4*pageSize, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_PRIVATE|syscall.MAP_ANON)
++	if err != nil {
++		fatal(err)
++	}
++	for i := range pages {
++		pages[i] = byte(0x31 + i/pageSize)
++	}
++	pagemap, err := os.Open("/proc/self/pagemap")
++	if err != nil {
++		fatal(err)
++	}
++	gpas := make([]uint64, 4)
++	for i := range gpas {
++		var entry [8]byte
++		addr := uintptr(unsafe.Pointer(&pages[i*pageSize]))
++		if _, err := pagemap.ReadAt(entry[:], int64(addr/uintptr(pageSize))*8); err != nil {
++			fatal(err)
++		}
++		value := binary.LittleEndian.Uint64(entry[:])
++		pfn := value & ((uint64(1) << 55) - 1)
++		if value&(uint64(1)<<63) == 0 || pfn == 0 {
++			fatal(fmt.Errorf("guest pagemap does not expose present PFN for marker %d", i))
++		}
++		gpas[i] = pfn * uint64(pageSize)
++	}
++	pagemap.Close()
++	emit(map[string]any{"event": "ready", "page_size": pageSize, "gpas": gpas})
++	scanner := bufio.NewScanner(os.Stdin)
++	for scanner.Scan() {
++		args := strings.Fields(scanner.Text())
++		if len(args) == 0 {
++			continue
++		}
++		switch args[0] {
++		case "allocate":
++			if arena != nil {
++				fatal(fmt.Errorf("arena already allocated"))
++			}
++			mib := 40
++			if len(args) > 2 {
++				mib, err = strconv.Atoi(args[2])
++				if err != nil || mib < 1 || mib > 140 {
++					fatal(fmt.Errorf("invalid arena MiB"))
++				}
++			}
++			arena, err = syscall.Mmap(-1, 0, mib<<20, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_PRIVATE|syscall.MAP_ANON)
++			if err != nil {
++				fatal(err)
++			}
++			value := byte(107)
++			if len(args) > 1 {
++				v, e := strconv.Atoi(args[1])
++				if e != nil || v < 0 || v > 255 {
++					fatal(fmt.Errorf("invalid byte"))
++				}
++				value = byte(v)
++			}
++			for i := range arena {
++				arena[i] = value
++			}
++			frames := make([]uint64, len(arena)/pageSize)
++			pm, e := os.Open("/proc/self/pagemap")
++			if e != nil {
++				fatal(e)
++			}
++			for i := range frames {
++				var ent [8]byte
++				addr := uintptr(unsafe.Pointer(&arena[i*pageSize]))
++				if _, e = pm.ReadAt(ent[:], int64(addr/uintptr(pageSize))*8); e != nil {
++					fatal(e)
++				}
++				v := binary.LittleEndian.Uint64(ent[:])
++				if v>>63 == 0 || v&((1<<55)-1) == 0 {
++					fatal(fmt.Errorf("missing PFN"))
++				}
++				frames[i] = (v & ((1 << 55) - 1)) * uint64(pageSize)
++			}
++			pm.Close()
++			emit(map[string]any{"event": "allocate", "gpas": frames, "value": value, "bytes": len(arena)})
++		case "release":
++			if arena == nil {
++				fatal(fmt.Errorf("arena not allocated"))
++			}
++			if e := syscall.Munmap(arena); e != nil {
++				fatal(e)
++			}
++			arena = nil
++			emit(map[string]any{"event": "release"})
++		case "arena-read":
++			if arena == nil {
++				fatal(fmt.Errorf("arena not allocated"))
++			}
++			sum := sha256.Sum256(arena)
++			emit(map[string]any{"event": "arena-read", "sha256": hex.EncodeToString(sum[:]), "bytes": len(arena)})
++		case "read":
++			hashes := make([]string, 4)
++			for i := range hashes {
++				sum := sha256.Sum256(pages[i*pageSize : (i+1)*pageSize])
++				hashes[i] = hex.EncodeToString(sum[:])
++			}
++			emit(map[string]any{"event": "read", "sha256": hashes})
++		case "write", "zero":
++			if len(args) < 2 {
++				emit(map[string]any{"event": "command_error", "error": "missing page index"})
++				continue
++			}
++			index, err := strconv.Atoi(args[1])
++			if err != nil || index < 0 || index >= 4 {
++				emit(map[string]any{"event": "command_error", "error": "invalid page index"})
++				continue
++			}
++			value := 0
++			if args[0] == "write" {
++				if len(args) != 3 {
++					emit(map[string]any{"event": "command_error", "error": "missing byte value"})
++					continue
++				}
++				value, err = strconv.Atoi(args[2])
++				if err != nil || value < 0 || value > 255 {
++					emit(map[string]any{"event": "command_error", "error": "invalid byte value"})
++					continue
++				}
++			}
++			for j := index * pageSize; j < (index+1)*pageSize; j++ {
++				pages[j] = byte(value)
++			}
++			emit(map[string]any{"event": args[0], "page": index, "value": value})
++		default:
++			emit(map[string]any{"event": "command_error", "error": "unknown command"})
++		}
++	}
++	fatal(fmt.Errorf("serial input ended: %v", scanner.Err()))
++}
+diff --git a/scripts/memory-lab/page-sharing/m11.md b/scripts/memory-lab/page-sharing/m11.md
+new file mode 100644
+index 000000000..c81fce1bb
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m11.md
+@@ -0,0 +1,25 @@
++# M11：并发块设备与网络 checkpoint
++
++`m11_setup.sh GO_BINARY MATCHED_KERNEL_MODULE_ROOT NEW_FIXTURE_DIRECTORY`
++构建 ARM64 guest 并复制匹配内核的五个 virtio/network 模块。输入目录保持只读。
++
++```sh
++sudo -n python3 scripts/memory-lab/page-sharing/m11_check.py \
++  --firecracker /absolute/patched-firecracker --kernel /absolute/vmlinuz \
++  --guest-binary /absolute/new-fixture/m11-guest \
++  --nbd-helper /absolute/page-sharing-source \
++  --module-dir /absolute/new-fixture/modules \
++  --output /absolute/new-run --cleanup-failed
++```
++
++需要 root、KVM、NBD、TAP 和 4 KiB host/guest 页。测试使用 2 vCPU、128 MiB
++guest、四个 O_DIRECT worker、真实 Async/io_uring 块 I/O 和持续 TAP RX。
++B0/File 和 B1/NBD 各执行三轮冻结、完整 RAM/native/disk oracle，再恢复验证
++所有 worker 和网络继续推进。仅操作本次创建的 VM、helper、TAP 和文件。
++
++测试盘为 raw virtio-blk，不能替代应用 rootfs 或完整原 trace。诊断变量
++`M11_DIAGNOSTIC_SKIP_NATIVE=1` 的结果不计入验收。故障现场默认保留；
++`--cleanup-failed` 仅授权清理本轮 children。
++
++设备状态顺序修复、错误传播、vsock 兼容边界、五项 Rust 合同、严格旧版本失败
++及最终同源构建证据见[本轮 M11 报告](../../../deliveries/page-sharing/20261030-step1-followup/m11/m11.md)。
+diff --git a/scripts/memory-lab/page-sharing/m11_check.py b/scripts/memory-lab/page-sharing/m11_check.py
+new file mode 100644
+index 000000000..9a1d9d251
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m11_check.py
+@@ -0,0 +1,223 @@
++#!/usr/bin/env python3
++"""M11: real Async virtio-blk and TAP RX versus external checkpoint freeze.
++
++Owns one TAP and only VM/helper children it starts. Keeps failed children unless
++--cleanup-failed. A raw writable virtio disk is used, not an application rootfs.
++The separate orchestrator/rootfs E2E remains required for application acceptance.
++"""
++import argparse
++import gzip
++import hashlib
++import json
++import os
++from pathlib import Path
++import platform
++import shutil
++import socket
++import struct
++import subprocess
++import threading
++import time
++import kvm_check as k
++
++CHUNK, SLOTS, WORKERS = 65536, 64, 4
++
++
++def initrd_with_modules(binary, modules, destination):
++    # Reuse the console-safe fixture archive and add a second newc archive in
++    # one gzip stream. Linux initramfs explicitly permits concatenated archives.
++    base = destination.with_suffix('.base.gz')
++    k.make_initrd(binary, base)
++    data = bytearray(gzip.decompress(base.read_bytes()))
++    files = [('modules', 0o040755, b'')]
++    for name in ('virtio_mmio','virtio_blk','failover','net_failover','virtio_net'):
++        files.append(('modules/'+name+'.ko', 0o100644, (modules/(name+'.ko')).read_bytes()))
++    files.append(('TRAILER!!!',0,b''))
++    for index,(name,mode,content) in enumerate(files,100):
++        encoded=name.encode()+b'\0'
++        fields=[index,mode,0,0,1,0,len(content),0,0,0,0,len(encoded),0]
++        data.extend(b'070701'+b''.join(f'{v:08x}'.encode() for v in fields))
++        data.extend(encoded);data.extend(b'\0'*(-len(data)%4))
++        data.extend(content);data.extend(b'\0'*(-len(data)%4))
++    with gzip.open(destination,'wb') as stream:stream.write(data)
++    base.unlink()
++
++
++def disk_check(path):
++    counts = [0] * WORKERS
++    with path.open('rb', buffering=0) as source:
++        for worker in range(WORKERS):
++            for slot in range(SLOTS):
++                record = source.read(CHUNK)
++                if record == bytes(CHUNK):
++                    continue
++                if len(record) != CHUNK or record[:8] != b'M11BLK00':
++                    raise AssertionError(f'disk torn/invalid header {worker=} {slot=}')
++                owner, seq = struct.unpack_from('<QQ', record, 8)
++                if owner != worker or seq % SLOTS != slot:
++                    raise AssertionError(f'disk wrong slot {worker=} {slot=} {owner=} {seq=}')
++                expected = bytearray((i * 17 + seq + worker * 29) % 256 for i in range(CHUNK))
++                expected[:8] = b'M11BLK00'
++                struct.pack_into('<QQ', expected, 8, worker, seq)
++                if record != expected:
++                    raise AssertionError(f'disk torn payload {worker=} {slot=} {seq=}')
++                counts[worker] += 1
++    if any(n == 0 for n in counts):
++        raise AssertionError(f'no recorded disk I/O for some workers: {counts}')
++    return {'valid_records_per_worker': counts, 'sha256': k.sha256_file(path)}
++
++
++class Sender:
++    def __init__(self, tap):
++        self.stop = threading.Event()
++        self.count = 0
++        self.error = None
++        self.sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(3))
++        self.sock.bind((tap, 0))
++        self.thread = threading.Thread(target=self.send, daemon=True)
++        self.thread.start()
++
++    def send(self):
++        try:
++            while not self.stop.is_set():
++                seq = self.count + 1
++                payload = b'\x06\x00\x00\x00\x00\x01\x02\x00\x00\x00\x00\x02\x88\xb5M11NET00' + struct.pack('<Q', seq)
++                payload += bytes((seq + i) % 256 for i in range(30, 1400))
++                self.sock.send(payload)
++                self.count += 1
++                self.stop.wait(0.0005)
++        except BaseException as e:
++            self.error = repr(e)
++
++    def close(self):
++        self.stop.set()
++        self.thread.join(timeout=5)
++        self.sock.close()
++        if self.error:
++            raise RuntimeError(self.error)
++
++
++def wait_progress(vm, previous=None):
++    # Restored counters already include work done by the seed. A fresh sample
++    # is required before checking actual post-restore progress.
++    if previous is None:
++        previous = vm.command('status')
++    deadline = time.monotonic() + 30
++    while time.monotonic() < deadline:
++        got = vm.command('status')
++        if got['errors']:
++            raise AssertionError(got)
++        if all(n > max(previous['completed'][i], 10) for i, n in enumerate(got['completed'])) and got['rx_packets'] > max(previous['rx_packets'], 10):
++            return got
++        time.sleep(0.05)
++    raise TimeoutError(f'no block/network progress: {got}')
++
++
++def frozen(vm, run, name, disk, sender):
++    state = run / (name + '.state')
++    # Sender stays active throughout pause, drain, state capture, export and
++    # stable sampling; freeze must stop device RX writes as well as vCPUs.
++    k.record_memory_stats(run, name+'-before-freeze', (vm,))
++    before_packets = sender.count
++    vm.api('PATCH', '/vm', {'state': 'Paused'})
++    vm.snapshot(state)
++    regions = vm.mappings()
++    samples = []
++    ram = None
++    for index in range(3):
++        ram = run / f'{name}-sample{index}.ram'
++        receipt = k.export_memory(vm, regions, ram)
++        samples.append({'ram_sha256': receipt['sha256'], 'disk_sha256': k.sha256_file(disk), 'sender_packets': sender.count, 'monotonic': time.monotonic()})
++        time.sleep(0.15)
++    if len({s['ram_sha256'] for s in samples}) != 1 or len({s['disk_sha256'] for s in samples}) != 1:
++        raise AssertionError(f'RAM/disk mutated after external checkpoint freeze: {samples}')
++    if sender.count <= before_packets + 10:
++        raise AssertionError('network injector did not remain active during freeze')
++    native = not os.environ.get('M11_DIAGNOSTIC_SKIP_NATIVE')
++    if native:
++        vm.snapshot(run / f'{name}.native.state', run / f'{name}.native.ram')
++        if k.sha256_file(run / f'{name}.native.ram') != samples[0]['ram_sha256']:
++            raise AssertionError('external export differs from same-frozen-state FC full dump')
++    disk_receipt = disk_check(disk)
++    disk_copy = run / f'{name}.disk'
++    shutil.copyfile(disk, disk_copy)
++    if k.sha256_file(disk_copy) != disk_receipt['sha256']:
++        raise AssertionError('frozen block image copy mismatch')
++    receipt = {'samples': samples, 'injected_during_freeze': sender.count - before_packets, 'disk_oracle': disk_receipt,
++               'state_sha256': k.sha256_file(state), 'external_equals_native': True if native else None, 'ram': str(ram), 'state': str(state), 'disk': str(disk_copy)}
++    k.save_json(run / f'{name}-freeze.json', receipt)
++    return state, ram, disk_copy
++
++
++def main():
++    p = argparse.ArgumentParser()
++    for name in ('firecracker','kernel','guest-binary','nbd-helper','module-dir','output'):
++        p.add_argument('--'+name, required=True, type=Path)
++    p.add_argument('--cleanup-failed', action='store_true')
++    args = p.parse_args()
++    for name in ('firecracker','kernel','guest_binary','nbd_helper'):
++        setattr(args, name, getattr(args,name).resolve(strict=True))
++    run = args.output.resolve(); run.mkdir(parents=True,exist_ok=False)
++    tap = 'm11' + str(os.getpid())[-8:]
++    vms, helpers, sender, tap_created, ok = [], [], None, False, False
++    disk = run / 'active.disk'
++    with disk.open('xb') as f: f.truncate(WORKERS*SLOTS*CHUNK)
++    initrd_with_modules(args.guest_binary, args.module_dir, run / 'guest-initrd.gz')
++    k.save_json(run / 'environment.json', {'uname':list(platform.uname()),'page_size':os.sysconf('SC_PAGE_SIZE'),'tap':tap,'fc_sha256':k.sha256_file(args.firecracker),'guest_sha256':k.sha256_file(args.guest_binary),'kernel_sha256':k.sha256_file(args.kernel),'requested_io_engine':'Async','ram_mib':128,'vcpus':2})
++    try:
++        subprocess.run(['ip','tuntap','add','dev',tap,'mode','tap'],check=True);tap_created=True
++        subprocess.run(['ip','link','set',tap,'up'],check=True)
++        vm = k.VM(args,'seed',run);vms.append(vm)
++        vm.api('PUT','/machine-config',{'vcpu_count':2,'mem_size_mib':128})
++        vm.api('PUT','/boot-source',{'kernel_image_path':str(args.kernel),'initrd_path':str(run/'guest-initrd.gz'),'boot_args':'console=ttyS0 reboot=k panic=1 pci=off'})
++        vm.api('PUT','/drives/io',{'drive_id':'io','path_on_host':str(disk),'is_root_device':False,'is_read_only':False,'io_engine':'Async'})
++        vm.api('PUT','/network-interfaces/io',{'iface_id':'io','guest_mac':'06:00:00:00:00:01','host_dev_name':tap})
++        vm.api('PUT','/actions',{'action_type':'InstanceStart'})
++        vm.event('ready');sender=Sender(tap)
++        fd_links = {entry.name: os.readlink(entry) for entry in Path(f'/proc/{vm.process.pid}/fd').iterdir()}
++        k.save_json(run/'seed-fd-links.json', fd_links)
++        if not any('io_uring' in value for value in fd_links.values()):
++            raise AssertionError('requested Async block engine has no live io_uring FD')
++        k.save_json(run/'seed-progress.json',wait_progress(vm))
++        seed_state,seed_ram,seed_disk=frozen(vm,run,'seed',disk,sender)
++        vm.close();vms.remove(vm)
++        results={}
++        for variant in ('B0-file','B1-nbd'):
++            shutil.copyfile(seed_disk,disk)
++            backing=seed_ram
++            helper=None
++            if variant=='B1-nbd':
++                helper_run=run/'shared-source';helper_run.mkdir()
++                helper=k.NBDHelper(args.nbd_helper,seed_ram,helper_run);helpers.append(helper)
++                if helper.ready['content_id'] != 'sha256:'+k.sha256_file(seed_ram) or helper.ready['logical_size'] != seed_ram.stat().st_size:
++                    raise AssertionError('NBD ready identity/size differs from the frozen seed')
++                backing=Path(helper.ready['path'])
++            vm=k.VM(args,variant,run);vms.append(vm)
++            vm.restore(seed_state,backing)
++            vm.api('PATCH','/vm',{'state':'Resumed'})
++            progress=[]
++            for iteration in range(3):
++                progress.append(wait_progress(vm,progress[-1] if progress else None))
++                last_state,last_ram,last_disk=frozen(vm,run,f'{variant}-{iteration}',disk,sender)
++                if iteration<2:vm.api('PATCH','/vm',{'state':'Resumed'})
++            k.save_json(run/f'{variant}-progress.json',progress)
++            vm.close();vms.remove(vm)
++            restored=k.VM(args,variant+'-verify',run);vms.append(restored)
++            restored.restore(last_state,last_ram);restored.api('PATCH','/vm',{'state':'Resumed'})
++            after=wait_progress(restored,progress[-1]);k.save_json(run/f'{variant}-restored-progress.json',after)
++            # Check a second frozen checkpoint after resumed pending I/O ran.
++            frozen(restored,run,f'{variant}-restored',disk,sender)
++            restored.close();vms.remove(restored)
++            if helper:helper.close();helpers.remove(helper)
++            results[variant]={'freeze_iterations':3,'restore_io_and_network_progress':True,'errors':after['errors']}
++        k.save_json(run/'result.json',{'status':'diagnostic' if os.environ.get('M11_DIAGNOSTIC_SKIP_NATIVE') else 'passed','variants':results,'oracle':'3 full-RAM/disk stable samples per freeze, same-frozen-state FC full dump, every written raw-disk record, restored block and RX progress','scope':'Async virtio-blk raw disk + TAP network, not application rootfs trace or vsock','sender_packets':sender.count})
++        ok=True
++    finally:
++        if ok or args.cleanup_failed:
++            for vm in vms[:]: vm.close();vms.remove(vm)
++            for helper in helpers[:]:helper.close();helpers.remove(helper)
++            if sender:sender.close()
++            if tap_created:subprocess.run(['ip','link','delete',tap],check=True)
++        k.save_json(run/'cleanup.json',{'success':ok,'retained_vm_pids':[v.process.pid for v in vms],'retained_helper_pids':[h.process.pid for h in helpers],'tap_retained':tap_created and not(ok or args.cleanup_failed)})
++
++if __name__=='__main__': main()
+diff --git a/scripts/memory-lab/page-sharing/m11_guest.go b/scripts/memory-lab/page-sharing/m11_guest.go
+new file mode 100644
+index 000000000..b500c9e9b
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m11_guest.go
+@@ -0,0 +1,222 @@
++//go:build linux
++
++// Standalone init for the M11 asynchronous block/network checkpoint oracle.
++package main
++
++import (
++	"bufio"
++	"bytes"
++	"encoding/binary"
++	"encoding/json"
++	"fmt"
++	"os"
++	"runtime"
++	"strings"
++	"sync/atomic"
++	"syscall"
++	"time"
++	"unsafe"
++)
++
++const chunk = 65536
++const slots = 64
++
++var completed [4]atomic.Uint64
++var stages [4]atomic.Uint64
++var received atomic.Uint64
++var netBytes atomic.Uint64
++var failures atomic.Uint64
++
++func emit(v any) { b, _ := json.Marshal(v); fmt.Printf("PSG %s\n", b) }
++func die(e error) {
++	emit(map[string]any{"event": "error", "error": e.Error()})
++	for {
++		syscall.Pause()
++	}
++}
++func record(dst []byte, w int, s uint64) {
++	for i := range dst {
++		dst[i] = byte(uint64(i)*17 + s + uint64(w)*29)
++	}
++	copy(dst, "M11BLK00")
++	binary.LittleEndian.PutUint64(dst[8:], uint64(w))
++	binary.LittleEndian.PutUint64(dst[16:], s)
++}
++func worker(w int, fd int) {
++	memory, e := syscall.Mmap(-1, 0, chunk*2, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_PRIVATE|syscall.MAP_ANON)
++	if e != nil {
++		die(e)
++	}
++	out, in := memory[:chunk], memory[chunk:]
++	for s := uint64(1); ; s++ {
++		record(out, w, s)
++		off := int64((w*slots + int(s%slots)) * chunk)
++		stages[w].Store(1)
++		n, e := syscall.Pwrite(fd, out, off)
++		if e != nil || n != chunk {
++			die(fmt.Errorf("worker %d write %d: %d %v", w, s, n, e))
++		}
++		stages[w].Store(2)
++		n, e = syscall.Pread(fd, in, off)
++		if e != nil || n != chunk {
++			die(fmt.Errorf("worker %d read %d: %d %v", w, s, n, e))
++		}
++		if !bytes.Equal(out, in) {
++			failures.Add(1)
++			die(fmt.Errorf("worker %d sequence %d readback mismatch", w, s))
++		}
++		completed[w].Store(s)
++		stages[w].Store(3)
++	}
++}
++func network() {
++	fd, e := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, 0x0300)
++	if e != nil {
++		die(e)
++	}
++	// The fixture has exactly one virtio network device. Resolve its index from sysfs.
++	entries, e := os.ReadDir("/sys/class/net")
++	if e != nil {
++		die(e)
++	}
++	idx := 0
++	for _, entry := range entries {
++		if entry.Name() == "lo" {
++			continue
++		}
++		b, e := os.ReadFile("/sys/class/net/" + entry.Name() + "/ifindex")
++		if e != nil {
++			die(e)
++		}
++		fmt.Sscanf(string(b), "%d", &idx)
++		break
++	}
++	if idx == 0 {
++		die(fmt.Errorf("no virtio net interface"))
++	}
++	// SIOCSIFFLAGS: bring the fixture interface up without external userspace tools.
++	control, e := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
++	if e != nil {
++		die(e)
++	}
++	var req [40]byte
++	for _, entry := range entries {
++		if entry.Name() != "lo" {
++			copy(req[:16], entry.Name())
++			break
++		}
++	}
++	*(*uint16)(unsafe.Pointer(&req[16])) = syscall.IFF_UP | syscall.IFF_RUNNING
++	_, _, eno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(control), syscall.SIOCSIFFLAGS, uintptr(unsafe.Pointer(&req[0])))
++	if eno != 0 {
++		die(eno)
++	}
++	syscall.Close(control)
++	if e = syscall.Bind(fd, &syscall.SockaddrLinklayer{Protocol: 0x0300, Ifindex: idx}); e != nil {
++		die(e)
++	}
++	b := make([]byte, 4096)
++	for {
++		n, _, e := syscall.Recvfrom(fd, b, 0)
++		if e != nil {
++			die(e)
++		}
++		if n < 30 || b[12] != 0x88 || b[13] != 0xb5 {
++			continue
++		}
++		if string(b[14:22]) != "M11NET00" {
++			failures.Add(1)
++			continue
++		}
++		sequence := binary.LittleEndian.Uint64(b[22:30])
++		for i := 30; i < n; i++ {
++			if b[i] != byte(sequence+uint64(i)) {
++				failures.Add(1)
++				die(fmt.Errorf("network payload mismatch"))
++			}
++		}
++		received.Add(1)
++		netBytes.Add(uint64(n))
++	}
++}
++func report(event string) {
++	var c, s [4]uint64
++	for i := range c {
++		c[i] = completed[i].Load()
++		s[i] = stages[i].Load()
++	}
++	emit(map[string]any{"event": event, "completed": c, "stages": s, "rx_packets": received.Load(), "rx_bytes": netBytes.Load(), "errors": failures.Load()})
++}
++func main() {
++	runtime.GOMAXPROCS(4)
++	for _, p := range []string{"/proc", "/sys", "/dev"} {
++		if e := os.MkdirAll(p, 0755); e != nil {
++			die(e)
++		}
++	}
++	for _, m := range [][3]string{{"proc", "/proc", "proc"}, {"sysfs", "/sys", "sysfs"}, {"devtmpfs", "/dev", "devtmpfs"}} {
++		if e := syscall.Mount(m[0], m[1], m[2], 0, ""); e != nil {
++			die(e)
++		}
++	}
++	f, e := os.OpenFile("/dev/console", os.O_RDWR, 0)
++	if e != nil {
++		die(e)
++	}
++	for fd := 0; fd < 3; fd++ {
++		if fd != int(f.Fd()) {
++			if e = syscall.Dup3(int(f.Fd()), fd, 0); e != nil {
++				die(e)
++			}
++		}
++	}
++	var t syscall.Termios
++	_, _, eno := syscall.Syscall(syscall.SYS_IOCTL, 0, syscall.TCGETS, uintptr(unsafe.Pointer(&t)))
++	if eno == 0 {
++		t.Lflag &^= syscall.ICANON | syscall.ECHO | syscall.ISIG
++		t.Iflag &^= syscall.ICRNL | syscall.INLCR | syscall.IXON
++		t.Oflag &^= syscall.OPOST
++		t.Cc[syscall.VMIN], t.Cc[syscall.VTIME] = 1, 0
++		syscall.Syscall(syscall.SYS_IOCTL, 0, syscall.TCSETS, uintptr(unsafe.Pointer(&t)))
++	}
++	for _, name := range []string{"virtio_mmio", "virtio_blk", "failover", "net_failover", "virtio_net"} {
++		module, e := os.Open("/modules/" + name + ".ko")
++		if e != nil {
++			die(fmt.Errorf("module %s: %w", name, e))
++		}
++		params := []byte{0}
++		_, _, eno := syscall.Syscall(syscall.SYS_FINIT_MODULE, module.Fd(), uintptr(unsafe.Pointer(&params[0])), 0)
++		module.Close()
++		if eno != 0 && eno != syscall.EEXIST {
++			die(fmt.Errorf("module %s: %v", name, eno))
++		}
++	}
++	for deadline := time.Now().Add(5 * time.Second); ; {
++		if _, e := os.Stat("/dev/vda"); e == nil {
++			break
++		}
++		if time.Now().After(deadline) {
++			die(fmt.Errorf("virtio block node missing after module load"))
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	fd, e := syscall.Open("/dev/vda", syscall.O_RDWR|syscall.O_DIRECT, 0)
++	if e != nil {
++		die(e)
++	}
++	for i := range completed {
++		go worker(i, fd)
++	}
++	go network()
++	report("ready")
++	scanner := bufio.NewScanner(os.Stdin)
++	for scanner.Scan() {
++		switch strings.TrimSpace(scanner.Text()) {
++		case "status":
++			report("status")
++		default:
++			die(fmt.Errorf("unknown command"))
++		}
++	}
++	die(fmt.Errorf("serial input ended: %v", scanner.Err()))
++}
+diff --git a/scripts/memory-lab/page-sharing/m11_setup.sh b/scripts/memory-lab/page-sharing/m11_setup.sh
+new file mode 100755
+index 000000000..94f0886a0
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/m11_setup.sh
+@@ -0,0 +1,22 @@
++#!/bin/sh
++# Prepare only this run's guest fixture; never execute the old fixture init.
++# Usage: m11_setup.sh GO_BINARY MATCHED_KERNEL_MODULE_ROOT OUTPUT_DIRECTORY
++set -eu
++if [ "$#" -ne 3 ]; then
++    echo 'usage: m11_setup.sh GO_BINARY MATCHED_KERNEL_MODULE_ROOT OUTPUT_DIRECTORY' >&2
++    exit 2
++fi
++go_binary=$1
++module_root=$2
++fixture_output=$3
++if [ -e "$fixture_output" ]; then
++    echo "refusing to overwrite fixture directory: $fixture_output" >&2
++    exit 1
++fi
++mkdir -p "$fixture_output/modules"
++for module in drivers/virtio/virtio_mmio drivers/block/virtio_blk net/core/failover drivers/net/net_failover drivers/net/virtio_net; do
++    cp "$module_root/$module.ko" "$fixture_output/modules/"
++done
++script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
++GOOS=linux GOARCH=arm64 CGO_ENABLED=0 "$go_binary" build -o "$fixture_output/m11-guest" "$script_dir/m11_guest.go"
++sha256sum "$fixture_output"/modules/*.ko "$fixture_output/m11-guest" > "$fixture_output/fixture-sha256.txt"
+diff --git a/scripts/memory-lab/page-sharing/prepare_factory_fixture.sh b/scripts/memory-lab/page-sharing/prepare_factory_fixture.sh
+new file mode 100755
+index 000000000..48198e0ae
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/prepare_factory_fixture.sh
+@@ -0,0 +1,59 @@
++#!/usr/bin/env bash
++# Build a disposable Factory fixture from the existing ARM64 envd image.
++# Never alter the input image, initrd tree, or host package installation.
++set -euo pipefail
++if [[ $# != 2 ]]; then
++  echo "usage: $0 EXISTING_TEMPLATE_DIR NEW_OUTPUT_DIR" >&2
++  exit 2
++fi
++source_dir=$(realpath "$1")
++output_dir=$(realpath -m "$2")
++test ! -e "$output_dir"
++mkdir -p "$output_dir"
++cp --reflink=auto --sparse=always "$source_dir/rootfs.ext4" "$output_dir/rootfs.ext4"
++sudo -n cp -a "$source_dir/initrd-tree" "$output_dir/initrd-tree"
++cat > "$output_dir/sharing-init" <<'GUEST'
++#!/bin/sh
++export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++mount -t tmpfs tmpfs /run
++mkdir -p /run/e2b /workspace /sys/fs/cgroup /dev/pts
++mount -t devpts devpts /dev/pts
++mount -t cgroup2 none /sys/fs/cgroup || true
++echo "+cpu +memory" > /sys/fs/cgroup/cgroup.subtree_control || true
++MD=/lib/modules/6.1.0-50-arm64/kernel
++for m in net/core/failover drivers/net/net_failover drivers/net/virtio_net; do
++  insmod "$MD/$m.ko" 2>/dev/null || true
++done
++ip link set lo up
++IP=
++for arg in $(cat /proc/cmdline); do
++  case "$arg" in ip=*) IP=${arg#ip=}; IP=${IP%%:*};; esac
++done
++test -n "$IP" || { echo SHARING_INIT_MISSING_IP; exec sh; }
++ip link set eth0 up
++ip addr add "$IP/30" dev eth0
++# The driver is a module, so the kernel's early ip= autoconfiguration cannot
++# establish this route. Factory's namespace DNAT retains the host source IP.
++ip route replace default via 169.254.0.22 dev eth0
++ulimit -n 8192
++# Only MMDS/log transport differs; process/filesystem APIs are real envd.
++/usr/local/bin/envd -isnotfc > /dev/console 2>&1 &
++echo "SHARING_INIT_READY ip=$IP envd=$!"
++while true; do wait; sleep 1; done
++GUEST
++chmod 755 "$output_dir/sharing-init"
++debugfs -w -R "write $output_dir/sharing-init /sbin/sharing-init" "$output_dir/rootfs.ext4"
++debugfs -w -R 'set_inode_field /sbin/sharing-init mode 0100755' "$output_dir/rootfs.ext4"
++debugfs -R "dump /sbin/sharing-init $output_dir/sharing-init-readback" "$output_dir/rootfs.ext4"
++cmp "$output_dir/sharing-init" "$output_dir/sharing-init-readback"
++sudo -n python3 - "$output_dir/initrd-tree/init" <<'PY'
++from pathlib import Path
++import sys
++p = Path(sys.argv[1])
++text = p.read_text()
++assert '/sbin/memory-lab-init' in text
++p.write_text(text.replace('/sbin/memory-lab-init', '/sbin/sharing-init'))
++PY
++(cd "$output_dir/initrd-tree"; sudo -n find . -print0 | sudo -n cpio --null -o --format=newc --quiet | gzip -n > "$output_dir/initrd.gz")
++sha256sum "$source_dir/rootfs.ext4" "$source_dir/initrd.gz" "$output_dir/rootfs.ext4" "$output_dir/initrd.gz" "$output_dir/sharing-init" > "$output_dir/sha256.txt"
++echo "Fixture ready: $output_dir"
+diff --git a/scripts/memory-lab/page-sharing/prepare_factory_network_deps.sh b/scripts/memory-lab/page-sharing/prepare_factory_network_deps.sh
+new file mode 100755
+index 000000000..e80354580
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/prepare_factory_network_deps.sh
+@@ -0,0 +1,24 @@
++#!/usr/bin/env bash
++# Optional openEuler 24.03 SP2 ARM64 test dependency. No system installation.
++set -euo pipefail
++if [[ $# != 1 ]]; then
++  echo "usage: $0 NEW_OUTPUT_DIR" >&2
++  exit 2
++fi
++test "$(uname -m)" = aarch64
++output_dir=$(realpath -m "$1")
++test ! -e "$output_dir"
++mkdir -p "$output_dir"
++cd "$output_dir"
++curl --fail --location --connect-timeout 15 --max-time 90 -o iptables.rpm \
++  https://repo.openeuler.openatom.cn/openEuler-24.03-LTS-SP2/update/aarch64/Packages/iptables-1.8.9-13.oe2403sp2.aarch64.rpm
++echo '56be46ddd49ddbb9963d8814fb044927420735fe1cab8d3ab02a61140fb53e4e  iptables.rpm' | sha256sum -c -
++rpm2cpio iptables.rpm | cpio -id --quiet
++cd usr/sbin
++ln -s iptables-legacy iptables
++ln -s iptables-legacy-save iptables-save
++ln -s iptables-legacy-restore iptables-restore
++ln -s ip6tables-legacy ip6tables
++ldd xtables-legacy-multi
++./iptables --version
++echo "Prepend to PATH for the test only: $output_dir/usr/sbin"
+diff --git a/scripts/memory-lab/page-sharing/trace_slice.py b/scripts/memory-lab/page-sharing/trace_slice.py
+new file mode 100644
+index 000000000..62629a0b8
+--- /dev/null
++++ b/scripts/memory-lab/page-sharing/trace_slice.py
+@@ -0,0 +1,212 @@
++#!/usr/bin/env python3
++"""Extract and verify a source-edit fixture from an immutable SWE trace.
++
++This preserves five original tool calls, including complete Write/Edit text.
++It is a trace-derived fixture, not a complete trace or compilation replay.
++"""
++
++import argparse
++import copy
++import hashlib
++import json
++from pathlib import Path, PurePosixPath
++
++
++TRACE_ID = "biofabric-rust-rewrite-897c0fc8-381"
++SOURCE_SHA256 = "6345988d0e84ca897b54a875fa6b4a4fe879b620ad095d3a61bfde825490d9e2"
++SELECTED = {
++    50: ("call_4ddcd8df06ba4b95bc244c91", "Write"),
++    55: ("call_13c2a9e63d394ed8b1656659", "Write"),
++    60: ("call_b86af56480314c82944e5187", "Edit"),
++    63: ("call_5b1a809063144a479bae4f55", "Edit"),
++    65: ("call_ecf9273a896d455a8f80a5b8", "Edit"),
++}
++TARGETS = (
++    "/app/crates/core/src/model/link.rs",
++    "/app/crates/core/src/model/network.rs",
++)
++READ_IDS = {
++    "call_6b9344f81af8415eb145211a",
++    "call_392839277e1b4d50b05d51ae",
++}
++PHASES = ("after_writes", "after_edits")
++
++
++def sha256(data):
++    return hashlib.sha256(data).hexdigest()
++
++
++def apply_tool(files, tool):
++    """Apply original UTF-8 Write/Edit semantics; reject ambiguous edits."""
++    params = tool["params"]
++    path = params["file_path"]
++    if path not in TARGETS:
++        raise ValueError(f"unexpected destination {path}")
++    if tool["name"] == "Write":
++        files[path] = params["content"]
++    elif tool["name"] == "Edit":
++        old = params["old_string"]
++        new = params["new_string"]
++        if not old or path not in files:
++            raise ValueError(f"missing edit input at step {tool['step_id']}")
++        count = files[path].count(old)
++        replace_all = params.get("replace_all", False)
++        if count == 0 or (not replace_all and count != 1):
++            raise ValueError(f"ambiguous edit at step {tool['step_id']}: {count} matches")
++        files[path] = files[path].replace(old, new) if replace_all else files[path].replace(old, new, 1)
++    else:
++        raise ValueError(f"unsupported original tool {tool['name']}")
++
++
++def expected_states(tools):
++    files = {}
++    states = {}
++    for tool in tools:
++        apply_tool(files, tool)
++        if tool["step_id"] in (55, 65):
++            phase = "after_writes" if tool["step_id"] == 55 else "after_edits"
++            states[phase] = copy.deepcopy(files)
++    return states
++
++
++def file_manifest(files):
++    return [
++        {"file_path": path, "sha256": sha256(text.encode("utf-8")), "size_bytes": len(text.encode("utf-8"))}
++        for path, text in sorted(files.items())
++    ]
++
++
++def extract(source):
++    raw = source.read_bytes()
++    digest = sha256(raw)
++    if digest != SOURCE_SHA256:
++        raise ValueError(f"source hash mismatch: {digest}; expected {SOURCE_SHA256}")
++    trace = json.loads(raw)
++    tools = []
++    excluded = []
++    read_probes = []
++    all_count = 0
++    for step in trace["steps"]:
++        sid = step["step_id"]
++        calls = step.get("tool_calls") or []
++        all_count += len(calls)
++        omitted = []
++        for call in calls:
++            cid, name = call["tool_call_id"], call["function_name"]
++            if sid in SELECTED and (cid, name) == SELECTED[sid]:
++                tools.append({
++                    "step_id": sid, "call_id": cid, "name": name,
++                    "phase": "before_checkpoint" if sid <= 55 else "after_restore",
++                    "params": copy.deepcopy(call["arguments"]),
++                })
++            elif 50 <= sid <= 65:
++                omitted.append({"call_id": cid, "name": name})
++            if cid in READ_IDS:
++                read_probes.append({
++                    "original_step_id": sid, "call_id": cid, "name": name,
++                    "params": copy.deepcopy(call["arguments"]),
++                    "validation_only": True,
++                    "historical_observation_reused": False,
++                })
++        if 50 <= sid <= 65 and sid not in SELECTED:
++            excluded.append({"step_id": sid, "tools": omitted})
++        elif omitted:
++            raise ValueError(f"unexpected extra tool in selected step {sid}")
++    if [(t["step_id"], (t["call_id"], t["name"])) for t in tools] != list(SELECTED.items()):
++        raise ValueError("selected original calls missing, duplicated, or reordered")
++    if len(read_probes) != 2:
++        raise ValueError("original Read parameter probes missing")
++    states = expected_states(tools)
++    return {
++        "schema_version": 1,
++        "fixture_id": "biofabric-381-source-edit-50-65-v1",
++        "evidence_type": "trace_derived_source_edit_fixture",
++        "complete_original_trace": False,
++        "source": {
++            "trace_id": TRACE_ID, "normalized_file": "agent/trajectory.json",
++            "sha256": digest, "size_bytes": len(raw),
++            "original_steps": len(trace["steps"]), "original_tool_calls": all_count,
++        },
++        "scope": {
++            "preserved": "Exact original call IDs, step IDs and full tool arguments; UTF-8 file bytes and absolute paths.",
++            "precondition": "Destination parent directories exist; both files are completely established by the original Write calls.",
++            "checkpoint": "Execute Write steps 50 and 55; pause, publish and restore; execute Edit steps 60, 63 and 65.",
++            "oracle": "Independent byte application of the original arguments; compare both full files before checkpoint, after restore and after edits.",
++            "not_tested": "Compilation, Rust/Java dependencies, original task outcome, agent task management, original timing, or complete trace compatibility.",
++        },
++        "tools": tools,
++        "excluded_steps": excluded,
++        "excluded_ranges": [{"step_id_lt": 50}, {"step_id_gt": 65}],
++        "exclusion_reason": "Explicitly selected file-edit fixture; skipped Bash/Read/TaskUpdate steps are not counted as passing original trace calls.",
++        "read_probes": read_probes,
++        "read_probe_contract": "Original Read parameters from steps 13 and 20 can be reapplied as validation-only probes. Their historical results describe an earlier state and must not be reused as the checkpoint oracle. Full-file bytes are authoritative.",
++        "checkpoints": {
++            phase: {"after_step_id": 55 if phase == "after_writes" else 65,
++                    "expected_files": file_manifest(states[phase])}
++            for phase in PHASES
++        },
++    }
++
++
++def verify(fixture, source=None):
++    if fixture["schema_version"] != 1 or fixture["complete_original_trace"] is not False:
++        raise ValueError("incorrect fixture evidence boundary")
++    tools = fixture["tools"]
++    if [(t["step_id"], (t["call_id"], t["name"])) for t in tools] != list(SELECTED.items()):
++        raise ValueError("unexpected call selection")
++    if fixture["source"]["sha256"] != SOURCE_SHA256:
++        raise ValueError("unexpected trace identity")
++    states = expected_states(tools)
++    for phase in PHASES:
++        if fixture["checkpoints"][phase]["expected_files"] != file_manifest(states[phase]):
++            raise ValueError(f"incorrect oracle for {phase}")
++    if source is not None and fixture != extract(source):
++        raise ValueError("fixture is not the exact deterministic extraction of the original trace")
++    return states
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    sub = parser.add_subparsers(dest="command", required=True)
++    gen = sub.add_parser("extract", help="extract from the pinned original trace")
++    gen.add_argument("--source", type=Path, required=True)
++    gen.add_argument("--output", type=Path, required=True)
++    check = sub.add_parser("verify", help="verify oracle; optionally compare all fields to original source")
++    check.add_argument("--fixture", type=Path, required=True)
++    check.add_argument("--source", type=Path)
++    check.add_argument("--directory", type=Path, help="read guest files downloaded into an isolated root directory")
++    check.add_argument("--phase", choices=PHASES, default="after_edits")
++    export = sub.add_parser("expected", help="write independent expected UTF-8 files to a new directory")
++    export.add_argument("--fixture", type=Path, required=True)
++    export.add_argument("--phase", choices=PHASES, required=True)
++    export.add_argument("--output", type=Path, required=True)
++    args = parser.parse_args()
++    if args.command == "extract":
++        fixture = extract(args.source)
++        verify(fixture, args.source)
++        # Refuse accidental replacement of a prior fixture or receipt.
++        with args.output.open("x", encoding="utf-8") as stream:
++            json.dump(fixture, stream, ensure_ascii=False, indent=2)
++            stream.write("\n")
++    else:
++        fixture = json.loads(args.fixture.read_text(encoding="utf-8"))
++        states = verify(fixture, getattr(args, "source", None))
++        if args.command == "expected":
++            args.output.mkdir()
++            for path, content in states[args.phase].items():
++                dest = args.output.joinpath(*PurePosixPath(path).parts[1:])
++                dest.parent.mkdir(parents=True, exist_ok=True)
++                with dest.open("xb") as stream:
++                    stream.write(content.encode("utf-8"))
++        elif args.directory is not None:
++            for path, content in states[args.phase].items():
++                observed = args.directory.joinpath(*PurePosixPath(path).parts[1:]).read_bytes()
++                if observed != content.encode("utf-8"):
++                    raise ValueError(f"observed file mismatch: {path}")
++    print(json.dumps({"result": "passed", "command": args.command,
++                      "fixture_id": fixture["fixture_id"],
++                      "complete_original_trace": False}, sort_keys=True))
++
++
++if __name__ == "__main__":
++    main()
+-- 
+2.56.0
+

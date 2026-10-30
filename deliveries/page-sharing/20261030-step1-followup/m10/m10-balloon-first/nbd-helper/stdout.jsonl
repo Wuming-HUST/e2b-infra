@@ -1,0 +1,3 @@
+{"content_id":"sha256:10dd03514233be95304144f1a96eaf2bf499a15e2867254be8cafea26e2e2a11","event":"ready","layout_id":"fixture-128m-low-ram-4k-v1","leases":2,"logical_size":201326592,"path":"/dev/nbd0","pid":122050}
+{"event":"lease_released","path":"/dev/nbd0","remaining":1}
+{"event":"closed","read_bytes":201326592,"reads":1587}
