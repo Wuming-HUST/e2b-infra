@@ -48,7 +48,7 @@ KVM guest CPU 写
 
 已换出的候选页必须保留并读回；不能再经过 present/mincore 筛选丢弃。私有匿名页/swap 的 pagemap 扫描可以作为补充候选或独立交叉校验，不能仅看 resident 或 exclusive 位。新 guest heap/stack 页仍是普通 guest RAM offset，guest 内部的分配并不自动产生 host 用户态通知。
 
-`Dirty` 输出最终非零内容；候选最终为零时写 `Empty` 覆盖；其余继承。候选不要求每一页最终字节都与父不同，允许保守多导出。失败时保留 ledger，只有建立了正确的新基线后才清位。同一 FC 原地继续运行时，必须区分“相对启动 backing 的累计变化”和“相对最新 checkpoint 的本轮变化”。
+`Dirty` 输出最终内容，允许包含全零页；`Empty` 则无需内容载荷，直接覆盖父数据为零；其余继承。首版可把所有候选写入 `Dirty`、保持 `Empty` 为空，先不做零页压缩。候选不要求每一页最终字节都与父不同，允许保守多导出。失败时保留 ledger，只有建立了正确的新基线后才清位。同一 FC 原地继续运行时，必须区分“相对启动 backing 的累计变化”和“相对最新 checkpoint 的本轮变化”。
 
 ## 可直接借鉴的共享块设备预取
 
