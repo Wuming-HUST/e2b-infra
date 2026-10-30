@@ -1,0 +1,3 @@
+# Preserve raw receipts and mail patches byte-for-byte for SHA256 verification.
+receipts/** -text -whitespace
+*.patch -text -whitespace
