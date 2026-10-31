@@ -50,3 +50,5 @@ go test -race ./internal/sandbox/pmem ./internal/sandbox/fc ./internal/sandbox/t
 Linux KVM 整机测试为 `TestPmemFactoryIntegration`，默认跳过；必须显式提供隔离目录、FC、kernel、upper、initrd、lower、layout 与 trace slice。已执行命令和结果见交付目录 `deliveries/page-sharing/20261030-step2`。
 
 共享与快照专项整机测试为 `TestPmemSharingProofIntegration`，分别以 full_logical/tracked_delta 执行；实际 PFN、COW、应用路径 DAX、不同 backing 对照和恢复收据见 [共享证明](../../../deliveries/page-sharing/20261031-sharing-proof/README.md)。离线可用 `verify-sharing-proof.py DELIVERY_DIRECTORY` 重新核对证据。
+
+完整合成 trace 整机测试为 `TestPmemMarathonIntegration`：在上述 PMEM 集成环境参数之外，必须提供绝对路径 `E2B_MARATHON_TRACE`、`E2B_MARATHON_REPLAY`、`E2B_MARATHON_MTOOL`，指定原始 trace、原始 replay.py 和实现 `fixed-work-no-padding-v1` 的 ARM64 静态 mtool。设置 `E2B_SHARING_RAM_EXPORT_MODE=full_logical` 或 `tracked_delta`，每轮使用全新目录和独立 slot；test timeout 至少 17 分钟。测试固定为 1536 MiB/2 vCPU，一次一台回放 VM，保留三个边界的原生完整 RAM oracle。原始输入、目标执行状态和未完成验收项见 [trace 续跑记录](../../../deliveries/page-sharing/20261031-marathon-pmem/README.md)。它驱动合成负载，不执行原始工具或 LLM。

@@ -1,6 +1,23 @@
 # SWE-marathon trace 验证续跑记录
 
-2026-10-31：可以复用 agent03 的 trace，但 PMEM/DAX 全量回放尚未执行。本次只读核对因第一跳 H-arch 的 SSH 连接超时而未进入 agent03；没有启动新 VM 或回放任务。当前阻塞是连接，不是 32 GiB 容量。
+2026-10-31 续跑：已恢复连接并在 agent03 完成新增集成测试的原生编译，启动 PMEM/DAX + 共享 NBD MAP_PRIVATE RAM 的全量 trace。最近一次成功读取日志确认 初始模板恢复及实际 NBD/DAX 检查通过、turn 10 保存完成并进入恢复；随后 H-arch 的 IPv4/IPv6 SSH 与 Tailscale ping 均超时，最终结果未知。tracked_delta 轮尚未启动，不能据此宣布验收。此前未启动任务的连接失败记录保留在 `connectivity.json`。
+
+## 本轮实现与目标任务
+
+- 新增 `TestPmemMarathonIntegration`，复用生产 Factory/Pause/upload/cache restore 和已有冻结 RAM oracle；1536 MiB RAM、2 vCPU、单 VM 顺序运行。测试核对原 trace hash、全部调用 ID 顺序、turn 10/200/700 三次恢复、相同 PID、文件状态、最终状态，以及每代实际 NBD MAP_PRIVATE 和应用路径 DAX/GPA。
+- `inputs/` 保存本次从 agent03 取回的原始 trace、replay、mtool.c；字节未修改。测试把同一静态 mtool 上传至私有 upper，使用已验证 6.6.60 kernel 与 PFN lower，无须改原始 r4 模板。
+- `full_logical` 比较同冻结边界生产导出与 FC native full RAM；`tracked_delta` 在 native full 触页前抓候选页，再比较导出和重建后的完整逻辑 RAM，包含历史依赖读取。
+- 离线核对器 `scripts/memory-lab/pmem-dax/verify-marathon.py` 可核对完整交付包。它独立按工作负载规则计算各边界及最终匿名状态 hash，并核对原始逐条工具事件、DAX/NBD 收据、目标清理与源码一致性；当前证据尚未取齐，不能运行完整包验收。
+
+远端隔离根：`/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01`。
+
+| 项目 | 本轮已确认状态 |
+|---|---|
+| `marathon-build-01` | 原生 `go test -p 2 -c ./internal/sandbox`，退出 0，7.51 秒 |
+| `marathon-full-01` | driver PID `222887`，已启动；最后确认 turn 10 保存完成并进入恢复，最终 `test.json` 未取回 |
+| `marathon-tracked-01` | 尚未启动；启动器只在 full 的 `test.json.exit == 0` 后运行，已有目录则拒绝重复启动 |
+
+断线后先读取 `marathon-full-01/{driver.json,test.json,test.log,driver.log}` 及当前进程，不重新启动原目录，不因 SSH 超时结束或重启远端 VM。测试本身设置 17 分钟超时，内部 context 为 15 分钟；保留失败收据与清理结果。当前问题是第一跳连接，不是容器容量。
 
 ## 已有结果
 
@@ -24,4 +41,4 @@
 5. 最终工作状态与 legacy 比较前，确认相同 trace/replay/mtool 及确定性输入；如 payload 或 oracle 包含布局相关字段，先解释差异，不能直接忽略 hash 不同。共享 PFN/COW 仍以专项证明和必要的目标采样为准，回放完成不能替代物理共享证据。
 6. 保存命令、源码/输入 hash、各代快照 metadata、恢复日志、完整 summary、原始事件、失败收据及清理审计。原始工具执行另做原任务环境验证；本轮不能将 D14 标记为全部通过。
 
-本次连接失败的机器可读记录见 [connectivity.json](connectivity.json)。PMEM 回放适配、编译和目标执行均未在本轮完成；本文件是续跑验收清单。
+此前连接失败见 [connectivity.json](connectivity.json)。本轮适配及原生编译已完成，完整回放已启动；最终收据、增量回放、清理审计及完整离线核对仍待完成。

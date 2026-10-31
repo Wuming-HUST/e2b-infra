@@ -67,6 +67,7 @@ func TestPmemFactoryIntegration(t *testing.T) { //nolint:paralleltest
 }
 func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:paralleltest
 	proofMode := pmemMode && os.Getenv("E2B_SHARING_PROOF") == "1"
+	marathonMode := pmemMode && os.Getenv("E2B_PMEM_MARATHON") == "1"
 	runDir := os.Getenv("E2B_SHARING_INTEGRATION_DIR")
 	if runDir == "" {
 		t.Skip("set E2B_SHARING_INTEGRATION_DIR and explicit fixture inputs on an isolated Linux KVM node")
@@ -95,7 +96,11 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 	require.False(t, fixture.CompleteOriginalTrace)
 	require.Equal(t, "6345988d0e84ca897b54a875fa6b4a4fe879b620ad095d3a61bfde825490d9e2", fixture.Source.SHA256)
 	require.Len(t, fixture.Tools, 5)
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	duration := 8 * time.Minute
+	if marathonMode {
+		duration = 15 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
 	// Allocate NBD with kernel IndexAny; do not enumerate or retarget devices
 	// that belong to another experiment on this shared node.
@@ -111,7 +116,7 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		require.NoError(t, err)
 	}
 	store := &sharingNetworkStorage{config: netConfig, next: baseIndex, limit: baseIndex + 5}
-	if proofMode {
+	if proofMode || marathonMode {
 		store.limit = baseIndex + 8
 	}
 	networkPool := network.NewPool(2, 1, store, netConfig)
@@ -198,6 +203,9 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 	config := Config{Vcpu: 1, RamMB: 256, HugePages: false, Network: &orchestrator.SandboxNetworkConfig{},
 		Envd:              EnvdMetadata{Vars: map[string]string{}, Version: "1.0.0"},
 		FirecrackerConfig: fc.Config{KernelVersion: "sharing", FirecrackerVersion: "sharing"}}
+	if marathonMode {
+		config.Vcpu, config.RamMB = 2, 1536
+	}
 	user, workdir, token := "root", "/workspace", "sharing-integration"
 	config.Envd.DefaultUser, config.Envd.DefaultWorkdir, config.Envd.AccessToken = &user, &workdir, &token
 	runtimeFor := func() RuntimeMetadata {
@@ -356,6 +364,15 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 			sharingPmemCheckState(t, ctx, sbx)
 		}
 		return sbx
+	}
+	if marathonMode {
+		current := resume("marathon-start", aID, b1, b1Cache)
+		current = sharingMarathonReplay(t, ctx, runDir, current, pauseUpload, func(name, buildID string) *Sandbox {
+			return resume(name, buildID, b1, b1Cache)
+		})
+		sharingProofUnchangedSources(t, ctx, runDir, "marathon", current, b1Cache, aID)
+		require.NoError(t, current.Close(ctx))
+		return
 	}
 	// Both modes start from the exact same A disk/RAM/state and use the same
 	// parameters, tool payloads and byte oracles. No baseline consumes B1 markers.

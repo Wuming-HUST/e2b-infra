@@ -1,0 +1,32 @@
+{
+  "recorded_at_utc": "2026-10-31T02:53:09.689566+00:00",
+  "source": "successful SSH stdout observations; final target receipts not yet downloaded",
+  "remote_root": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01",
+  "build": {
+    "directory": "marathon-build-01",
+    "exit": 0,
+    "seconds": 7.508420467376709
+  },
+  "full": {
+    "directory": "marathon-full-01",
+    "driver_pid": 222887,
+    "started_log_utc": "2026-10-31 02:45:52",
+    "last_confirmed_log": "marathon-10-restored: cache template and resume",
+    "last_confirmed_log_is_restore_entry_only": true,
+    "initial_restore_and_backing_assertions_passed": true,
+    "turn_10_save_and_upload_completed": true,
+    "final_result": null
+  },
+  "tracked": {
+    "directory": "marathon-tracked-01",
+    "started": false
+  },
+  "connectivity": {
+    "ipv4_ssh": "timeout",
+    "ipv6_ssh": "timeout",
+    "tailscale_ping": "2 timeouts",
+    "target": "H-arch",
+    "remote_process_state": "unknown after disconnect",
+    "restarted_or_killed": false
+  }
+}
