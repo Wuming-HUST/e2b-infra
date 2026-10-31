@@ -1,0 +1,6 @@
+{
+  "actual_proc_mapping": "ffff14000000-ffff24000000 rw-p 00000000 103:07 12589330                  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-tracked-01/run/B0/file-memory/0ab63d46b62140771eccf43e16c2cf35b3a228356562ac9274911afc163bb0d8.raw",
+  "inode": 12589330,
+  "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-tracked-01/run/B0/file-memory/0ab63d46b62140771eccf43e16c2cf35b3a228356562ac9274911afc163bb0d8.raw",
+  "regular_file": true
+}

@@ -1,0 +1,74 @@
+{
+  "left_inode": 10794774,
+  "left_ram": [
+    {
+      "pid": 221264,
+      "host_address": 281470916571136,
+      "entry": 11529215048757919857,
+      "pfn": 2689450097,
+      "file_page": true,
+      "mapping": "ffff0c000000-ffff1c000000 rw-p 00000000 00:d6 62                         /dev/nbd0"
+    },
+    {
+      "pid": 221264,
+      "host_address": 281470916575232,
+      "entry": 11601272642795847794,
+      "pfn": 2689450098,
+      "file_page": true,
+      "mapping": "ffff0c000000-ffff1c000000 rw-p 00000000 00:d6 62                         /dev/nbd0"
+    },
+    {
+      "pid": 221264,
+      "host_address": 281470916579328,
+      "entry": 11601272642795847795,
+      "pfn": 2689450099,
+      "file_page": true,
+      "mapping": "ffff0c000000-ffff1c000000 rw-p 00000000 00:d6 62                         /dev/nbd0"
+    }
+  ],
+  "left_rootfs": {
+    "pid": 221264,
+    "host_address": 281471566364672,
+    "entry": 11529215048799099300,
+    "pfn": 2730629540,
+    "file_page": true,
+    "mapping": "ffff1c000000-ffffa4000000 r--s 00000000 103:07 10794774                  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-full-01/run/B1/pmem-lower/da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e.raw"
+  },
+  "right_inode": 11712278,
+  "right_ram": [
+    {
+      "pid": 221286,
+      "host_address": 281470916571136,
+      "entry": 11601272642810573811,
+      "pfn": 2704176115,
+      "file_page": true,
+      "mapping": "ffff0c000000-ffff1c000000 rw-p 00000000 103:07 8435481                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-full-01/run/B2-control/file-memory/1fc8a56090a8210e8b2555c55cf164fe72ff214ffbba839d6f08ef1a39a86d02.raw"
+    },
+    {
+      "pid": 221286,
+      "host_address": 281470916575232,
+      "entry": 11601272642810573812,
+      "pfn": 2704176116,
+      "file_page": true,
+      "mapping": "ffff0c000000-ffff1c000000 rw-p 00000000 103:07 8435481                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-full-01/run/B2-control/file-memory/1fc8a56090a8210e8b2555c55cf164fe72ff214ffbba839d6f08ef1a39a86d02.raw"
+    },
+    {
+      "pid": 221286,
+      "host_address": 281470916579328,
+      "entry": 11601272642810573813,
+      "pfn": 2704176117,
+      "file_page": true,
+      "mapping": "ffff0c000000-ffff1c000000 rw-p 00000000 103:07 8435481                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-full-01/run/B2-control/file-memory/1fc8a56090a8210e8b2555c55cf164fe72ff214ffbba839d6f08ef1a39a86d02.raw"
+    }
+  ],
+  "right_rootfs": {
+    "pid": 221286,
+    "host_address": 281471566364672,
+    "entry": 11601272642838295972,
+    "pfn": 2731898276,
+    "file_page": true,
+    "mapping": "ffff1c000000-ffffa4000000 r--s 00000000 103:07 11712278                  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-full-01/run/B2-control/pmem-lower/da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e.raw"
+  },
+  "same_bytes": true,
+  "same_lower_digest": "da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e"
+}

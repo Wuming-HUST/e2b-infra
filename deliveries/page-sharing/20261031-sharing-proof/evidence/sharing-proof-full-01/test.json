@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-build-01/sandbox.test",
+    "-test.run",
+    "^TestPmemSharingProofIntegration$",
+    "-test.v",
+    "-test.timeout",
+    "10m"
+  ],
+  "exit": 0,
+  "seconds": 64.3491895198822,
+  "ram_export_mode": "full_logical"
+}

@@ -1,0 +1,32 @@
+{
+  "epoch": 1,
+  "ram_gpas": [
+    2180984832,
+    2180988928,
+    2180993024
+  ],
+  "ram_sha256": [
+    "4fdd600892f7d61608383a6f94b6b68a8630b65c0976dea3f5e410d4c4ff0bbd",
+    "f600eca824e84a43f0691b267bd620e462c50da165c5b80e17aecb7a924f1fa8",
+    "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7"
+  ],
+  "file_gpa": 275292766208,
+  "current_file_gpa": 2205478912,
+  "original_file_sha256": "29cf5700516b7cd7f6125eecaae0ec50193663a1c43f8d5e7c53e4b938cd0cf6",
+  "mapped_file_sha256": "29cf5700516b7cd7f6125eecaae0ec50193663a1c43f8d5e7c53e4b938cd0cf6",
+  "current_file_sha256": "4495867faa9fbe3dc05e2f8b112431909ee9d27999048a2b01943f3031f6ebc7",
+  "lower_file_sha256": "29cf5700516b7cd7f6125eecaae0ec50193663a1c43f8d5e7c53e4b938cd0cf6",
+  "expected_current_sha256": "4495867faa9fbe3dc05e2f8b112431909ee9d27999048a2b01943f3031f6ebc7",
+  "statx": {
+    "/.e2b/lower/sbin/sharing-init": {
+      "attributes": 2097152,
+      "mask": 3160180
+    },
+    "/sbin/sharing-init": {
+      "attributes": 0,
+      "mask": 3160180
+    }
+  },
+  "pid": 80,
+  "file_path": "/sbin/sharing-init"
+}

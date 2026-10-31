@@ -48,3 +48,5 @@ go test -race ./internal/sandbox/pmem ./internal/sandbox/fc ./internal/sandbox/t
 ```
 
 Linux KVM 整机测试为 `TestPmemFactoryIntegration`，默认跳过；必须显式提供隔离目录、FC、kernel、upper、initrd、lower、layout 与 trace slice。已执行命令和结果见交付目录 `deliveries/page-sharing/20261030-step2`。
+
+共享与快照专项整机测试为 `TestPmemSharingProofIntegration`，分别以 full_logical/tracked_delta 执行；实际 PFN、COW、应用路径 DAX、不同 backing 对照和恢复收据见 [共享证明](../../../deliveries/page-sharing/20261031-sharing-proof/README.md)。离线可用 `verify-sharing-proof.py DELIVERY_DIRECTORY` 重新核对证据。

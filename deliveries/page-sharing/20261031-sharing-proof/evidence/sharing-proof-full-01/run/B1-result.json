@@ -1,0 +1,11 @@
+{
+  "A": "567c5e3e-edc1-4e45-ac12-6ac08fb5fb6a",
+  "B": "e059ddea-7eaf-41ff-8e9e-b1a9c5fcbce1",
+  "C": "743e07b6-4dc3-4f48-9ccf-d81e9769c0fd",
+  "complete_original_trace": false,
+  "full_logical_native_oracle": true,
+  "pmem_dax_rootfs": true,
+  "requested_ram_export_mode": "full_logical",
+  "result": "passed",
+  "trace_derived_source_edit_fixture": true
+}

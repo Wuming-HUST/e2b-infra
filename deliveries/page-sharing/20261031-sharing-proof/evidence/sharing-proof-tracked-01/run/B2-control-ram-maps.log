@@ -1,0 +1,45 @@
+aaaab3260000-aaaab3754000 r-xp 00000000 103:07 5158826                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker
+aaaab3763000-aaaab3790000 r--p 004f3000 103:07 5158826                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker
+aaaab3790000-aaaab3791000 rw-p 00520000 103:07 5158826                   /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker
+aaaab3791000-aaaab3792000 rw-p 00000000 00:00 0 
+aaaae28d2000-aaaae28f3000 rw-p 00000000 00:00 0                          [heap]
+ffff10000000-ffff10021000 rw-p 00000000 00:00 0 
+ffff10021000-ffff14000000 ---p 00000000 00:00 0 
+ffff18000000-ffff28000000 rw-p 00000000 103:07 12589454                  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-tracked-01/run/B2-control/file-memory/0ab63d46b62140771eccf43e16c2cf35b3a228356562ac9274911afc163bb0d8.raw
+ffff28000000-ffffb0000000 r--s 00000000 103:07 12589459                  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-tracked-01/run/B2-control/pmem-lower/da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e.raw
+ffffb0000000-ffffb0021000 rw-p 00000000 00:00 0 
+ffffb0021000-ffffb4000000 ---p 00000000 00:00 0 
+ffffb67b6000-ffffb67c6000 ---p 00000000 00:00 0 
+ffffb67c6000-ffffb69c6000 rw-p 00000000 00:00 0 
+ffffb69c6000-ffffb69f0000 rw-p 00000000 00:00 0 
+ffffb69f0000-ffffb6a00000 ---p 00000000 00:00 0 
+ffffb6a00000-ffffb6c00000 rw-p 00000000 00:00 0 
+ffffb6c00000-ffffb6d82000 r-xp 00000000 103:07 187054642                 /lib64/libc.so.6
+ffffb6d82000-ffffb6d9d000 ---p 00182000 103:07 187054642                 /lib64/libc.so.6
+ffffb6d9d000-ffffb6da0000 r--p 0018d000 103:07 187054642                 /lib64/libc.so.6
+ffffb6da0000-ffffb6da2000 rw-p 00190000 103:07 187054642                 /lib64/libc.so.6
+ffffb6da2000-ffffb6dae000 rw-p 00000000 00:00 0 
+ffffb6db0000-ffffb6dc4000 r-xp 00000000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb6dc4000-ffffb6ddf000 ---p 00014000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb6ddf000-ffffb6de0000 r--p 0001f000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb6de0000-ffffb6de1000 rw-p 00020000 103:07 187202164                 /lib64/libgcc_s-12.so.1
+ffffb6de3000-ffffb6de4000 ---p 00000000 00:00 0 
+ffffb6de4000-ffffb6de8000 rw-p 00000000 00:00 0 
+ffffb6de8000-ffffb6e0b000 r-xp 00000000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffffb6e0e000-ffffb6e0f000 rw-p 00000000 00:00 0 
+ffffb6e0f000-ffffb6e10000 rw-s 00000000 00:01 4102                       /memfd:iov_deque (deleted)
+ffffb6e10000-ffffb6e11000 rw-s 00000000 00:01 4102                       /memfd:iov_deque (deleted)
+ffffb6e11000-ffffb6e12000 rw-s 00000000 00:01 4101                       /memfd:iov_deque (deleted)
+ffffb6e12000-ffffb6e13000 rw-s 00000000 00:01 4101                       /memfd:iov_deque (deleted)
+ffffb6e13000-ffffb6e15000 rw-s 00000000 00:0e 1068                       anon_inode:kvm-vcpu:0
+ffffb6e15000-ffffb6e16000 ---p 00000000 00:00 0 
+ffffb6e16000-ffffb6e1a000 rw-p 00000000 00:00 0 
+ffffb6e1a000-ffffb6e1c000 rw-p 00000000 00:00 0 
+ffffb6e1c000-ffffb6e1d000 ---p 00000000 00:00 0 
+ffffb6e1d000-ffffb6e21000 rw-p 00000000 00:00 0 
+ffffb6e21000-ffffb6e23000 rw-p 00000000 00:00 0 
+ffffb6e23000-ffffb6e25000 r--p 00000000 00:00 0                          [vvar]
+ffffb6e25000-ffffb6e26000 r-xp 00000000 00:00 0                          [vdso]
+ffffb6e26000-ffffb6e28000 r--p 0002e000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+ffffb6e28000-ffffb6e2a000 rw-p 00030000 103:07 187054010                 /lib/ld-linux-aarch64.so.1
+fffff21b8000-fffff2287000 rw-p 00000000 00:00 0                          [stack]

@@ -66,6 +66,7 @@ func TestPmemFactoryIntegration(t *testing.T) { //nolint:paralleltest
 	runSharingFactoryIntegration(t, true)
 }
 func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:paralleltest
+	proofMode := pmemMode && os.Getenv("E2B_SHARING_PROOF") == "1"
 	runDir := os.Getenv("E2B_SHARING_INTEGRATION_DIR")
 	if runDir == "" {
 		t.Skip("set E2B_SHARING_INTEGRATION_DIR and explicit fixture inputs on an isolated Linux KVM node")
@@ -110,6 +111,9 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		require.NoError(t, err)
 	}
 	store := &sharingNetworkStorage{config: netConfig, next: baseIndex, limit: baseIndex + 5}
+	if proofMode {
+		store.limit = baseIndex + 8
+	}
 	networkPool := network.NewPool(2, 1, store, netConfig)
 	go networkPool.Populate(ctx)
 	devices, err := nbd.NewDevicePool()
@@ -186,6 +190,11 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 	b0Config := configFor("B0")
 	b0, b0Cache := makeFactory(b0Config)
 	b1, b1Cache := makeFactory(configFor("B1"))
+	var controlFactory *Factory
+	var controlCache *template.Cache
+	if proofMode {
+		controlFactory, controlCache = makeFactory(configFor("B2-control"))
+	}
 	config := Config{Vcpu: 1, RamMB: 256, HugePages: false, Network: &orchestrator.SandboxNetworkConfig{},
 		Envd:              EnvdMetadata{Vars: map[string]string{}, Version: "1.0.0"},
 		FirecrackerConfig: fc.Config{KernelVersion: "sharing", FirecrackerVersion: "sharing"}}
@@ -242,6 +251,9 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 	sharingCheckFiles(t, ctx, cold, fixture.Checkpoints["after_writes"].ExpectedFiles)
 	if pmemMode {
 		sharingPmemWriteState(t, ctx, cold)
+	}
+	if proofMode {
+		sharingProofStart(t, ctx, cold)
 	}
 	pauseUpload := func(name string, sbx *Sandbox) string {
 		t.Logf("%s: freeze, compare native RAM, production Pause and upload", name)
@@ -323,7 +335,7 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		tmpl, err := cache.GetTemplate(ctx, buildID, false, false)
 		require.NoError(t, err)
 		var fileRAM string
-		if factory == b0 {
+		if factory != b1 {
 			require.Eventually(t, func() bool {
 				var ready bool
 				fileRAM, ready = template.FileMemoryBackendPath(tmpl)
@@ -334,7 +346,7 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		sbx, err := factory.ResumeSandbox(ctx, tmpl, config, runtimeFor(), now, now.Add(10*time.Minute), nil)
 		require.NoError(t, err)
 		sharingRecordPID(t, runDir, name, sbx)
-		if factory == b0 {
+		if factory != b1 {
 			_, leased := sbx.Resources.memory.(*leasedMemory)
 			require.False(t, leased, "B0 must not use shared NBD")
 			sharingCheckFileRAMMapping(t, runDir, name, sbx, fileRAM)
@@ -355,8 +367,10 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		left := resume(mode+"-left", aID, factory, cache)
 		sharingCheckFiles(t, ctx, left, fixture.Checkpoints["after_writes"].ExpectedFiles)
 		var right *Sandbox
-		if mode == "B1" {
+		if mode == "B1" || proofMode {
 			right = resume(mode+"-right", aID, factory, cache)
+		}
+		if mode == "B1" {
 			lm, ok := left.Resources.memory.(*leasedMemory)
 			require.True(t, ok, "B1 must actually hold a shared NBD lease")
 			rm, ok := right.Resources.memory.(*leasedMemory)
@@ -376,19 +390,38 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 			sharingReceipt(t, filepath.Join(runDir, "B1-shared-backing.json"), map[string]any{
 				"left": lm.lease.Path(), "right": rm.lease.Path(), "same_backing": true})
 		}
+		if proofMode {
+			sharingProofPair(t, ctx, runDir, mode, left, right)
+			if mode == "B1" {
+				control := resume("B2-control", aID, controlFactory, controlCache)
+				sharingProofControl(t, ctx, runDir, right, control)
+				require.NoError(t, control.Close(ctx))
+			}
+		}
 		sharingRunTools(t, ctx, left, fixture.Tools[2:], runDir)
 		sharingCheckFiles(t, ctx, left, fixture.Checkpoints["after_edits"].ExpectedFiles)
 		if right != nil {
 			sharingCheckFiles(t, ctx, right, fixture.Checkpoints["after_writes"].ExpectedFiles)
+			if proofMode {
+				sharingProofState(t, ctx, right, 0)
+			}
 		}
 		bID := pauseUpload(mode+"-B", left)
 		if right != nil {
 			// Pausing/stopping left releases one lease; right must remain usable.
 			sharingCheckFiles(t, ctx, right, fixture.Checkpoints["after_writes"].ExpectedFiles)
+			if proofMode {
+				sharingProofState(t, ctx, right, 0)
+			}
 		}
 		second := resume(mode+"-B-restored", bID, factory, cache)
 		sharingCheckFiles(t, ctx, second, fixture.Checkpoints["after_edits"].ExpectedFiles)
-		if right != nil {
+		if proofMode {
+			sharingReceipt(t, filepath.Join(runDir, mode+"-B-proof-restored.json"), sharingProofState(t, ctx, second, 1))
+			sharingProofCommand(t, ctx, second, "mutate2")
+			sharingProofState(t, ctx, second, 2)
+		}
+		if right != nil && mode == "B1" {
 			oldRAM, oldOK := right.Resources.memory.(*leasedMemory)
 			newRAM, newOK := second.Resources.memory.(*leasedMemory)
 			require.True(t, oldOK && newOK)
@@ -396,12 +429,18 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 			sharingCheckFiles(t, ctx, right, fixture.Checkpoints["after_writes"].ExpectedFiles)
 			sharingReceipt(t, filepath.Join(runDir, "B1-distinct-backing.json"), map[string]any{
 				"A": oldRAM.lease.Path(), "B": newRAM.lease.Path(), "distinct_live_backings": true})
+		}
+		if right != nil {
 			require.NoError(t, right.Close(ctx))
 			sharingCheckFiles(t, ctx, second, fixture.Checkpoints["after_edits"].ExpectedFiles)
 		}
 		cID := pauseUpload(mode+"-C", second)
 		third := resume(mode+"-C-restored", cID, factory, cache)
 		sharingCheckFiles(t, ctx, third, fixture.Checkpoints["after_edits"].ExpectedFiles)
+		if proofMode {
+			sharingReceipt(t, filepath.Join(runDir, mode+"-C-proof-restored.json"), sharingProofState(t, ctx, third, 2))
+			sharingProofUnchangedSources(t, ctx, runDir, mode, third, cache, aID)
+		}
 		require.NoError(t, third.Close(ctx))
 		sharingReceipt(t, filepath.Join(runDir, mode+"-result.json"), map[string]any{
 			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true, "requested_ram_export_mode": exportMode,

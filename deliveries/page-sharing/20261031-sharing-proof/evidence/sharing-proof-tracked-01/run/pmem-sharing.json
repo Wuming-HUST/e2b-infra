@@ -1,0 +1,25 @@
+{
+  "left": {
+    "data_offset": 2097152,
+    "entry": 11529215048826430464,
+    "file_offset": 35651584,
+    "host_address": 281470985830400,
+    "mapping_address": 281470950178816,
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-tracked-01/run/B1/pmem-lower/da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e.raw",
+    "pfn": 2757960704,
+    "pid": 221602,
+    "readonly_shared": true
+  },
+  "pfn_visible": true,
+  "right": {
+    "data_offset": 2097152,
+    "entry": 11529215048826430464,
+    "file_offset": 35651584,
+    "host_address": 281470918721536,
+    "mapping_address": 281470883069952,
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-tracked-01/run/B1/pmem-lower/da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e.raw",
+    "pfn": 2757960704,
+    "pid": 221622,
+    "readonly_shared": true
+  }
+}

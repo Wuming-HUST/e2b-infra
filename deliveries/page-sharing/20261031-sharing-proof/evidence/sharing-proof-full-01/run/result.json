@@ -1,0 +1,7 @@
+{
+  "B0_B1_same_source_edit_payloads": true,
+  "complete_original_trace": false,
+  "factory_create_resume_pause_upload_cache_restore": true,
+  "pmem_dax_rootfs": true,
+  "result": "passed"
+}

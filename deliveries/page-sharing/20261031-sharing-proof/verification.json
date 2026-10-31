@@ -1,0 +1,105 @@
+{
+  "result": "passed",
+  "evidence_files": 137,
+  "cleaned_up_vms": 20,
+  "runs": {
+    "sharing-proof-full-01": {
+      "seconds": 64.3491895198822,
+      "modes": {
+        "B0": {
+          "checkpoints": {
+            "B": {
+              "tracked_delta": false,
+              "payload_size": 268435456,
+              "ram_size": 268435456,
+              "ram_sha256": "f43b60050f73d68e61ffa94c60416d88c68597051b693d1260279777e3d58b6b"
+            },
+            "C": {
+              "tracked_delta": false,
+              "payload_size": 268435456,
+              "ram_size": 268435456,
+              "ram_sha256": "45a86e086e328dbd5c4edbab88d6bbca14332eb1144ccb3844c071bcc9f902ac"
+            }
+          },
+          "shared_ram_pfns": [
+            2690955251,
+            2690955252,
+            2690955253
+          ],
+          "shared_rootfs_pfn": 2702503844
+        },
+        "B1": {
+          "checkpoints": {
+            "B": {
+              "tracked_delta": false,
+              "payload_size": 268435456,
+              "ram_size": 268435456,
+              "ram_sha256": "1619155a4b75a84f6608fb8ae98be3145e45203a921a29d2a6dc58cb785c8ac3"
+            },
+            "C": {
+              "tracked_delta": false,
+              "payload_size": 268435456,
+              "ram_size": 268435456,
+              "ram_sha256": "d554b4962704615c68742e05203de578879845319b1fd26ff1c263b35001deb9"
+            }
+          },
+          "shared_ram_pfns": [
+            2689450097,
+            2689450098,
+            2689450099
+          ],
+          "shared_rootfs_pfn": 2730629540
+        }
+      }
+    },
+    "sharing-proof-tracked-01": {
+      "seconds": 62.7676420211792,
+      "modes": {
+        "B0": {
+          "checkpoints": {
+            "B": {
+              "tracked_delta": true,
+              "payload_size": 14336000,
+              "ram_size": 268435456,
+              "ram_sha256": "9f124e630702eaa6092d1f66c72df47e14d5c2cb1ba07fc639efbf92d8a34e8a"
+            },
+            "C": {
+              "tracked_delta": true,
+              "payload_size": 12763136,
+              "ram_size": 268435456,
+              "ram_sha256": "0fe59c679efeb255adeb0da08023fce9154e0f24e93a93cf0ed42b32cea6665c"
+            }
+          },
+          "shared_ram_pfns": [
+            2757766681,
+            2757766682,
+            2757766683
+          ],
+          "shared_rootfs_pfn": 2693577636
+        },
+        "B1": {
+          "checkpoints": {
+            "B": {
+              "tracked_delta": true,
+              "payload_size": 15626240,
+              "ram_size": 268435456,
+              "ram_sha256": "37054897410f01d4968bd1a4bb589649e89969be6720fb27890b21090696b8cf"
+            },
+            "C": {
+              "tracked_delta": true,
+              "payload_size": 13033472,
+              "ram_size": 268435456,
+              "ram_sha256": "aefba43dc7d9102e1c776ae8ce8bbfc0084d629aace27d9cc5947dfc2b8c8d70"
+            }
+          },
+          "shared_ram_pfns": [
+            2751702503,
+            2751702504,
+            2751702505
+          ],
+          "shared_rootfs_pfn": 2757535652
+        }
+      }
+    }
+  }
+}

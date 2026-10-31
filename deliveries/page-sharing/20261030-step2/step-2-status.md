@@ -29,22 +29,26 @@
 
 `synthetic-legacy-02` 使用新 FC + 旧 guest kernel + 派生 r4 rootfs 完成全量**合成内存**回放，退出 0，203.80 秒；10/200 等三个边界保存恢复；1016 turns、571 次合成工具工作，最终状态校验通过。该结果是 legacy 路径回归，不是 PMEM 全量回放，不是原始 SWE-marathon 工具执行，也不用于性能结论。
 
+## 2026-10-31 追加共享与快照证明
+
+新增 `TestPmemSharingProofIntegration` 已在 agent03 分别以 full_logical 和 tracked_delta 跑通，File/NBD 两后端均通过。补齐固定非零 RAM 页的真实 PFN/COW、应用 OverlayFS 路径 DAX mmap、不同 backing 对照、copy-up 后私有页、已打开 FD/mmap 的跨代恢复、源完整 hash 不变及生命周期检查。两轮共 20 个 VM，全部清理；详细数据与 137 份原始证据见 [共享证明](../20261031-sharing-proof/README.md)。此项证明核心共享/保存恢复链，整体步骤二仍有下表待验项。
+
 ## 验收矩阵
 
 “部分”只代表列明子项通过，不等于该 ID 已验收。
 
 | ID | 状态 | 已有证据及剩余工作 |
 |---|---|---|
-| D01 | 部分 | PMEM/PFN 发现、完整 rootfs、实际 lower inode DAX、envd 与恢复通过；最终 overlay inode 的独立 DAX 核查待补 |
-| D02 | 部分 | 同 backing 双 VM 相同文件偏移 PFN 相同；不同 backing 对照、特定 mmap/exec 矩阵待补 |
+| D01 | 通过 | PMEM/PFN/GPA、完整 rootfs、lower 与最终 OverlayFS 路径 STATX_ATTR_DAX、实际 mmap GPA 落入 PMEM、envd/恢复均通过 |
+| D02 | 部分 | 已知文件的应用路径 mmap 同 PFN，内容相同但不同 inode 对照为不同 PFN；指定 exec 页的独立 PFN 矩阵待补 |
 | D03 | 部分 | 工具读文件正确；专门 buffer 私有性测试待补 |
 | D04 | 部分 | RO FD/map/KVM slot、只读/可写设备内存接口及恶意 flush 描述符单测；真实 guest CPU/raw block 攻击、第二 VM 与源 hash 四方证据待补 |
-| D05 | 部分 | 正常私有写和恢复通过；append/truncate/fsync 与 copy-up 物理核算矩阵待补 |
+| D05 | 部分 | 正常私有写、append/fsync/copy-up、另一 VM 不变及恢复通过；truncate 等完整矩阵及写放大核算待补 |
 | D06 | 通过 | lower 删除/whiteout、opaque directory 跨代恢复不复活 |
 | D07 | 部分 | 文件 rename、symlink、xattr、mode、uid/gid 跨代通过；目录 rename、hardlink、EXDEV 等基线对照待补 |
-| D08 | 待验 | 已打开 FD/mmap 后 copy-up/rename/unlink 的完整语义矩阵 |
+| D08 | 部分 | 已打开 FD/DAX mmap 后 copy-up、跨 B/C 快照恢复均通过，保留旧 lower 内容；rename/unlink 的打开映射矩阵待补 |
 | D09 | 部分 | 只读 DAX 源接口的 IOVec/block 读能力单测；真实 sendfile/splice/TX、锁、安装工具待验 |
-| D10 | 部分 | File/NBD RAM A→B→C、完整 RAM hash、文件状态、固定 GPA 通过；打开映射场景待补 |
+| D10 | 通过 | File/NBD RAM × 完整/增量保存 A→B→C；同冻结边界完整 RAM hash、打开 FD/mmap、进程与文件状态、固定 GPA 均通过（256 MiB 单 RAM region） |
 | D11 | 部分 | 缺源/短读/hash/并发取消/损坏发布文件、layout/checkpoint mismatch 合同测试；真实 disk-full、远端故障整机闭环待补 |
 | D12 | 部分 | 双 VM 关闭一个不影响另一个；缓存当前不在线淘汰，压力/GC 待验 |
 | D13 | 部分 | 旧版序列化形状/CRC 单测、旧 guest legacy 全量合成回放；真实历史 FC snapshot、旧 binary 拒绝新格式待补 |

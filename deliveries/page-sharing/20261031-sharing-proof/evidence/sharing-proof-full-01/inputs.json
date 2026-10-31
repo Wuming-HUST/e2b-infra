@@ -1,0 +1,12 @@
+{
+  "E2B_PMEM_INTEGRATION_DIR": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/sharing-proof-full-01/run",
+  "E2B_SHARING_FC": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker",
+  "E2B_SHARING_KERNEL": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/kernel-build/out/arch/arm64/boot/Image",
+  "E2B_SHARING_ROOTFS": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture-02/upper.ext4",
+  "E2B_SHARING_INITRD": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-04/initrd.gz",
+  "E2B_SHARING_TRACE_FIXTURE": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json",
+  "E2B_PMEM_LAYOUT": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture-02/layout.json",
+  "E2B_PMEM_LOWER": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture-02/lower.raw",
+  "E2B_SHARING_SLOT_BASE": "26120",
+  "E2B_SHARING_RAM_EXPORT_MODE": "full_logical"
+}

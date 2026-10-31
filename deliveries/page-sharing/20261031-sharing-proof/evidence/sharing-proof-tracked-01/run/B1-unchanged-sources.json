@@ -1,0 +1,8 @@
+{
+  "input_rootfs_sha256": "da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e",
+  "ram_sha256": "0ab63d46b62140771eccf43e16c2cf35b3a228356562ac9274911afc163bb0d8",
+  "ram_size": 268435456,
+  "ram_template": "65cf2deb-9c4b-4aa6-82d5-f0254c423a96",
+  "rootfs_sha256": "da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e",
+  "rootfs_size": 2281701376
+}

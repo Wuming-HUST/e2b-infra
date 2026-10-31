@@ -1,0 +1,100 @@
+{
+  "base_infra_commit": "118890bc0",
+  "firecracker_commit": "bd2800cac",
+  "sources": {
+    "infra": {
+      "packages/orchestrator/internal/cfg/model.go": "e31ea649df9a902e8088c29b67ac6c2561622140e15e6f2ded6e5af53931c267",
+      "packages/orchestrator/internal/sandbox/checkpoint.go": "6b7608ce431ac4bf6a623af67d99bf6c277a2cd67c5e5d19299da1e514fde4a2",
+      "packages/orchestrator/internal/sandbox/fc/client.go": "6cd4f812e2ec6216d53660a86d2e0e8d1cc4ac1e2e2587b6d7345013125bf30e",
+      "packages/orchestrator/internal/sandbox/fc/process.go": "85676117af7e4a565876e937c095546aa60c7bc5107ad239c9602eaa7c42d430",
+      "packages/orchestrator/internal/sandbox/fc/snapshot_memory_backend.go": "27ba406338bcd771601486393555f8f9e3eacfd26ba9edf881eca484ff4fe7e3",
+      "packages/orchestrator/internal/sandbox/sandbox.go": "04a52327034c25c1b5b00a98a3752f018e424279531dbca0dcc1f69f99160af1",
+      "packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go": "3ea2904955f4dd9db3739e73619f4560edda7dfa35b5c59d91e602be3cdcefdb",
+      "packages/orchestrator/internal/sandbox/snapshot.go": "ccac33065d02af8a98ba623df7b48614890f71b96c9f80abb31da2c8ff924d0c",
+      "packages/orchestrator/internal/sandbox/template/checkpoint_test.go": "e0b28c85c97d28f3a75881e02b4ea836f6b9ffd59b35609ad8c3c6971ae0e1b1",
+      "packages/orchestrator/internal/sandbox/template/restore_memory.go": "156ae576b828e0e65a7c8d74814c9cc857ab223511bf775a78994bccd15ac553",
+      "packages/orchestrator/internal/template/metadata/template_metadata.go": "a8dac3b2649dd1d10debc26db5d6ed1bb24cca8e03298c1fc73750a7fa911878",
+      "packages/orchestrator/internal/template/metadata/template_metadata_test.go": "4abdf10e1dd575dc642eedc33253b70defc54db943bc01ae02a2dd8b24d4778c",
+      "packages/shared/pkg/fc/models/snapshot_load_params.go": "1a5e72d9df00e062a9579bb545ac2cc4265e8f30c95fd6bcdd6beb1c4548e9be",
+      "packages/orchestrator/cmd/pmem-init/main.go": "0784be540a3fc3ab8d25710ddcd0eae6b85fae6be17cf1f6afffd9029760dc94",
+      "packages/orchestrator/cmd/pmem-init/main_test.go": "991b16386fd3bc0a446fc1e41ab762c84dee750918eadc2d563cb353e2a08592",
+      "packages/orchestrator/internal/sandbox/fc/pmem.go": "376ece41427385546800e65e0e40f3059d3dcfa0544fcae6096b80de7610b8e6",
+      "packages/orchestrator/internal/sandbox/fc/pmem_test.go": "a8c9a2f8bc4e8db89bd5125c12fda50d582a38d535df4ea855095be0309b9bfc",
+      "packages/orchestrator/internal/sandbox/pmem/layout.go": "919e7b0dcb4dde9eb1cfaf3e0e0e7855108b6588fae50ed97b1ed17bce84c1f1",
+      "packages/orchestrator/internal/sandbox/pmem/local.go": "8df6052ffebd08a5079b6d7e287a3909bb9e1076837ce3529c428dc18e2151fe",
+      "packages/orchestrator/internal/sandbox/pmem/materialize.go": "fa3feb5844de2a0e63ecc89fbb6dd29ab4e5104bb907c7091851427fe715ee67",
+      "packages/orchestrator/internal/sandbox/pmem/materialize_test.go": "52f1e8626c2c17fd6eb9f89f2475b739063ccd247762316dd446de17f6bde95d",
+      "packages/orchestrator/internal/sandbox/rootfs/pmem.go": "4012b583b2fcd4ab08bfc66cc06e6e46be015fa80dd080476ca6bdcea4a97fb3",
+      "packages/orchestrator/internal/sandbox/template/pmem.go": "0dd33f049fe3c3a0a3ca5ca2b4b9c63a06597939430d7e95a78b3342394f67a9",
+      "packages/shared/pkg/fc/models/pmem.go": "248bc52f457263ce87dd5fcb3525ffae0742fe95aaf4f71085ae4b14fa9a6275",
+      "packages/orchestrator/internal/sandbox/sharing_proof_integration_linux_test.go": "1df73fa8a1e5319cb1a249b3823e072eee453d9501ec30c9534c899e2cd2ce85"
+    },
+    "fc": {
+      "src/firecracker/src/api_server/parsed_request.rs": "277b82648b3771f0600a5b2f847b433ac11637dab5287c4a7ae997b4de449494",
+      "src/firecracker/src/api_server/request/snapshot.rs": "30576225108e62024509f8c5b15465fea45fe7a323386bb0304486ae21a21f1b",
+      "src/firecracker/swagger/firecracker.yaml": "3d8f31fc7c0010d52f30c35d39f66e2b0ff9a8b1d3a4babe6ff8b82f8af49e53",
+      "src/vmm/src/arch/aarch64/vcpu.rs": "d822c866bc2d7756358ccadcc51e00ea64a4a5d2cd31f6773f5449fb4a16cc44",
+      "src/vmm/src/arch/x86_64/vcpu.rs": "b7a0cab51b511a1aefd1911cff867d2aa7ce467c6453bcb31c9c483e8f9de6d4",
+      "src/vmm/src/builder.rs": "bf8fb87703d4b614df20ab86db95da47531554beeaa7bd6052bc5a3854c06d5c",
+      "src/vmm/src/device_manager/mmio.rs": "33596e85821dadb01399786655b25919da6495548eae4782a24109032a996831",
+      "src/vmm/src/device_manager/persist.rs": "93b8a72942965c5493ef6443f91d1ff5cde1b2a2be8ef571dc1feff8b1ba9621",
+      "src/vmm/src/devices/virtio/block/virtio/io/async_io.rs": "9f7a3d716df42a8afebdc51d74e157193320e2a8e8d0d7e0eca69ffa3c461596",
+      "src/vmm/src/devices/virtio/block/virtio/io/sync_io.rs": "290f39ef561fb9aec2f4635c1560933fbb977a90529d1afd55e9b1e847fdd0bf",
+      "src/vmm/src/devices/virtio/iovec.rs": "f2278f23afcffbbdd314fbabad8ad0fce91d722a568a8a010f0d92cb0f773a9d",
+      "src/vmm/src/devices/virtio/mod.rs": "c535570157985110afbf48eb019f45879590ca186d287c1b6f4dbaec8b3ba878",
+      "src/vmm/src/devices/virtio/pmem/device.rs": "242337f5bbaf550764d5d9c932d9a29bddef2d0fbf3e1b225378df5f35cebe93",
+      "src/vmm/src/devices/virtio/pmem/event_handler.rs": "7824d55477536dd7180b3a359b21b527528e5590bc5bb70eaf9084d384198651",
+      "src/vmm/src/devices/virtio/pmem/metrics.rs": "7d77179f834381b55f00eb176a9065d11a1cf028181c57010d64ae298d5722d0",
+      "src/vmm/src/devices/virtio/pmem/mod.rs": "97e950121282f78bf3680c9149603eb0d5d4edce04cc87db269187cc83489ffc",
+      "src/vmm/src/devices/virtio/pmem/persist.rs": "04d23bfc992ac002f1b710317223624917a95afc72f494c2ce8609a5b16e1c44",
+      "src/vmm/src/devices/virtio/pmem/tests.rs": "69a94048dedfb0846fe142cf73271464929615edfba1d5247fddebbba543d228",
+      "src/vmm/src/lib.rs": "1dc1fbf68f70cb02cd212d85a7d5bfa3af7c3a056836d368a9f0e5e8e352d63e",
+      "src/vmm/src/logger/metrics.rs": "cdab3db300b406f5a8ebbb86de0d5f379d0fb282f9e156ed3ee7523fbaaf0f0a",
+      "src/vmm/src/persist.rs": "42cfa888b33d5dd86b3fc32d819b72037ef3e85847ed5824b94f3978b02b8f0b",
+      "src/vmm/src/resources.rs": "70962da76f403fba4d1fcab085d95f296e58f07602c11974b429d8db1ceaf463",
+      "src/vmm/src/rpc_interface.rs": "b9b8be4f06b80a6a1203b3aa5e1e0db94e2feab5f053b2020ba1144676325be7",
+      "src/vmm/src/vmm_config/mod.rs": "98a771ac61882c5d6c02288d2b6f7e9b4a240ae17db1f0010d358cd97ebceff2",
+      "src/vmm/src/vmm_config/pmem.rs": "3463c35ddf169e6c61d7a77aef2ed08bd4252b4a4be816ab22a2bcbf7d9304df",
+      "src/vmm/src/vmm_config/snapshot.rs": "80dcff32cdbf0cb86c97069804576da089fe245acb3f40a906a76a436df3cd68",
+      "src/vmm/src/vstate/memory.rs": "cef7f68492557db35ff79780aa4759b6d696abebfb81ef6da3ad3b136e8c9650",
+      "src/vmm/src/vstate/vcpu.rs": "f717bb8c8e9498135ad20e4c3bab811dba44cda1f4225827da87baef2f8f3f10",
+      "src/vmm/src/vstate/vm.rs": "ba506c06edd3bddec6937954420dd97e5ecf7a058848168bab177aff5c135611",
+      "src/vmm/tests/integration_tests.rs": "ca708063b34688249ebe18e3486b46e38e9243a4e1b357f8a3670debce658a1e"
+    }
+  },
+  "mismatches": [],
+  "inputs": {
+    "sharing-proof-build-01/sandbox.test": {
+      "sha256": "2e5af5faafec16f7e9d127b20667b36d01c8c585e523bb97844c142b48ef0a97",
+      "size": 74115144
+    },
+    "cargo-target/debug/firecracker": {
+      "sha256": "bc66b160a21f12c723b52964546f1566ae016bc40f7f1c72c8466d23295cf8cb",
+      "size": 37828624
+    },
+    "kernel-build/out/arch/arm64/boot/Image": {
+      "sha256": "93e21a97a8e9fdec98462cfaaf14ad13b5721443dedabc8d7508bc0c9157ae79",
+      "size": 41751040
+    },
+    "go-check-04/initrd.gz": {
+      "sha256": "91d138f56757096f80b43253d01ba790bebe30db10af73bb7fa22a9dedbd17c7",
+      "size": 1548488
+    },
+    "fixture-02/lower.raw": {
+      "sha256": "da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e",
+      "size": 2281701376
+    },
+    "fixture-02/upper.ext4": {
+      "sha256": "8c9c4d8bba9741f0e40459f7572a8635070f41e28455260cdce6b4804cbb11b0",
+      "size": 134217728
+    },
+    "fixture-02/layout.json": {
+      "sha256": "0d5dc8f275ec65aee0b8d493224275023fdff4835d0ec50ca5ff9cd472f90d04",
+      "size": 238
+    },
+    "infra/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json": {
+      "sha256": "aa732fd55fc81846601c90570979f0fa1de6eaa347a67e293260d9e4a91b46ca",
+      "size": 34282
+    }
+  }
+}
