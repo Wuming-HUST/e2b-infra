@@ -48,11 +48,17 @@
 | D07 | 部分 | 文件 rename、symlink、xattr、mode、uid/gid 跨代通过；目录 rename、hardlink、EXDEV 等基线对照待补 |
 | D08 | 部分 | 已打开 FD/DAX mmap 后 copy-up、跨 B/C 快照恢复均通过，保留旧 lower 内容；rename/unlink 的打开映射矩阵待补 |
 | D09 | 部分 | 只读 DAX 源接口的 IOVec/block 读能力单测；真实 sendfile/splice/TX、锁、安装工具待验 |
-| D10 | 通过 | File/NBD RAM × 完整/增量保存 A→B→C；同冻结边界完整 RAM hash、打开 FD/mmap、进程与文件状态、固定 GPA 均通过（256 MiB 单 RAM region） |
+| D10 | 通过 | File/NBD RAM × 完整/增量保存 A→B→C；同冻结边界完整 RAM hash、打开 FD/mmap、进程与文件状态、固定 GPA 均通过（256 MiB 单 RAM region）；新增 NBD RAM 1536 MiB 全量合成 trace 的完整/增量三次恢复通过 |
 | D11 | 部分 | 缺源/短读/hash/并发取消/损坏发布文件、layout/checkpoint mismatch 合同测试；真实 disk-full、远端故障整机闭环待补 |
 | D12 | 部分 | 双 VM 关闭一个不影响另一个；缓存当前不在线淘汰，压力/GC 待验 |
 | D13 | 部分 | 旧版序列化形状/CRC 单测、旧 guest legacy 全量合成回放；真实历史 FC snapshot、旧 binary 拒绝新格式待补 |
-| D14 | 待验 | 五条真实工具 slice 通过；1052 条原工具 trace 和完整 DAX 合成回放尚未执行 |
+| D14 | 部分 | 五条真实工具 slice 通过；新增 NBD RAM + PMEM/DAX 的完整/增量全量合成回放均通过，各 1016 turns、571 合成工具事件、3 次恢复；1052 条原工具执行仍待验 |
+
+## 2026-10-31 追加全量合成 trace
+
+新增 `TestPmemMarathonIntegration` 原生编译通过，复用生产 Factory/Pause/upload/cache restore。在共享 NBD MAP_PRIVATE RAM + PMEM/DAX lower + 私有 NBD upper 下，1536 MiB/2 vCPU 的 full_logical、tracked_delta 两轮均完成 1016 turns、571 次合成工具事件和 576 个调用 ID，turn 10/200/700 三次恢复通过；最终工作状态 hash 与 legacy 一致。每代核对实际映射与 DAX GPA、同冻结边界 native full RAM oracle，增量轮重建历史依赖，A RAM/lower hash 保持不变。目标收集器确认两轮退出 0、26 个 Go/30 个 FC 文件 hash 匹配，以及 10 个 VM/专用网络清理完成。
+
+本轮测试提交 `35c20c28a`，详情见 [trace 报告](../20261031-marathon-pmem/README.md)。原始证据包已在 agent03 生成，传输连接反复超时，本地完整离线复核仍待完成。它是合成内存/I/O 负载，不等于原始工具/LLM 执行，不用于速度或容量结论。
 
 ## 限制与后续
 
