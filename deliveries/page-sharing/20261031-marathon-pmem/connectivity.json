@@ -1,0 +1,26 @@
+{
+  "recorded_at_utc": "2026-10-31T02:33:19.158158+00:00",
+  "route": [
+    "H-arch",
+    "agent03.coder"
+  ],
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "ServerAliveInterval=15",
+    "-o",
+    "ServerAliveCountMax=2",
+    "H-arch",
+    "ssh -o BatchMode=yes -o ConnectTimeout=15 agent03.coder true"
+  ],
+  "exit_code": 255,
+  "stderr": "ssh: connect to host 100.67.12.107 port 22: Operation timed out",
+  "failed_hop": "H-arch",
+  "remote_inventory_received": false,
+  "new_replay_started": false,
+  "pmem_full_trace_status": "not_run"
+}
