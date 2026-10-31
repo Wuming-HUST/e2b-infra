@@ -1,0 +1,20 @@
+{
+  "scope": "local Python syntax and whitespace only; not native correctness",
+  "python_files": [
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-multiregion.py",
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-compat-retry.py",
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/launch-compat.py",
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-target.py",
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-compat-inbound.py",
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-runtime-extra.py",
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/collect-evidence.py",
+    "scripts/memory-lab/page-sharing/pressure_check.py",
+    "scripts/memory-lab/page-sharing/snapshot_version_check.py",
+    "scripts/memory-lab/page-sharing/multiregion_check.py",
+    "scripts/memory-lab/page-sharing/vsock_check.py"
+  ],
+  "syntax_passed": true,
+  "git_diff_check_passed": true,
+  "collector_valid_archive_passed": true,
+  "collector_corrupt_hash_rejected": true
+}

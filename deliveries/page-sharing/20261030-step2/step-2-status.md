@@ -2,6 +2,8 @@
 
 **设备、完整 rootfs DAX、生产 Factory 快照恢复链已实现并在 agent03 原生验证；步骤二整体尚未验收。** 用户已允许保留步骤一待验项后继续，步骤一余项见同目录 `step-1-remaining-tests.md`。
 
+2026-10-31 最新交接：用户决定不再依赖 agent03，在内网继续功能验证，再进行端到端超分测试。已冻结 [内网功能清单 F01–F14、迁移输入及超分验收条件](../20261031-remaining-tests/intranet-handoff.md)。本轮不再重试 agent03；其未取回证据与未知终态保持原状态。
+
 ## 代码与格式
 
 两仓均使用 `feat/virtio-pmem-dax-20261030`；Firecracker 在隔离 worktree 实施。包含只读独立 GPA/slot、virtio-pmem/API/设备快照、RAM 与 PMEM 访问能力区分、旧快照显式解码路径；E2B 包含完整物化器、v3 manifest、cold boot early init、私有 upper 与恢复重绑。功能默认关闭。
@@ -40,16 +42,16 @@
 | ID | 状态 | 已有证据及剩余工作 |
 |---|---|---|
 | D01 | 通过 | PMEM/PFN/GPA、完整 rootfs、lower 与最终 OverlayFS 路径 STATX_ATTR_DAX、实际 mmap GPA 落入 PMEM、envd/恢复均通过 |
-| D02 | 部分 | 已知文件的应用路径 mmap 同 PFN，内容相同但不同 inode 对照为不同 PFN；指定 exec 页的独立 PFN 矩阵待补 |
-| D03 | 部分 | 工具读文件正确；专门 buffer 私有性测试待补 |
-| D04 | 部分 | RO FD/map/KVM slot、只读/可写设备内存接口及恶意 flush 描述符单测；真实 guest CPU/raw block 攻击、第二 VM 与源 hash 四方证据待补 |
-| D05 | 部分 | 正常私有写、append/fsync/copy-up、另一 VM 不变及恢复通过；truncate 等完整矩阵及写放大核算待补 |
+| D02 | 部分 | 已知文件的应用路径 mmap 同 PFN，内容相同但不同 inode 对照为不同 PFN；补测已观察到运行中 exec 页同 PFN，待取回离线复核及补齐 exec 不同 backing 对照 |
+| D03 | 部分 | 专门恢复后 readinto buffer 内容正确、两 VM PFN 不同已原生通过（File/NBD × full/delta），原始证据尚待取回复核 |
+| D04 | 部分 | RO FD/map/KVM slot、只读/可写设备内存接口及恶意 flush 描述符单测；真实 guest CPU/raw-block 写尝试测试已 exit 0，须取回攻击收据确认拒绝位置，不把权限拒绝扩大为已执行 store 的证明 |
+| D05 | 部分 | truncate 缩短/零扩展、私有写、copy-up 与另一 VM 不变及 B/C 恢复已原生通过，待归档复核；写放大核算待补 |
 | D06 | 通过 | lower 删除/whiteout、opaque directory 跨代恢复不复活 |
-| D07 | 部分 | 文件 rename、symlink、xattr、mode、uid/gid 跨代通过；目录 rename、hardlink、EXDEV 等基线对照待补 |
-| D08 | 部分 | 已打开 FD/DAX mmap 后 copy-up、跨 B/C 快照恢复均通过，保留旧 lower 内容；rename/unlink 的打开映射矩阵待补 |
-| D09 | 部分 | 只读 DAX 源接口的 IOVec/block 读能力单测；真实 sendfile/splice/TX、锁、安装工具待验 |
-| D10 | 通过 | File/NBD RAM × 完整/增量保存 A→B→C；同冻结边界完整 RAM hash、打开 FD/mmap、进程与文件状态、固定 GPA 均通过（256 MiB 单 RAM region）；新增 NBD RAM 1536 MiB 全量合成 trace 的完整/增量三次恢复通过 |
-| D11 | 部分 | 缺源/短读/hash/并发取消/损坏发布文件、layout/checkpoint mismatch 合同测试；真实 disk-full、远端故障整机闭环待补 |
+| D07 | 部分 | 目录 rename/hardlink/EXDEV 同 guest 非 DAX OverlayFS 基线、文件 rename、symlink、xattr、mode、uid/gid 跨代已原生通过；补测证据待取回复核 |
+| D08 | 部分 | FD/mmap 的 copy-up、rename、unlink、B/C 恢复矩阵已原生通过，补测证据待复核。非 DAX 基线确认 copy-up 后旧 FD 会重新解析 upper，而已有 mmap 保留 lower，不混淆二者语义 |
+| D09 | 部分 | 只读 DAX 源接口单测；sendfile/splice 的 loopback 与真实 virtio TCP TX、锁与解包安装已原生通过，补测证据待取回复核 |
+| D10 | 通过 | File/NBD RAM × 完整/增量保存 A→B→C；同冻结边界完整 RAM hash、打开 FD/mmap、进程与文件状态、固定 GPA 均通过；NBD RAM 1536 MiB 全量合成 trace 各三次恢复通过。新增三个真实 KVM RAM slot 的四组合测试已原生通过、待归档，属于连续 GPA 拆分 fixture |
+| D11 | 部分 | 缺源/短读/hash/并发取消/损坏发布文件、layout/checkpoint mismatch 合同测试；私有 tmpfs 真实 ENOSPC、双 VM 的 HTTP 短读/延迟→失败广播→停止/drain 已原生通过，补测证据待复核；真实云存储仍待验 |
 | D12 | 部分 | 双 VM 关闭一个不影响另一个；缓存当前不在线淘汰，压力/GC 待验 |
 | D13 | 部分 | 旧版序列化形状/CRC 单测、旧 guest legacy 全量合成回放；真实历史 FC snapshot、旧 binary 拒绝新格式待补 |
 | D14 | 部分 | 五条真实工具 slice 通过；新增 NBD RAM + PMEM/DAX 的完整/增量全量合成回放均通过，各 1016 turns、571 合成工具事件、3 次恢复；1052 条原工具执行仍待验 |
@@ -62,7 +64,9 @@
 
 ## 限制与后续
 
-当前 FC 是 debug/glibc 原生构建，使用 empty default seccomp；生产 musl/seccomp/jailer、x86 编译运行、固定版本 Swagger 重新生成未验收。R1 具备完整物化/校验/原子发布及 warm reuse，真实云对象存储仍待验证。缓存采用保留式策略，无在线淘汰，磁盘容量规划与安全 GC 待做。R2 直接 NBD-backed PMEM 未实现。
+已验证的核心运行使用 debug/glibc FC、empty default seccomp；补测已构建静态 musl release FC，但生产 seccomp 实际运行、jailer、x86 编译运行仍未验收。固定版本 Swagger 生成任务最终状态尚未读到，不记通过。R1 具备完整物化/校验/原子发布及 warm reuse，真实云对象存储仍待验证。缓存采用保留式策略，无在线淘汰，磁盘容量规划与安全 GC 待做。R2 直接 NBD-backed PMEM 未实现。
+
+迁移前补测的执行状态和失败尝试见 [20261031 剩余测试](../20261031-remaining-tests/status.md)。当前 agent03 文件系统最后读数为可用 0、100%；随后 Coder 数据库 DNS/API 故障导致无法进入节点。持续 cgroup 压力测试未启动，部分已启动任务终态未知，原始补测证据尚未全部取回。上述新增原生结果不将步骤一、二整体升级为验收完成。
 
 上述多数功能测试可继续在当前节点执行，不能归因于“只有 32 GiB 所以无法测试”；全量部署、真实服务/对象存储及原任务环境另需资源。尚未开展物理内存净收益、容量或 SLO 实验。
 

@@ -1,0 +1,232 @@
+{
+  "scope": "Prepared local test sources and documentation overlay, not a target-tested source manifest or full repository backup",
+  "infra_commit": "efc50ca94529b8161673ffd69dbccf7b4ee8610c",
+  "firecracker_commit": "bd2800cac55ea4426f9d337be49d8be58cfaba16",
+  "excluded": "Large binaries, rootfs/RAM images, remote uncollected evidence, external original task/trace assets, third-party dependencies and unrelated worktree edits",
+  "files": {
+    "deliveries/page-sharing/20261030-step2/step-1-remaining-tests.md": {
+      "size": 3850,
+      "sha256": "a9ef2047997e46af7a9f96be556878b2c238254136d6230f722cd01e9f4a541f"
+    },
+    "deliveries/page-sharing/20261030-step2/step-2-status.md": {
+      "size": 11929,
+      "sha256": "36c93a269ce4779b8c0b54fc15fea1f0efe68812ec93cf7889e0fad0641efacc"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/connectivity-attempts.jsonl": {
+      "size": 509,
+      "sha256": "ac01a45f1d9b564022d1eb0b92cd309cb6e80e8081434fc75880db2f56541d15"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/intranet-handoff.md": {
+      "size": 15448,
+      "sha256": "d8c11e2acaaa22ac4344fd2d45bd2289bfac937f48d4e37f572850694938eb22"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/local-checks.json": {
+      "size": 1079,
+      "sha256": "6ac45fc1803c748dbddae3a38821c08ceae3e84c42377369d7a43853c810af27"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/new-source-sha256.json": {
+      "size": 706,
+      "sha256": "bc1cbe29cae33629e35002698d210cbe58073734af96c0ac56f24345f6aee041"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/collect-evidence.py": {
+      "size": 5247,
+      "sha256": "cf139e45c63a19f6346c2333d1bf88e6382504aa6caffe783eb1943c75316239"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/launch-compat.py": {
+      "size": 2704,
+      "sha256": "d7729ccace8e06d97c7fd1408987838f0fb65ec192cad684245d586f52209709"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-compat-inbound.py": {
+      "size": 1429,
+      "sha256": "27269fcd02c86fccf7d21879207920a6b4fc757003c7ccaa4ec99a66331cab60"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-compat-retry.py": {
+      "size": 1434,
+      "sha256": "2c15f44b678e011c89f49df5c2d3510b86d7e8bd76804a4cbb9049df5278b41f"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-multiregion.py": {
+      "size": 1996,
+      "sha256": "a89fd1a7a87b772ae9f7e902e9e93c1e3fbb7632db8633624ed060944af1ea81"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-production.py": {
+      "size": 2459,
+      "sha256": "dc56858092f9982f365d13194142c235dc72435b7628c1cf601504392060a843"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-runtime-extra.py": {
+      "size": 1570,
+      "sha256": "d53cc85be7fc4c27e18364ddd92148842137b9ba2d505bbfe90484f689a55bde"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/reproduce/run-target.py": {
+      "size": 4771,
+      "sha256": "babb1b36355e71cfdbebe5d57bf3f796863aa09e80d7f65de09830b69c61cfaa"
+    },
+    "deliveries/page-sharing/20261031-remaining-tests/status.md": {
+      "size": 6448,
+      "sha256": "ff72bd0609e265ae0019f3d4a0a7a067cba6fa5d3a380c06c06406d55753e21f"
+    },
+    "packages/orchestrator/internal/sandbox/pmem/materialize_diskfull_linux_test.go": {
+      "size": 1553,
+      "sha256": "1cde5708e0ea413b9491865bb94bed2cc01944c70d92eaeeb026315c3d795408"
+    },
+    "packages/orchestrator/internal/sandbox/pmem_compat_integration_linux_test.go": {
+      "size": 10014,
+      "sha256": "2b5b6005c45ec03289fd3a93515bedecf7e5aa392333600cbee3005cb5086a51"
+    },
+    "packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go": {
+      "size": 34995,
+      "sha256": "9de647e5b23f509e06de0ed4ac7d6cb1dba9c9a68672dc393092b8f9791ecb05"
+    },
+    "packages/orchestrator/internal/sandbox/sharing_proof_integration_linux_test.go": {
+      "size": 15467,
+      "sha256": "1df73fa8a1e5319cb1a249b3823e072eee453d9501ec30c9534c899e2cd2ce85"
+    },
+    "packages/orchestrator/internal/sandbox/sharing_remote_failure_integration_linux_test.go": {
+      "size": 7030,
+      "sha256": "48b071d9e32f0a78c45bdfa8c5ba2743de0ecfcf55a62f3008f1cf1b4de8a100"
+    },
+    "packages/orchestrator/internal/sandbox/sharing_seccomp_integration_linux_test.go": {
+      "size": 2047,
+      "sha256": "69085d2630c72a249b4ddb58650d55a41f072163a947684686c501e8401765fb"
+    },
+    "packages/orchestrator/internal/sandbox/template/history_delete_integration_test.go": {
+      "size": 4083,
+      "sha256": "ac6274bbb5901861358b2639d1fd5480fc8a94a697dbe210d803983c5ce778c7"
+    },
+    "packages/orchestrator/internal/sandbox/testdata/pmem_compat.py": {
+      "size": 11128,
+      "sha256": "edd26b184c588c182e644c974f4ec5011cb61d9955f328a5254d3768a64d4f9b"
+    },
+    "packages/orchestrator/internal/sandbox/testdata/pmem_overlay_baseline.py": {
+      "size": 2244,
+      "sha256": "99ab3840b26c58edb7ed1a81826c4c83b66df23ddc9c196196244e81117dbc5d"
+    },
+    "scripts/memory-lab/page-sharing/README.md": {
+      "size": 8770,
+      "sha256": "2ae863059c9d1957246ab12a204869d738e47d2e54c539aa7ddac46431773719"
+    },
+    "scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json": {
+      "size": 34282,
+      "sha256": "aa732fd55fc81846601c90570979f0fa1de6eaa347a67e293260d9e4a91b46ca"
+    },
+    "scripts/memory-lab/page-sharing/check-software.sh": {
+      "size": 2073,
+      "sha256": "e446a11c1b115db695efde0f46aabe15838cda5d006d47d8014412e0f9d28e37"
+    },
+    "scripts/memory-lab/page-sharing/guest.go": {
+      "size": 4081,
+      "sha256": "613530e82b2e0940e1d671c3033ae12c57b2438c58b58f06cda37a6e5213bfda"
+    },
+    "scripts/memory-lab/page-sharing/kvm_check.py": {
+      "size": 34479,
+      "sha256": "e05d6858884875d67617c39d96f4c5a49c7df7e3adc787fab701a4984090d1ae"
+    },
+    "scripts/memory-lab/page-sharing/m10.md": {
+      "size": 3594,
+      "sha256": "bdb51ac55f469e59a66096151cd8c042b32664f2c5d63614cac2c2ee755aebae"
+    },
+    "scripts/memory-lab/page-sharing/m10_check.py": {
+      "size": 20867,
+      "sha256": "4c3c24514f9091d8744e0a663a92641ed050b3f7b6dff5547975a9828d8fea6a"
+    },
+    "scripts/memory-lab/page-sharing/m10_cleanup_test.py": {
+      "size": 3418,
+      "sha256": "ebe15820ba51a64dfe039cfe11c2fdd25671c4ac18b41690c363bd38bfc9dcf3"
+    },
+    "scripts/memory-lab/page-sharing/m10_guest.go": {
+      "size": 6874,
+      "sha256": "3ae16538e51b4631de1ed56a5078a66e4bdfd0c8f3e93292881e5f3e3aa6a3a3"
+    },
+    "scripts/memory-lab/page-sharing/m11.md": {
+      "size": 1376,
+      "sha256": "01e4fd0cf9f890f7b1e6c87ee54f18442701bbdae2553c18ccf7cd27d44ede3e"
+    },
+    "scripts/memory-lab/page-sharing/m11_check.py": {
+      "size": 12428,
+      "sha256": "f154732ffe115ebd23b1b1834cfc316526a259faff921692d773cd7cc4e99d08"
+    },
+    "scripts/memory-lab/page-sharing/m11_guest.go": {
+      "size": 5781,
+      "sha256": "75526a76bd884bc68ca6ae0ffa55ee8798f40849319de93482c6d14db8dec83f"
+    },
+    "scripts/memory-lab/page-sharing/m11_setup.sh": {
+      "size": 979,
+      "sha256": "a473ed7b21d7984fb19db54b06b5f185d9c41b7305778d0de3bc760e6e4143fa"
+    },
+    "scripts/memory-lab/page-sharing/multiregion_check.py": {
+      "size": 5260,
+      "sha256": "cbf6ec7a129a2ee5bc468de833baf05a7f354d1b3d097d740a8ecfa972a9771c"
+    },
+    "scripts/memory-lab/page-sharing/prepare_factory_fixture.sh": {
+      "size": 2679,
+      "sha256": "50fead1cc9dd3190e3c2fcd3f5f413cffa27c97f4fbca5092bd01c701c06b124"
+    },
+    "scripts/memory-lab/page-sharing/prepare_factory_network_deps.sh": {
+      "size": 931,
+      "sha256": "c39b0482f4574a6516dda8c4b17fde4e8fa1865d015e12f39da12415ac3a737e"
+    },
+    "scripts/memory-lab/page-sharing/pressure_check.py": {
+      "size": 8731,
+      "sha256": "0724ec2768df274da31d15e91f96470a28dedf9101a36db488f1904033fe59b8"
+    },
+    "scripts/memory-lab/page-sharing/snapshot_version_check.py": {
+      "size": 4024,
+      "sha256": "a0c3f2b3b181b2fb1b5dd308d73ab111080605bc205749deb54856d050714c8a"
+    },
+    "scripts/memory-lab/page-sharing/split_snapshot.rs": {
+      "size": 1487,
+      "sha256": "24476247e84a324b1327b28e7df041a9aecbb77f41ab8432c25e1ff7cea2d144"
+    },
+    "scripts/memory-lab/page-sharing/trace_slice.py": {
+      "size": 9717,
+      "sha256": "e0223120befa566b5ee4f3b186fbac1df6ca2c15a183171d36acd90ec555d693"
+    },
+    "scripts/memory-lab/page-sharing/tracked-delta.md": {
+      "size": 5838,
+      "sha256": "0c9f4e25b20e30178bdb78c7ee13b0828cd3a9ba02cc226a3a2272e626a91c5a"
+    },
+    "scripts/memory-lab/page-sharing/tracked_delta_check.py": {
+      "size": 11148,
+      "sha256": "173ee7862923a04bf98fffc5204e104fa25a6bbf186a9e7cc761cfc16a9c3493"
+    },
+    "scripts/memory-lab/page-sharing/vsock_check.py": {
+      "size": 7740,
+      "sha256": "1725e89cdddefc465040b836c8d5b6869f03c69b932a561d10cc87d901ea76ba"
+    },
+    "scripts/memory-lab/page-sharing/vsock_guest.go": {
+      "size": 1848,
+      "sha256": "26c044a1431c7cdcdcfc65ead1b2fb3c5075d73d7194f8885535d6b26e131fbe"
+    },
+    "scripts/memory-lab/pmem-dax/README.md": {
+      "size": 5367,
+      "sha256": "48b43dd9b4dbb0a568809fedad2bc504ab6755f84414eac967128159381ff86c"
+    },
+    "scripts/memory-lab/pmem-dax/make-initramfs.py": {
+      "size": 1125,
+      "sha256": "6428712fab46bd8a3edcd7fe62a90e7f35657a1ed8025640d1ba7817a73da174"
+    },
+    "scripts/memory-lab/pmem-dax/pack-pfn.py": {
+      "size": 2203,
+      "sha256": "29e4997cc85799afd1aee0396669ca389eb3c9548db920dd3c3904f1f58afbad"
+    },
+    "scripts/memory-lab/pmem-dax/prepare-compat.py": {
+      "size": 2908,
+      "sha256": "844d844920673e6d74665d937d2cc78f93e5dd548a2aaca50281e6ca996dc37c"
+    },
+    "scripts/memory-lab/pmem-dax/prepare-rootfs.sh": {
+      "size": 2785,
+      "sha256": "718f40483c4d1f72b648a4e2dc53edd93459afbe770fdde71db49503653fa811"
+    },
+    "scripts/memory-lab/pmem-dax/test_pack_pfn.py": {
+      "size": 2600,
+      "sha256": "4ae78441fe839a123864a565014904c5be4637391c229eebb76221a5f418f56c"
+    },
+    "scripts/memory-lab/pmem-dax/verify-marathon.py": {
+      "size": 8382,
+      "sha256": "79a27c67a4605f8a6308b11968ee0681975cdd8ddbe82892cd77e59b94c2f081"
+    },
+    "scripts/memory-lab/pmem-dax/verify-sharing-proof.py": {
+      "size": 6763,
+      "sha256": "26c5c86e12fa7dc8c2faf7b5f6c75d866e927956814b6a95c9f7400d32042bd6"
+    }
+  }
+}

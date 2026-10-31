@@ -67,7 +67,9 @@ func TestPmemFactoryIntegration(t *testing.T) { //nolint:paralleltest
 }
 func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:paralleltest
 	proofMode := pmemMode && os.Getenv("E2B_SHARING_PROOF") == "1"
+	compatMode := proofMode && os.Getenv("E2B_PMEM_COMPAT") == "1"
 	marathonMode := pmemMode && os.Getenv("E2B_PMEM_MARATHON") == "1"
+	remoteFailureMode := os.Getenv("E2B_SHARING_REMOTE_FAILURE")
 	runDir := os.Getenv("E2B_SHARING_INTEGRATION_DIR")
 	if runDir == "" {
 		t.Skip("set E2B_SHARING_INTEGRATION_DIR and explicit fixture inputs on an isolated Linux KVM node")
@@ -130,6 +132,7 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 	require.NoError(t, err)
 	var factories []*Factory
 	var caches []*template.Cache
+	var expectedFailureDrain *Factory
 	t.Cleanup(func() {
 		cleanCtx := context.Background()
 		// Factory drain stops FC before releasing source leases and NBD devices.
@@ -139,6 +142,12 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		drained := true
 		for _, factory := range factories {
 			if err := factory.DrainMemoryBackings(cleanCtx); err != nil {
+				if factory == expectedFailureDrain {
+					// The fault test has already checked every process exit and
+					// successful registry disconnect independently of this error.
+					sharingReceipt(t, filepath.Join(runDir, "expected-failure-drain.json"), map[string]any{"error": err.Error()})
+					continue
+				}
 				t.Errorf("factory drain failed; retain sources/pools for diagnosis: %v", err)
 				drained = false
 			}
@@ -263,6 +272,9 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 	if proofMode {
 		sharingProofStart(t, ctx, cold)
 	}
+	if compatMode {
+		sharingCompatStart(t, ctx, cold)
+	}
 	pauseUpload := func(name string, sbx *Sandbox) string {
 		t.Logf("%s: freeze, compare native RAM, production Pause and upload", name)
 		_, err := sharingExec(ctx, sbx, "sync")
@@ -365,6 +377,12 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		}
 		return sbx
 	}
+	if remoteFailureMode != "" {
+		sharingRemoteFailure(t, ctx, runDir, remoteFailureMode, b1, devices, flags,
+			func(name string) *Sandbox { return resume(name, aID, b1, b1Cache) })
+		expectedFailureDrain = b1
+		return
+	}
 	if marathonMode {
 		current := resume("marathon-start", aID, b1, b1Cache)
 		current = sharingMarathonReplay(t, ctx, runDir, current, pauseUpload, func(name, buildID string) *Sandbox {
@@ -409,6 +427,9 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		}
 		if proofMode {
 			sharingProofPair(t, ctx, runDir, mode, left, right)
+			if compatMode {
+				sharingCompatPair(t, ctx, runDir, mode, left, right)
+			}
 			if mode == "B1" {
 				control := resume("B2-control", aID, controlFactory, controlCache)
 				sharingProofControl(t, ctx, runDir, right, control)
@@ -438,6 +459,11 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 			sharingProofCommand(t, ctx, second, "mutate2")
 			sharingProofState(t, ctx, second, 2)
 		}
+		if compatMode {
+			sharingReceipt(t, filepath.Join(runDir, mode+"-B-compat-restored.json"), sharingCompatState(t, ctx, second, "read", 1))
+			sharingCompatState(t, ctx, second, "mutate2", 2)
+			sharingCompatState(t, ctx, right, "read", 0)
+		}
 		if right != nil && mode == "B1" {
 			oldRAM, oldOK := right.Resources.memory.(*leasedMemory)
 			newRAM, newOK := second.Resources.memory.(*leasedMemory)
@@ -457,6 +483,15 @@ func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:parall
 		if proofMode {
 			sharingReceipt(t, filepath.Join(runDir, mode+"-C-proof-restored.json"), sharingProofState(t, ctx, third, 2))
 			sharingProofUnchangedSources(t, ctx, runDir, mode, third, cache, aID)
+		}
+		if compatMode {
+			sharingReceipt(t, filepath.Join(runDir, mode+"-C-compat-restored.json"), sharingCompatState(t, ctx, third, "read", 2))
+			sharingCompatTransfers(t, ctx, third)
+			for _, kind := range []string{"cpu", "raw-block"} {
+				attacker := resume(mode+"-"+kind+"-attacker", aID, factory, cache)
+				sharingCompatAttack(t, ctx, runDir, mode+"-"+kind, kind, attacker, third)
+				require.NoError(t, attacker.Close(ctx))
+			}
 		}
 		require.NoError(t, third.Close(ctx))
 		sharingReceipt(t, filepath.Join(runDir, mode+"-result.json"), map[string]any{
@@ -613,6 +648,9 @@ func sharingRecordPID(t *testing.T, dir, name string, sbx *Sandbox) {
 	require.NoError(t, err)
 	sharingReceipt(t, filepath.Join(dir, name+"-pid.json"), map[string]any{"pid": pid, "sandbox_id": sbx.Runtime.SandboxID,
 		"namespace": sbx.Slot.NamespaceID(), "api_socket": sbx.files.SandboxFirecrackerSocketPath()})
+	if os.Getenv("E2B_SHARING_REQUIRE_SECCOMP") == "1" {
+		sharingRequireSeccomp(t, dir, name, pid)
+	}
 }
 
 func sharingCheckFileRAMMapping(t *testing.T, dir, name string, sbx *Sandbox, path string) {

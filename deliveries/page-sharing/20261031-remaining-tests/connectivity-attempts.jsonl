@@ -1,0 +1,2 @@
+{"command": ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "H-arch", "ssh -o BatchMode=yes -o ConnectTimeout=10 agent03.coder true"], "started_utc": "2026-10-31T04:34:23Z", "seconds": 17.146220922470093, "exit": 255, "stdout": "", "stderr": "Connection timed out during banner exchange\n"}
+{"started_utc": "2026-10-31T04:40:55Z", "purpose": "read-only disk/process/campaign audit", "seconds": 22.72499918937683, "exit": 255, "stdout": "", "stderr": "Connection timed out during banner exchange\n"}

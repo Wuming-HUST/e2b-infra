@@ -1,0 +1,7 @@
+{
+  "archive": "migration-test-sources.tar.gz",
+  "size": 129132,
+  "sha256": "29669d3bee9968d183a2b7c3c68cc1ed96575ab26341d7c7d84f7d84032effff",
+  "verified_files": 57,
+  "roundtrip_size_and_sha256_verified": true
+}
