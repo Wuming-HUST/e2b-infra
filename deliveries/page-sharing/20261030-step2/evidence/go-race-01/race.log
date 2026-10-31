@@ -1,0 +1,5 @@
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem	10.557s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc	1.071s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template	1.333s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata	1.049s
+ok  	github.com/e2b-dev/infra/packages/orchestrator/cmd/pmem-init	1.010s

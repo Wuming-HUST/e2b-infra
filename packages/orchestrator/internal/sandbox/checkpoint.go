@@ -130,6 +130,13 @@ func sealSnapshotMetadata(ctx context.Context, s *Snapshot, m metadata.Template)
 			return errors.New("tracked checkpoint has no captured payload digest")
 		}
 		checkpoint.RAMPayloadSHA256 = hex.EncodeToString(digest[:])
+		if m.Rootfs != nil {
+			if err := m.Rootfs.Validate(); err != nil {
+				return err
+			}
+			checkpoint.FormatVersion = 3
+			checkpoint.RootfsLayoutSHA256 = m.Rootfs.Digest()
+		}
 		m.Checkpoint = checkpoint
 		return publishCheckpointMetadata(ctx, m, s.Metafile.Path())
 	}
@@ -162,6 +169,13 @@ func sealSnapshotMetadata(ctx context.Context, s *Snapshot, m metadata.Template)
 		}
 		checkpoint.RAMExportMode = "full_logical"
 		checkpoint.LogicalRAMSHA256 = hex.EncodeToString(digest[:])
+	}
+	if m.Rootfs != nil {
+		if err := m.Rootfs.Validate(); err != nil {
+			return err
+		}
+		checkpoint.FormatVersion = 3
+		checkpoint.RootfsLayoutSHA256 = m.Rootfs.Digest()
 	}
 	m.Checkpoint = checkpoint
 	return publishCheckpointMetadata(ctx, m, s.Metafile.Path())

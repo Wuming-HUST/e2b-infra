@@ -1,0 +1,5 @@
+{
+  "A": "/dev/nbd0",
+  "B": "/dev/nbd1",
+  "distinct_live_backings": true
+}

@@ -1,0 +1,5 @@
+{
+  "stdout": "{\"allocated_bytes\":1048576,\"read_bytes\":16777216,\"policy\":\"fixed-work-no-padding-v1\"}\n",
+  "stderr": "",
+  "exit": 0
+}

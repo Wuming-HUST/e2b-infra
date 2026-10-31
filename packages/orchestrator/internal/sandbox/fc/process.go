@@ -280,6 +280,10 @@ func (p *Process) Create(
 	ctx, childSpan := tracer.Start(ctx, "create-fc")
 	defer childSpan.End()
 
+	if _, ok := p.rootfsProvider.(pmemBindingProvider); ok && options.InitrdPath == "" {
+		return fmt.Errorf("pmem cold boot requires DAX initramfs")
+	}
+
 	// Symlink /dev/null to the rootfs link path, so we can start the FC process without the rootfs and then symlink the real rootfs.
 	err := utils.SymlinkForce("/dev/null", p.files.SandboxCacheRootfsLinkPath(p.config.StorageConfig))
 	if err != nil {
@@ -338,6 +342,18 @@ func (p *Process) Create(
 		args["loglevel"] = "5" // KERN_NOTICE
 	}
 
+	if _, ok := p.rootfsProvider.(pmemBindingProvider); ok {
+		args["e2b.pmem-rootfs"] = "1"
+		binding := p.rootfsProvider.(pmemBindingProvider).PmemBinding()
+		args["e2b.pmem-gpa"] = strconv.FormatUint(binding.GuestAddress, 10)
+		args["e2b.pmem-size"] = strconv.FormatUint(binding.Size, 10)
+		args["e2b.pmem-data-offset"] = strconv.FormatUint(p.rootfsProvider.(pmemBindingProvider).PmemDataOffset(), 10)
+		// The initramfs starts the original init after switching to the overlay.
+		if options.InitScriptPath != "" {
+			args["e2b.real-init"] = options.InitScriptPath
+		}
+		delete(args, "init")
+	}
 	kernelArgs := args.String()
 	err = p.client.setBootSource(ctx, kernelArgs, p.kernelPath, options.InitrdPath)
 	if err != nil {
@@ -364,13 +380,19 @@ func (p *Process) Create(
 	}
 	telemetry.ReportEvent(ctx, "symlinked rootfs")
 
-	err = p.client.setRootfsDrive(ctx, p.rootfsPath, options.IoEngine)
+	err = p.client.setRootfsDrive(ctx, p.rootfsPath, options.IoEngine, !isPmemProvider(p.rootfsProvider))
 	if err != nil {
 		fcStopErr := p.Stop(ctx)
 
 		return errors.Join(fmt.Errorf("error setting fc drivers config: %w", err), fcStopErr)
 	}
 	telemetry.ReportEvent(ctx, "set fc drivers config")
+
+	if bound, ok := p.rootfsProvider.(pmemBindingProvider); ok {
+		if err := p.client.setPmem(ctx, bound.PmemBinding()); err != nil {
+			return errors.Join(err, p.Stop(ctx))
+		}
+	}
 
 	// Network
 	err = p.client.setNetworkInterface(ctx, p.slot.VpeerName(), p.slot.TapName(), p.slot.TapMAC())
@@ -501,6 +523,10 @@ func (p *Process) Resume(
 		fcStopErr := p.Stop(ctx)
 
 		return errors.Join(fmt.Errorf("error waiting for uffd socket or symlinking rootfs: %w", err), fcStopErr)
+	}
+	if bound, ok := p.rootfsProvider.(pmemBindingProvider); ok {
+		binding := bound.PmemBinding()
+		memoryBackend.Pmem = &binding
 	}
 	phase5Start := time.Now()
 	err = p.client.loadSnapshot(

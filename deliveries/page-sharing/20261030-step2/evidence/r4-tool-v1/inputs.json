@@ -1,0 +1,26 @@
+{
+  "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/rootfs.ext4": {
+    "size": 2147483648,
+    "sha256": "d4ae644c25be4ea6f1e9b696a2431c8585753afd1e5261915e4e41b0d628671e"
+  },
+  "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/initrd.gz": {
+    "size": 2635486,
+    "sha256": "a8879a896e25b1e556f118cf2fce428bf649728952be09739d8f59b3a41a884b"
+  },
+  "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/mtool.c": {
+    "size": 3192,
+    "sha256": "a2a4425d7b26b5e5ad8779f572927f07f3b9fad97c05d787599eac38e89afa53"
+  },
+  "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/old-mtool": {
+    "size": 88528,
+    "sha256": "b7f454f219fa2638df4cc058b0ee67f097c9f9ee9b2b8a08b03b322f4f35d5bc"
+  },
+  "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/mtool": {
+    "size": 88032,
+    "sha256": "ad240e9ef888b431b48f14c1c4ac0e3bc16f7c5c519c03994b123d26bc32b8f5"
+  },
+  "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4": {
+    "size": 2147483648,
+    "sha256": "6d60c48e139807d47925141b3f30cc20c81517e7f3bff168c5dd69c121345631"
+  }
+}

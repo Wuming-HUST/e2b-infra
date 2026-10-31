@@ -1,0 +1,4 @@
+=== RUN   TestBootLayoutRequiresExplicitPmemAndAbsoluteInit
+--- PASS: TestBootLayoutRequiresExplicitPmemAndAbsoluteInit (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/cmd/pmem-init	0.003s

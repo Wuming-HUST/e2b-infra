@@ -1,0 +1,5 @@
+{
+  "source_path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/factory-fixture-v2/rootfs.ext4",
+  "source_sha256": "c5779c5de7bcf5e5d98e0bfc36b857166b47ee7f7d810f4c23c6260f191fa99c",
+  "conversion": "block-preserving copy; offline journal removal; PFN_MODE_RAM v1.4 with 2MiB data offset; padded to 128MiB"
+}

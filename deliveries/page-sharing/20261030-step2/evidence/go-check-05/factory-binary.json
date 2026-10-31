@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/bin/go",
+    "test",
+    "-p",
+    "2",
+    "-c",
+    "-o",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-05/sandbox.test",
+    "./internal/sandbox"
+  ],
+  "exit": 0,
+  "seconds": 6.381322145462036
+}

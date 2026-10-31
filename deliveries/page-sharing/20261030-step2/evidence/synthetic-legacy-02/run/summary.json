@@ -1,0 +1,67 @@
+{
+  "call_ids": 576,
+  "checkpoints": [
+    {
+      "Name": "generation-1",
+      "StateSHA256": "6d0e2d98693e4eca9cd6ab26ce432b0532379fc248c1a9c3b5e0d3572b6f411f",
+      "FirecrackerSHA256": "bc66b160a21f12c723b52964546f1566ae016bc40f7f1c72c8466d23295cf8cb",
+      "MemoryID": "4fc2abc0-9011-4b5b-bd34-f3268e42e919",
+      "DiskID": "2e5df53e-5781-4eb7-955f-87630188e017",
+      "SelectedPages": 393216,
+      "MemoryBytes": 295059456,
+      "DiskBytes": 966656,
+      "Created": "2026-10-31T01:44:17.418618542Z"
+    },
+    {
+      "Name": "generation-2",
+      "StateSHA256": "1e0cd4583a1e8e9902c7e313e7bad665e8418dd013849680a1e2be388c603750",
+      "FirecrackerSHA256": "bc66b160a21f12c723b52964546f1566ae016bc40f7f1c72c8466d23295cf8cb",
+      "MemoryID": "118fad4b-1b19-461e-b636-dce5ded7f41e",
+      "DiskID": "34d8f41a-0e3d-403e-a5f1-51bd91aa8f5a",
+      "SelectedPages": 193142,
+      "MemoryBytes": 763469824,
+      "DiskBytes": 1794048,
+      "Created": "2026-10-31T01:45:17.038497352Z"
+    },
+    {
+      "Name": "generation-3",
+      "StateSHA256": "81d76f8f88a7a9ca87a94f049d61e4190316b2f6dd797ceb00f1f48ce8c9949f",
+      "FirecrackerSHA256": "bc66b160a21f12c723b52964546f1566ae016bc40f7f1c72c8466d23295cf8cb",
+      "MemoryID": "58b85baf-ad9c-4662-bccf-37aff19d3580",
+      "DiskID": "914aed7d-037c-4c39-8701-0d0fdb2b32a1",
+      "SelectedPages": 193667,
+      "MemoryBytes": 767602688,
+      "DiskBytes": 4444160,
+      "Created": "2026-10-31T01:46:34.775703757Z"
+    }
+  ],
+  "dirty_mode": "software",
+  "disk_oracle_drops_guest_cache": true,
+  "elapsed_s": 203.488244353,
+  "envd_file_roundtrip": true,
+  "envd_init": true,
+  "envd_process_api": true,
+  "envd_pty": true,
+  "envd_signals": true,
+  "evidence": "trace-driven synthetic memory replay; no original tool/LLM execution",
+  "guest_pid": "134",
+  "kae": "not implemented",
+  "last_restore_uffd_reads": 192332,
+  "nbd_rootfs": true,
+  "production_isolation": "not validated; local root debug harness, no seccomp or host per-VM cgroup",
+  "result": {
+    "pid": 134,
+    "sha256": "aa44ebe9ce29d4563fabc1f42496ec16f6119b163b1a09d4b81df6f046dfcc62",
+    "tools": 571,
+    "turns": 1016,
+    "verify": true
+  },
+  "snapshot_codec": "raw",
+  "status": "passed",
+  "time_scale": 0.001,
+  "tools": 571,
+  "trace_name": "swe-marathon-biofabric-rust-rewrite-897c0fc8-381-fixed",
+  "trace_sha256": "683d7fcc17c4edbd56ec6977293d3ec527a0ed4edc9cb1aa8c0f9935a200dcc5",
+  "turns": 1016,
+  "verified_resumes": 3
+}

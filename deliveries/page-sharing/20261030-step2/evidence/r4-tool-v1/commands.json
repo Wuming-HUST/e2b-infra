@@ -1,0 +1,132 @@
+[
+  {
+    "command": [
+      "sha256sum",
+      "-c",
+      "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/manifest.sha256"
+    ],
+    "exit": 0,
+    "stdout": "/home/coder/projects/yangshengxin/e2b/memory-lab-envd: OK\n/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/rootfs.ext4: OK\n/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/initrd.gz: OK\n",
+    "stderr": "",
+    "seconds": 1.2899835109710693
+  },
+  {
+    "command": [
+      "debugfs",
+      "-R",
+      "dump /usr/local/bin/memory-lab-mtool /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/old-mtool",
+      "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/rootfs.ext4"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": "debugfs 1.47.0 (5-Feb-2023)\n",
+    "seconds": 0.0031151771545410156
+  },
+  {
+    "command": [
+      "musl-gcc",
+      "-static",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/mtool.c",
+      "-o",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/mtool"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.10794305801391602
+  },
+  {
+    "command": [
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/old-mtool",
+      "1",
+      "0",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/corpus",
+      "read"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.0011174678802490234
+  },
+  {
+    "command": [
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/mtool",
+      "1",
+      "0",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/corpus",
+      "read"
+    ],
+    "exit": 0,
+    "stdout": "{\"allocated_bytes\":1048576,\"read_bytes\":16777216,\"policy\":\"fixed-work-no-padding-v1\"}\n",
+    "stderr": "",
+    "seconds": 0.002827167510986328
+  },
+  {
+    "command": [
+      "cp",
+      "--reflink=auto",
+      "--sparse=always",
+      "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/rootfs.ext4",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": "",
+    "seconds": 0.07634544372558594
+  },
+  {
+    "command": [
+      "debugfs",
+      "-w",
+      "-R",
+      "rm /usr/local/bin/memory-lab-mtool",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4"
+    ],
+    "exit": 0,
+    "stdout": "\n",
+    "stderr": "debugfs 1.47.0 (5-Feb-2023)\n",
+    "seconds": 0.05162668228149414
+  },
+  {
+    "command": [
+      "debugfs",
+      "-w",
+      "-R",
+      "write /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/mtool /usr/local/bin/memory-lab-mtool",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4"
+    ],
+    "exit": 0,
+    "stdout": "Allocated inode: 6564\n",
+    "stderr": "debugfs 1.47.0 (5-Feb-2023)\n",
+    "seconds": 0.003986835479736328
+  },
+  {
+    "command": [
+      "debugfs",
+      "-w",
+      "-R",
+      "set_inode_field /usr/local/bin/memory-lab-mtool mode 0100755",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": "debugfs 1.47.0 (5-Feb-2023)\n",
+    "seconds": 0.002596616744995117
+  },
+  {
+    "command": [
+      "e2fsck",
+      "-f",
+      "-n",
+      "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4"
+    ],
+    "exit": 0,
+    "stdout": "Pass 1: Checking inodes, blocks, and sizes\nPass 2: Checking directory structure\nPass 3: Checking directory connectivity\nPass 4: Checking reference counts\nPass 5: Checking group summary information\n/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4: 6700/131072 files (0.1% non-contiguous), 117927/524288 blocks\n",
+    "stderr": "e2fsck 1.47.0 (5-Feb-2023)\n",
+    "seconds": 0.0215301513671875
+  }
+]

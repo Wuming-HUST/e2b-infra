@@ -6,11 +6,13 @@ import (
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/build"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
 )
 
 type Snapshot struct {
+	PmemLowerPath     string
 	RAMExportMode     string
 	MemfileDiff       build.Diff
 	MemfileDiffHeader *header.Header
@@ -27,6 +29,23 @@ func (s *Snapshot) Upload(
 	persistence storage.StorageProvider,
 	templateFiles storage.TemplateFiles,
 ) error {
+	// The immutable lower must exist before publishing any new template marker.
+	meta, err := metadata.FromFile(s.Metafile.Path())
+	if err != nil {
+		return err
+	}
+	if meta.Rootfs != nil {
+		if s.PmemLowerPath == "" {
+			return fmt.Errorf("pmem snapshot has no materialized lower to upload")
+		}
+		lower, err := persistence.OpenSeekable(ctx, meta.Rootfs.Lower.ObjectPath(), storage.RootFSObjectType)
+		if err != nil {
+			return err
+		}
+		if err = lower.StoreFile(ctx, s.PmemLowerPath); err != nil {
+			return fmt.Errorf("upload immutable pmem lower: %w", err)
+		}
+	}
 	var memfilePath *string
 	switch r := s.MemfileDiff.(type) {
 	case *build.NoDiff:

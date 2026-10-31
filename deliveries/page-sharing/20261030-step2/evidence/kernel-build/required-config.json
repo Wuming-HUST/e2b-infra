@@ -1,0 +1,14 @@
+{
+  "required": [
+    "VIRTIO_PMEM",
+    "LIBNVDIMM",
+    "ZONE_DEVICE",
+    "FS_DAX",
+    "NVDIMM_PFN",
+    "BLK_DEV_PMEM",
+    "EXT4_FS",
+    "OVERLAY_FS",
+    "ARM64_4K_PAGES"
+  ],
+  "missing": []
+}

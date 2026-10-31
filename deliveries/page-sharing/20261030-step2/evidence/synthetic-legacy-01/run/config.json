@@ -1,0 +1,14 @@
+{
+  "Firecracker": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker",
+  "Kernel": "/home/coder/tide-repro/assets/vmlinuz",
+  "Initrd": "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/initrd.gz",
+  "Rootfs": "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/rootfs.ext4",
+  "Workdir": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/synthetic-legacy-01/run",
+  "MemoryMiB": 1536,
+  "CPUs": 2,
+  "Tap": "pmem-r4-b0",
+  "HostCIDR": "172.30.81.1/30",
+  "GuestIP": "172.30.81.2",
+  "DirtyMode": "software",
+  "HDBSSOrder": 1
+}

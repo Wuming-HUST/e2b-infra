@@ -117,10 +117,31 @@ func ValidateCheckpoint(ctx context.Context, t Template) error {
 	}
 	c := meta.Checkpoint
 	if c == nil {
+		if meta.Rootfs != nil || meta.Version >= 3 {
+			return fmt.Errorf("pmem restore requires a new sealed checkpoint")
+		}
 		return nil
 	}
-	legacy := c.FormatVersion == 1 && (c.RAMExportMode == "full_logical" || c.RAMExportMode == "uffd_delta")
-	tracked := c.FormatVersion == 2 && c.RAMExportMode == "tracked_delta"
+	if meta.Rootfs != nil {
+		if err := meta.Rootfs.Validate(); err != nil {
+			return err
+		}
+		if meta.Version != 3 || c.FormatVersion != 3 || c.RootfsLayoutSHA256 != meta.Rootfs.Digest() {
+			return fmt.Errorf("invalid pmem checkpoint layout binding")
+		}
+	} else if c.FormatVersion == 3 || meta.Version >= 3 {
+		return fmt.Errorf("missing pmem checkpoint layout")
+	}
+	format := c.FormatVersion
+	if format == 3 {
+		if c.RAMExportMode == "tracked_delta" {
+			format = 2
+		} else {
+			format = 1
+		}
+	}
+	legacy := format == 1 && (c.RAMExportMode == "full_logical" || c.RAMExportMode == "uffd_delta")
+	tracked := format == 2 && c.RAMExportMode == "tracked_delta"
 	if !legacy && !tracked {
 		return fmt.Errorf("unsupported checkpoint format or RAM export mode")
 	}

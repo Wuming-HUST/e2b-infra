@@ -1,5 +1,7 @@
 package fc
 
+import "github.com/e2b-dev/infra/packages/shared/pkg/fc/models"
+
 type SnapshotMemoryBackendType uint8
 
 const (
@@ -8,6 +10,7 @@ const (
 )
 
 type SnapshotMemoryBackend struct {
+	Pmem       *models.PmemConfig
 	Type       SnapshotMemoryBackendType
 	Path       string
 	Ready      <-chan struct{}

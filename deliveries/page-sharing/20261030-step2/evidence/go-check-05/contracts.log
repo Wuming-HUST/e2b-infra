@@ -1,0 +1,136 @@
+=== RUN   TestPmemMaterializeSingleFlightWaiterCancellationAndSameInode
+--- PASS: TestPmemMaterializeSingleFlightWaiterCancellationAndSameInode (0.86s)
+=== RUN   TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink
+=== RUN   TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/size
+=== RUN   TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/short
+=== RUN   TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/digest
+=== RUN   TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/symlink
+--- PASS: TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink (0.60s)
+    --- PASS: TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/size (0.00s)
+    --- PASS: TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/short (0.01s)
+    --- PASS: TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/digest (0.30s)
+    --- PASS: TestPmemMaterializeRejectsShortWrongSizeDigestAndSymlink/symlink (0.00s)
+=== RUN   TestPmemLayoutRejectsUnsupportedAndOverflowBindings
+--- PASS: TestPmemLayoutRejectsUnsupportedAndOverflowBindings (0.29s)
+=== RUN   TestPmemLayoutBindsNamespaceOffsetInDigest
+--- PASS: TestPmemLayoutBindsNamespaceOffsetInDigest (0.29s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem	2.049s
+2026/10/31 01:35:43 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 01:35:43 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:35:43 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:35:43 Using network slot size: 32766
+=== RUN   TestBootSourceOptionalInitrd
+=== RUN   TestBootSourceOptionalInitrd/#00
+=== RUN   TestBootSourceOptionalInitrd//fixtures/guest_initrd.gz
+--- PASS: TestBootSourceOptionalInitrd (0.00s)
+    --- PASS: TestBootSourceOptionalInitrd/#00 (0.00s)
+    --- PASS: TestBootSourceOptionalInitrd//fixtures/guest_initrd.gz (0.00s)
+=== RUN   TestPmemAPIAndSnapshotBindingUseUnixTransport
+--- PASS: TestPmemAPIAndSnapshotBindingUseUnixTransport (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc	0.021s
+2026/10/31 01:35:44 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 01:35:44 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:35:44 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:35:44 Using network slot size: 32766
+=== RUN   TestCheckpointValidateAcceptsSealedFullAndDelta
+=== RUN   TestCheckpointValidateAcceptsSealedFullAndDelta/full_logical
+=== RUN   TestCheckpointValidateAcceptsSealedFullAndDelta/uffd_delta
+--- PASS: TestCheckpointValidateAcceptsSealedFullAndDelta (0.00s)
+    --- PASS: TestCheckpointValidateAcceptsSealedFullAndDelta/full_logical (0.00s)
+    --- PASS: TestCheckpointValidateAcceptsSealedFullAndDelta/uffd_delta (0.00s)
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/valid
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/old_version
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_tracking
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/missing_digest
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/logical_hash
+=== RUN   TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_length
+--- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/valid (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/old_version (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_tracking (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/missing_digest (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/logical_hash (0.00s)
+    --- PASS: TestCheckpointValidateTrackedContractAndPayloadLayout/wrong_length (0.00s)
+=== RUN   TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles
+--- PASS: TestCheckpointTrackedPayloadCanBeEmptyAndRejectsHoles (0.00s)
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/state-bytes
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/memory-header
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/rootfs-header
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/logical-size
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-memory-header-hash
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-rootfs-header-hash
+=== RUN   TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-state-hash
+--- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/state-bytes (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/memory-header (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/rootfs-header (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/logical-size (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-memory-header-hash (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-rootfs-header-hash (0.00s)
+    --- PASS: TestCheckpointValidateRejectsStateHeaderAndSizeMismatch/missing-state-hash (0.00s)
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/format
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/tracked-delta
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/unknown-mode
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/invalid-RAM-hex
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/short-RAM-checksum
+=== RUN   TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/missing-RAM-checksum
+--- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/format (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/tracked-delta (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/unknown-mode (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/invalid-RAM-hex (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/short-RAM-checksum (0.00s)
+    --- PASS: TestCheckpointValidateRejectsUnsupportedFormatAndUnprovenMode/missing-RAM-checksum (0.00s)
+=== RUN   TestCheckpointValidateAllowsLegacyWithoutOpeningPayloads
+--- PASS: TestCheckpointValidateAllowsLegacyWithoutOpeningPayloads (0.00s)
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout/valid
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout/missing-marker
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout/old-version
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout/wrong-layout
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout/missing-layout
+=== RUN   TestCheckpointPmemRequiresSealedNewLayout/unknown-mode
+--- PASS: TestCheckpointPmemRequiresSealedNewLayout (0.00s)
+    --- PASS: TestCheckpointPmemRequiresSealedNewLayout/valid (0.00s)
+    --- PASS: TestCheckpointPmemRequiresSealedNewLayout/missing-marker (0.00s)
+    --- PASS: TestCheckpointPmemRequiresSealedNewLayout/old-version (0.00s)
+    --- PASS: TestCheckpointPmemRequiresSealedNewLayout/wrong-layout (0.00s)
+    --- PASS: TestCheckpointPmemRequiresSealedNewLayout/missing-layout (0.00s)
+    --- PASS: TestCheckpointPmemRequiresSealedNewLayout/unknown-mode (0.00s)
+=== RUN   TestMaterializeMemoryImageLayeredRanges
+=== RUN   TestMaterializeMemoryImageLayeredRanges/sparse_tail=false
+=== RUN   TestMaterializeMemoryImageLayeredRanges/sparse_tail=true
+--- PASS: TestMaterializeMemoryImageLayeredRanges (0.07s)
+    --- PASS: TestMaterializeMemoryImageLayeredRanges/sparse_tail=false (0.04s)
+    --- PASS: TestMaterializeMemoryImageLayeredRanges/sparse_tail=true (0.03s)
+=== RUN   TestMaterializeMemoryImagePublishesImmutableSparseFile
+=== PAUSE TestMaterializeMemoryImagePublishesImmutableSparseFile
+=== RUN   TestMaterializeMemoryImageRejectsCorruptedPublishedFile
+=== PAUSE TestMaterializeMemoryImageRejectsCorruptedPublishedFile
+=== RUN   TestMaterializeMemoryImageRejectsPathTraversal
+=== PAUSE TestMaterializeMemoryImageRejectsPathTraversal
+=== RUN   TestMaterializeMemoryImageIgnoresLegacyReference
+=== PAUSE TestMaterializeMemoryImageIgnoresLegacyReference
+=== CONT  TestMaterializeMemoryImagePublishesImmutableSparseFile
+=== CONT  TestMaterializeMemoryImageRejectsPathTraversal
+=== CONT  TestMaterializeMemoryImageRejectsCorruptedPublishedFile
+=== CONT  TestMaterializeMemoryImageIgnoresLegacyReference
+--- PASS: TestMaterializeMemoryImageRejectsPathTraversal (0.00s)
+--- PASS: TestMaterializeMemoryImageRejectsCorruptedPublishedFile (0.01s)
+--- PASS: TestMaterializeMemoryImagePublishesImmutableSparseFile (0.01s)
+--- PASS: TestMaterializeMemoryImageIgnoresLegacyReference (0.01s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template	0.117s
+=== RUN   TestPmemLayoutSurvivesTemplateMetadataCopies
+--- PASS: TestPmemLayoutSurvivesTemplateMetadataCopies (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata	0.017s
+=== RUN   TestBootLayoutRequiresExplicitPmemAndAbsoluteInit
+--- PASS: TestBootLayoutRequiresExplicitPmemAndAbsoluteInit (0.00s)
+PASS
+ok  	github.com/e2b-dev/infra/packages/orchestrator/cmd/pmem-init	0.003s

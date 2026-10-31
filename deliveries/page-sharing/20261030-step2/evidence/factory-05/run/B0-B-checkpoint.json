@@ -1,0 +1,10 @@
+{
+  "build_id": "d55e720e-8ab6-4f99-ad78-00e29bfe8554",
+  "candidate_pages": 0,
+  "native_same_frozen_state": true,
+  "payload_sha256": "60e9eb79174c4fe4c960ed57626988ba408aa5fc8f03929d86dcce4b9f624942",
+  "payload_size": 268435456,
+  "ram_sha256": "60e9eb79174c4fe4c960ed57626988ba408aa5fc8f03929d86dcce4b9f624942",
+  "ram_size": 268435456,
+  "tracked_delta": false
+}

@@ -1,0 +1,10 @@
+{
+  "command": [
+    "make",
+    "-j8",
+    "O=/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/kernel-build/out",
+    "Image"
+  ],
+  "exit": 0,
+  "seconds": 238.2629041671753
+}

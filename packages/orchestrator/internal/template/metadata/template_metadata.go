@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem"
 	"github.com/e2b-dev/infra/packages/shared/pkg/ioutils"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage"
 )
@@ -114,10 +115,12 @@ type Checkpoint struct {
 	RAMHeaderSHA256    string `json:"ram_header_sha256"`
 	RootfsHeaderSHA256 string `json:"rootfs_header_sha256"`
 	RootfsDiffSHA256   string `json:"rootfs_diff_sha256"`
+	RootfsLayoutSHA256 string `json:"rootfs_layout_sha256,omitempty"`
 	FCStateSHA256      string `json:"fc_state_sha256"`
 }
 
 type Template struct {
+	Rootfs       *pmem.Layout     `json:"rootfs,omitempty"`
 	Checkpoint   *Checkpoint      `json:"checkpoint,omitempty"`
 	Version      uint64           `json:"version"`
 	Template     TemplateMetadata `json:"template"`
@@ -138,7 +141,8 @@ func (t Template) BasedOn(
 	ft FromTemplate,
 ) Template {
 	return Template{
-		Version:      CurrentVersion,
+		Rootfs:       t.Rootfs,
+		Version:      t.metadataVersion(),
 		Template:     t.Template,
 		Context:      t.Context,
 		Start:        t.Start,
@@ -149,7 +153,8 @@ func (t Template) BasedOn(
 
 func (t Template) NewVersionTemplate(metadata TemplateMetadata) Template {
 	return Template{
-		Version:      CurrentVersion,
+		Rootfs:       t.Rootfs,
+		Version:      t.metadataVersion(),
 		Template:     metadata,
 		Context:      t.Context,
 		Start:        t.Start,
@@ -160,6 +165,7 @@ func (t Template) NewVersionTemplate(metadata TemplateMetadata) Template {
 
 func (t Template) SameVersionTemplate(metadata TemplateMetadata) Template {
 	return Template{
+		Rootfs:       t.Rootfs,
 		Checkpoint:   t.Checkpoint,
 		Version:      t.Version,
 		Template:     metadata,
@@ -173,6 +179,7 @@ func (t Template) SameVersionTemplate(metadata TemplateMetadata) Template {
 // WithPrefetch returns a copy of the template with the given prefetch mapping.
 func (t Template) WithPrefetch(prefetch *Prefetch) Template {
 	return Template{
+		Rootfs:       t.Rootfs,
 		Checkpoint:   t.Checkpoint,
 		Version:      t.Version,
 		Template:     t.Template,
@@ -279,4 +286,11 @@ func serialize(template Template) (io.Reader, error) {
 	buf := bytes.NewBuffer(marshaled)
 
 	return buf, nil
+}
+
+func (t Template) metadataVersion() uint64 {
+	if t.Rootfs != nil {
+		return 3
+	}
+	return CurrentVersion
 }

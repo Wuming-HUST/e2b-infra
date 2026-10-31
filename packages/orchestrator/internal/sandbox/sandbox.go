@@ -27,6 +27,7 @@ import (
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/memorybacking"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/network"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/rootfs"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/uffd"
@@ -204,6 +205,7 @@ func (m *Metadata) SetStartedAt(t time.Time) {
 }
 
 type Factory struct {
+	pmemImages        *pmem.Cache
 	lifecycle         factoryLifecycle
 	memoryBackings    *memorybacking.Registry
 	config            cfg.BuilderConfig
@@ -230,6 +232,7 @@ func NewFactory(
 		hostStatsDelivery: hostStatsDelivery,
 		cgroupManager:     cgroupManager,
 	}
+	f.pmemImages = pmem.NewCache(config.PmemRootfsCacheDir)
 	f.memoryBackings = memorybacking.NewRegistry(nil, newSharedNBDFactory(devicePool, featureFlags))
 	return f
 }
@@ -342,6 +345,28 @@ func (f *Factory) CreateSandbox(
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rootfs overlay: %w", err)
+	}
+
+	if meta, metaErr := template.Metadata(); metaErr == nil && meta.Rootfs != nil {
+		if !f.config.PmemRootfsEnabled {
+			_ = rootfsProvider.Close(ctx)
+			return nil, fmt.Errorf("pmem rootfs template requires PMEM_ROOTFS_ENABLED")
+		}
+		if processOptions.InitrdPath == "" {
+			_ = rootfsProvider.Close(ctx)
+			return nil, fmt.Errorf("pmem cold boot requires a DAX overlay initramfs")
+		}
+		source, sourceErr := sbxTemplatePmemSource(template)
+		if sourceErr != nil {
+			_ = rootfsProvider.Close(ctx)
+			return nil, sourceErr
+		}
+		wrapped, wrapErr := rootfs.NewPmemProvider(ctx, rootfsProvider, f.pmemImages, *meta.Rootfs, source)
+		if wrapErr != nil {
+			_ = rootfsProvider.Close(ctx)
+			return nil, wrapErr
+		}
+		rootfsProvider = wrapped
 	}
 	cleanup.Add(ctx, rootfsProvider.Close)
 	go func() {
@@ -697,7 +722,7 @@ func (f *Factory) ResumeSandbox(
 
 		telemetry.ReportEvent(ctx, "got template rootfs")
 
-		overlay, err := rootfs.NewNBDProvider(
+		nbdOverlay, err := rootfs.NewNBDProvider(
 			ctx,
 			readonlyRootfs,
 			sandboxFiles.SandboxCacheRootfsPath(f.config.StorageConfig),
@@ -708,6 +733,28 @@ func (f *Factory) ResumeSandbox(
 			return nil, fmt.Errorf("failed to create rootfs overlay: %w", err)
 		}
 
+		var overlay rootfs.Provider = nbdOverlay
+		meta, metaErr := t.Metadata()
+		if metaErr != nil {
+			_ = overlay.Close(ctx)
+			return nil, metaErr
+		}
+		if meta.Rootfs != nil {
+			if !f.config.PmemRootfsEnabled {
+				_ = overlay.Close(ctx)
+				return nil, fmt.Errorf("pmem rootfs template requires PMEM_ROOTFS_ENABLED")
+			}
+			source, sourceErr := template.PmemLowerSource(t)
+			if sourceErr != nil {
+				_ = overlay.Close(ctx)
+				return nil, sourceErr
+			}
+			overlay, err = rootfs.NewPmemProvider(ctx, overlay, f.pmemImages, *meta.Rootfs, source)
+			if err != nil {
+				_ = nbdOverlay.Close(ctx)
+				return nil, err
+			}
+		}
 		cleanup.Add(ctx, overlay.Close)
 
 		telemetry.ReportEvent(ctx, "created rootfs overlay")
@@ -1170,6 +1217,19 @@ func (s *Sandbox) Pause(
 		return nil, fmt.Errorf("failed to parse build id: %w", err)
 	}
 
+	var lowerPath string
+	if bound, ok := s.rootfs.(*rootfs.PmemProvider); ok {
+		actual := bound.PmemLayout()
+		if m.Rootfs != nil && m.Rootfs.Digest() != actual.Digest() {
+			return nil, fmt.Errorf("snapshot rootfs layout differs from running VM")
+		}
+		m.Rootfs = &actual
+		m.Version = 3
+		lowerPath = bound.PmemBinding().PathOnHost
+	} else if m.Rootfs != nil {
+		return nil, fmt.Errorf("cannot label legacy rootfs snapshot as pmem")
+	}
+
 	// Stop the health check before pausing the VM
 	s.Checks.Stop()
 
@@ -1236,6 +1296,7 @@ func (s *Sandbox) Pause(
 	cleanup.AddNoContext(ctx, metadataFileLink.Close)
 
 	result := &Snapshot{
+		PmemLowerPath:     lowerPath,
 		Snapfile:          snapfile,
 		Metafile:          metadataFileLink,
 		MemfileDiff:       memfileDiff,
@@ -1515,4 +1576,8 @@ func (f *Factory) GetEnvdInitRequestTimeout(ctx context.Context) time.Duration {
 	envdInitRequestTimeoutMs := f.featureFlags.IntFlag(ctx, featureflags.EnvdInitTimeoutMilliseconds)
 
 	return time.Duration(envdInitRequestTimeoutMs) * time.Millisecond
+}
+
+func sbxTemplatePmemSource(t template.Template) (pmem.OpenSource, error) {
+	return template.PmemLowerSource(t)
 }

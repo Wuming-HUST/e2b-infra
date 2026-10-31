@@ -1,0 +1,2 @@
+# Preserve the exact bytes of target receipts, including guest serial CRLF.
+evidence/** -text -diff

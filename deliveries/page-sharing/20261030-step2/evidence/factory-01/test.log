@@ -1,0 +1,13 @@
+2026/10/31 01:15:33 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 01:15:33 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:15:33 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:15:33 Using network slot size: 32766
+=== RUN   TestPmemFactoryIntegration
+    sharing_integration_linux_test.go:231: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:231
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:66
+        	Error:      	Received unexpected error:
+        	            	context deadline exceeded
+        	Test:       	TestPmemFactoryIntegration
+--- FAIL: TestPmemFactoryIntegration (480.06s)
+FAIL

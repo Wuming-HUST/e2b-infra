@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/block"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata"
 	"github.com/e2b-dev/infra/packages/shared/pkg/storage/header"
 )
@@ -220,5 +221,34 @@ func TestCheckpointValidateAllowsLegacyWithoutOpeningPayloads(t *testing.T) {
 	}
 	if legacy.payloadCalls != 0 {
 		t.Fatalf("legacy restore opened %d payloads", legacy.payloadCalls)
+	}
+}
+
+func TestCheckpointPmemRequiresSealedNewLayout(t *testing.T) {
+	for _, change := range []string{"valid", "missing-marker", "old-version", "wrong-layout", "missing-layout", "unknown-mode"} {
+		t.Run(change, func(t *testing.T) {
+			fixture := newCheckpointTemplate(t)
+			l := pmem.Layout{FormatVersion: 1, Mode: pmem.Mode, Lower: pmem.Image{SHA256: strings.Repeat("a", 64), Size: 128 << 20}, GuestAddress: 1 << 38}
+			fixture.meta.Rootfs = &l
+			fixture.meta.Version = 3
+			fixture.meta.Checkpoint.FormatVersion = 3
+			fixture.meta.Checkpoint.RootfsLayoutSHA256 = l.Digest()
+			switch change {
+			case "missing-marker":
+				fixture.meta.Checkpoint = nil
+			case "old-version":
+				fixture.meta.Checkpoint.FormatVersion = 1
+			case "wrong-layout":
+				fixture.meta.Rootfs.GuestAddress += 128 << 20
+			case "missing-layout":
+				fixture.meta.Rootfs = nil
+			case "unknown-mode":
+				fixture.meta.Rootfs.Mode = "nbd-backed-pmem"
+			}
+			err := ValidateCheckpoint(t.Context(), fixture)
+			if (err == nil) != (change == "valid") {
+				t.Fatalf("%s: %v", change, err)
+			}
+		})
 	}
 }

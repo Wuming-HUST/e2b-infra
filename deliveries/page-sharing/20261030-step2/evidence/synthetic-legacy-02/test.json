@@ -1,0 +1,32 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/memory-lab",
+    "-mode",
+    "e2e",
+    "-root",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/synthetic-legacy-02/run",
+    "-firecracker",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker",
+    "-kernel",
+    "/home/coder/tide-repro/assets/vmlinuz",
+    "-initrd",
+    "/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/initrd.gz",
+    "-rootfs",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/rootfs.ext4",
+    "-trace",
+    "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/swe-marathon-trace.json",
+    "-replay",
+    "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/replay.py",
+    "-time-scale",
+    ".001",
+    "-tap",
+    "pmem-r4-b1",
+    "-host-cidr",
+    "172.30.82.1/30",
+    "-guest-ip",
+    "172.30.82.2"
+  ],
+  "exit": 0,
+  "seconds": 203.7987813949585,
+  "evidence": "trace-driven-synthetic-memory"
+}

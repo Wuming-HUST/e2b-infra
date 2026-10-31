@@ -1,0 +1,5 @@
+{
+  "sha256": "52f9e32d5082ab94253447fd66670d0c3bb765cfcb99b0bf61d1b8eae25952ef",
+  "official_checksum_url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc",
+  "download_url": "https://mirrors.tuna.tsinghua.edu.cn/kernel/v6.x/linux-6.6.60.tar.xz"
+}

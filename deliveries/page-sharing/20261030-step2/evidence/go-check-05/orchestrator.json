@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/bin/go",
+    "build",
+    "-p",
+    "2",
+    "-o",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-05/orchestrator",
+    "."
+  ],
+  "exit": 0,
+  "seconds": 8.322189807891846
+}

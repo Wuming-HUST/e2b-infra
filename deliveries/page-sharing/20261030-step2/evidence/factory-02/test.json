@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-02/sandbox.test",
+    "-test.run",
+    "^TestPmemFactoryIntegration$",
+    "-test.v",
+    "-test.timeout",
+    "10m"
+  ],
+  "exit": 1,
+  "seconds": 7.504843711853027
+}

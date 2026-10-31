@@ -18,6 +18,9 @@ import (
 // swagger:model SnapshotLoadParams
 type SnapshotLoadParams struct {
 
+	// Immutable device window binding; required for pmem snapshots.
+	PmemOverride *PmemConfig `json:"pmem_override,omitempty"`
+
 	// Enable support for incremental (diff) snapshots by tracking dirty guest pages.
 	EnableDiffSnapshots bool `json:"enable_diff_snapshots,omitempty"`
 
@@ -41,6 +44,11 @@ type SnapshotLoadParams struct {
 // Validate validates this snapshot load params
 func (m *SnapshotLoadParams) Validate(formats strfmt.Registry) error {
 	var res []error
+	if m.PmemOverride != nil {
+		if err := m.PmemOverride.ValidateBinding(); err != nil {
+			res = append(res, err)
+		}
+	}
 
 	if err := m.validateMemBackend(formats); err != nil {
 		res = append(res, err)

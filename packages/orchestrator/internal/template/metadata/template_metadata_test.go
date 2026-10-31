@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -214,4 +215,19 @@ type errorReader struct {
 
 func (er *errorReader) Read([]byte) (n int, err error) {
 	return 0, er.err
+}
+
+func TestPmemLayoutSurvivesTemplateMetadataCopies(t *testing.T) {
+	l := pmem.Layout{FormatVersion: 1, Mode: pmem.Mode, Lower: pmem.Image{SHA256: strings.Repeat("a", 64), Size: 128 << 20}, GuestAddress: 1 << 38}
+	base := Template{Version: 3, Rootfs: &l}
+	for _, next := range []Template{base.BasedOn(FromTemplate{BuildID: "parent"}), base.NewVersionTemplate(TemplateMetadata{BuildID: "next"}), base.SameVersionTemplate(TemplateMetadata{BuildID: "same"}), base.WithPrefetch(&Prefetch{})} {
+		require.Equal(t, uint64(3), next.Version)
+		require.NotNil(t, next.Rootfs)
+		require.Equal(t, l, *next.Rootfs)
+		data, err := serialize(next)
+		require.NoError(t, err)
+		got, err := deserialize(data)
+		require.NoError(t, err)
+		require.Equal(t, next.Rootfs, got.Rootfs)
+	}
 }

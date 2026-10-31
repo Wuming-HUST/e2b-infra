@@ -1,0 +1,11 @@
+{
+  "Name": "generation-1",
+  "StateSHA256": "6d0e2d98693e4eca9cd6ab26ce432b0532379fc248c1a9c3b5e0d3572b6f411f",
+  "FirecrackerSHA256": "bc66b160a21f12c723b52964546f1566ae016bc40f7f1c72c8466d23295cf8cb",
+  "MemoryID": "4fc2abc0-9011-4b5b-bd34-f3268e42e919",
+  "DiskID": "2e5df53e-5781-4eb7-955f-87630188e017",
+  "SelectedPages": 393216,
+  "MemoryBytes": 295059456,
+  "DiskBytes": 966656,
+  "Created": "2026-10-31T01:44:17.418618542Z"
+}

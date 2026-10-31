@@ -1,0 +1,52 @@
+2026-10-31T01:19:54.825693415 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-31T01:19:54.826049325 [anonymous-instance:main] Listening on API socket ("/tmp/fc-sharing-824c57b3-zlsd4uluxwgosnqjfvl5.sock").
+2026-10-31T01:19:54.829610439 [anonymous-instance:fc_api] API server started.
+2026-10-31T01:19:54.833904413 [anonymous-instance:fc_api] The API server received a Put request on "/boot-source" with body "{\"boot_args\":\"console=ttyS0 e2b.pmem-gpa=274877906944 e2b.pmem-rootfs=1 e2b.pmem-size=2147483648 e2b.real-init=/sbin/sharing-init ip=169.254.0.21::169.254.0.22:255.255.255.252:instance:eth0:off:tap0 ipv6.autoconf=1 ipv6.disable=0 loglevel=5 panic=1 reboot=k\",\"initrd_path\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture/initrd.gz\",\"kernel_image_path\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/factory-02/run/sandbox/sharing/vmlinux.bin\"}\n".
+2026-10-31T01:19:54.834392842 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:55.092923915 [anonymous-instance:fc_api] The API server received a Put request on "/drives/rootfs" with body "{\"drive_id\":\"rootfs\",\"is_root_device\":false,\"path_on_host\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/factory-02/run/sandbox/rootfs.ext4\"}\n".
+2026-10-31T01:19:55.094505932 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:55.095061141 [anonymous-instance:fc_api] The API server received a Put request on "/pmem" with body "{\"pmem_id\":\"rootfs-lower\",\"path_on_host\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/factory-02/run/B0/pmem-lower/5829b45ebc3efac55b17846827e5aec5f214191ebaee29896447287ebe458008.raw\",\"content_id\":\"5829b45ebc3efac55b17846827e5aec5f214191ebaee29896447287ebe458008\",\"guest_address\":274877906944,\"size\":2147483648,\"file_offset\":0,\"read_only\":true}\n".
+2026-10-31T01:19:56.260563191 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:56.261146190 [anonymous-instance:fc_api] The API server received a Put request on "/network-interfaces/eth0" with body "{\"guest_mac\":\"02:FC:00:00:00:05\",\"host_dev_name\":\"tap0\",\"iface_id\":\"eth0\"}\n".
+2026-10-31T01:19:56.262159139 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:56.262779038 [anonymous-instance:fc_api] The API server received a Put request on "/mmds/config" with body "{\"network_interfaces\":[\"eth0\"],\"version\":\"V2\"}\n".
+2026-10-31T01:19:56.263320567 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:56.263882426 [anonymous-instance:fc_api] The API server received a Put request on "/machine-config" with body "{\"mem_size_mib\":256,\"smt\":false,\"vcpu_count\":1}\n".
+2026-10-31T01:19:56.264340255 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:56.264742475 [anonymous-instance:fc_api] The API server received a Put request on "/entropy" with body "{}\n".
+2026-10-31T01:19:56.265015944 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:19:56.265187934 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\":\"InstanceStart\"}\n".
+2026-10-31T01:19:56.297851154 [anonymous-instance:main] Artificially kick devices.
+2026-10-31T01:19:56.298073784 [anonymous-instance:fc_vcpu 0] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-31T01:19:56.298381843 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+[    0.001083] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[    0.043375] nd_pmem namespace0.0: unable to guarantee persistence of writes
+[    0.075315] EXT4-fs (pmem0): DAX unsupported by block device.
+2026/10/31 01:19:56 PMEM_DAX_ROOTFS_FAILED: mount /.e2b/lower: invalid argument
+[    0.076558] Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000100
+[    0.077099] CPU: 0 PID: 1 Comm: init Not tainted 6.6.60-e2b-pmem #1
+[    0.077548] Hardware name: linux,dummy-virt (DT)
+[    0.077881] Call trace:
+[    0.078061]  dump_backtrace+0x94/0xec
+[    0.078345]  show_stack+0x18/0x24
+[    0.078586]  dump_stack_lvl+0x48/0x60
+[    0.078877]  dump_stack+0x18/0x24
+[    0.079116]  panic+0x30c/0x360
+[    0.079359]  do_exit+0x7e8/0x8f4
+[    0.079594]  do_group_exit+0x34/0x90
+[    0.079850]  __wake_up_parent+0x0/0x30
+[    0.080118]  invoke_syscall+0x48/0x114
+[    0.080393]  el0_svc_common.constprop.0+0x40/0xe0
+[    0.080834]  do_el0_svc+0x1c/0x28
+[    0.081098]  el0_svc+0x40/0xe4
+[    0.081350]  el0t_64_sync_handler+0x100/0x12c
+[    0.081700]  el0t_64_sync+0x190/0x194
+[    0.082002] Kernel Offset: 0x5a2cbae00000 from 0xffff800080000000
+[    0.082491] PHYS_OFFSET: 0x80000000
+[    0.082804] CPU features: 0x0,00000000,70037f43,90fe7e07
+[    0.083261] Memory Limit: none
+[    0.083536] Rebooting in 1 seconds..
+2026-10-31T01:19:57.461225727 [anonymous-instance:fc_vcpu 0] Received KVM_SYSTEM_EVENT: type: 2, event: [0]
+2026-10-31T01:19:57.461433327 [anonymous-instance:main] Vmm is stopping.
+2026-10-31T01:19:57.462299495 [anonymous-instance:main] Vmm is stopping.
+2026-10-31T01:19:57.486683448 [anonymous-instance:main] Firecracker exiting successfully. exit_code=0

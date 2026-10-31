@@ -13,6 +13,8 @@ import (
 )
 
 type BuilderConfig struct {
+	PmemRootfsEnabled          bool          `env:"PMEM_ROOTFS_ENABLED" envDefault:"false"`
+	PmemRootfsCacheDir         string        `env:"PMEM_ROOTFS_CACHE_DIR,expand" envDefault:"${ORCHESTRATOR_BASE_PATH}/pmem-lower"`
 	AllowSandboxInternet       bool          `env:"ALLOW_SANDBOX_INTERNET"   envDefault:"true"`
 	BalloonFPR                 bool          `env:"BALLOON_FPR"              envDefault:"true"`
 	DomainName                 string        `env:"DOMAIN_NAME"              envDefault:""`
@@ -48,6 +50,7 @@ func makePathsAbsolute(c *BuilderConfig) error {
 		&c.HostKernelsDir,
 		&c.OrchestratorBaseDir,
 		&c.FileMemoryBackendDir,
+		&c.PmemRootfsCacheDir,
 		&c.StorageConfig.SandboxCacheDir,
 		&c.SandboxDir,
 		&c.SharedChunkCacheDir,

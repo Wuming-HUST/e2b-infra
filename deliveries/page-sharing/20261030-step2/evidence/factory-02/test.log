@@ -1,0 +1,14 @@
+2026/10/31 01:19:50 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 01:19:50 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:19:50 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:19:50 Using network slot size: 32766
+=== RUN   TestPmemFactoryIntegration
+    sharing_integration_linux_test.go:233: cold VM created; waiting for real envd
+    sharing_integration_linux_test.go:234: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:234
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:66
+        	Error:      	Received unexpected error:
+        	            	failed to init new envd: failed to init envd: context canceled with cause: fc process exited prematurely: %!w(<nil>)
+        	Test:       	TestPmemFactoryIntegration
+--- FAIL: TestPmemFactoryIntegration (7.48s)
+FAIL

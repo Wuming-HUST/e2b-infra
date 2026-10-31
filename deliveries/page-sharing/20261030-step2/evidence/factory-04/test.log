@@ -1,0 +1,23 @@
+2026/10/31 01:31:56 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 01:31:56 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:31:56 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:31:56 Using network slot size: 32766
+=== RUN   TestPmemFactoryIntegration
+    sharing_integration_linux_test.go:233: cold VM created; waiting for real envd
+    sharing_integration_linux_test.go:247: A: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:320: B0-left: cache template and resume
+    sharing_integration_linux_test.go:247: B0-B: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:320: B0-B-restored: cache template and resume
+    sharing_integration_linux_test.go:247: B0-C: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:320: B0-C-restored: cache template and resume
+    sharing_integration_linux_test.go:320: B1-left: cache template and resume
+    sharing_integration_linux_test.go:320: B1-right: cache template and resume
+    sharing_integration_linux_test.go:367: 
+        	Error Trace:	/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:676
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:367
+        	            				/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/packages/orchestrator/internal/sandbox/sharing_integration_linux_test.go:66
+        	Error:      	Should not be zero, but was 0
+        	Test:       	TestPmemFactoryIntegration
+        	Messages:   	pmem superblock page not resident
+--- FAIL: TestPmemFactoryIntegration (35.03s)
+FAIL

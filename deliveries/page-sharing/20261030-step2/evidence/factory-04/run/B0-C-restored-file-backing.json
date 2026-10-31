@@ -1,0 +1,6 @@
+{
+  "actual_proc_mapping": "fffefc000000-ffff0c000000 rw-p 00000000 103:07 12588965                  /home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/factory-04/run/B0/file-memory/af46cfb96976e5c30d5b310dbe664b259f9151ce6a7364ba607ab6893790bf23.raw",
+  "inode": 12588965,
+  "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/factory-04/run/B0/file-memory/af46cfb96976e5c30d5b310dbe664b259f9151ce6a7364ba607ab6893790bf23.raw",
+  "regular_file": true
+}

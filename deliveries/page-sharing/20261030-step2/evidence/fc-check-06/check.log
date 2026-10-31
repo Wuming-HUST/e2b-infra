@@ -1,0 +1,55 @@
+   Compiling vmm v0.1.0 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fc/src/vmm)
+warning: firecracker@1.12.1: Using empty default seccomp policy for debug builds: `resources/seccomp/unimplemented.json`.
+   Compiling firecracker v1.12.1 (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fc/src/firecracker)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 22.68s
+     Running unittests src/lib.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/firecracker-3408f6a00df090ce)
+
+running 1 test
+test api_server::parsed_request::tests::test_pmem_preboot_request_and_exact_route ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 74 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/firecracker-ecde6f050cb6d1e1)
+
+running 1 test
+test api_server::parsed_request::tests::test_pmem_preboot_request_and_exact_route ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 78 filtered out; finished in 0.00s
+
+     Running tests/verify_dependencies.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/verify_dependencies-fe04413b6847a7ce)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/vmm-4365484c2152bf26)
+
+running 7 tests
+test devices::virtio::pmem::tests::flush_queue_malformed_response_frozen_capture_and_reset ... ok
+test devices::virtio::pmem::tests::malformed_flush_chains_never_write_device_windows ... ok
+test devices::virtio::pmem::tests::readonly_sources_and_mutable_destinations_are_separate ... ok
+test devices::virtio::pmem::tests::rejects_wrong_hash_truncation_rebinding_and_host_path_is_not_saved ... ok
+test devices::virtio::pmem::tests::snapshot_drain_propagates_interrupt_failure_and_keeps_frozen ... ok
+test persist::tests::test_pmem_legacy_snapshot_migration_and_crc_failure ... ok
+test vmm_config::pmem::tests::rejects_writable_overflow_unaligned_and_low_windows ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 518 filtered out; finished in 0.91s
+
+     Running tests/devices.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/devices-7a3986477d0542b8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/integration_tests.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/integration_tests-934e8a9554afd055)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/io_uring.rs (/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/deps/io_uring-5bdeb6bc082610be)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+

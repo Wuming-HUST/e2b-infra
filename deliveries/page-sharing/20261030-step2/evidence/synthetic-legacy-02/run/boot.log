@@ -1,0 +1,348 @@
+2026-10-31T01:44:13.675163222 [anonymous-instance:main] Running Firecracker v1.12.1
+2026-10-31T01:44:13.675389782 [anonymous-instance:main] Listening on API socket ("/tmp/e2b-ml-2139561836/api.sock").
+2026-10-31T01:44:13.675864351 [anonymous-instance:fc_api] API server started.
+2026-10-31T01:44:13.695425880 [anonymous-instance:fc_api] The API server received a Put request on "/machine-config" with body "{\"mem_size_mib\":1536,\"track_dirty_pages\":true,\"vcpu_count\":2}".
+2026-10-31T01:44:13.695960419 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:44:13.696639178 [anonymous-instance:fc_api] The API server received a Put request on "/boot-source" with body "{\"boot_args\":\"console=ttyS0 reboot=k panic=1 pci=off memorylab_ip=172.30.82.2\",\"initrd_path\":\"/home/coder/projects/yangshengxin/e2b/memory-lab-template-20261029-r4/initrd.gz\",\"kernel_image_path\":\"/home/coder/tide-repro/assets/vmlinuz\"}".
+2026-10-31T01:44:13.697149587 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:44:13.697586637 [anonymous-instance:fc_api] The API server received a Put request on "/drives/rootfs" with body "{\"cache_type\":\"Unsafe\",\"drive_id\":\"rootfs\",\"io_engine\":\"Sync\",\"is_read_only\":false,\"is_root_device\":true,\"path_on_host\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/synthetic-legacy-02/run/rootfs\"}".
+2026-10-31T01:44:13.698178266 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:44:13.698886365 [anonymous-instance:fc_api] The API server received a Put request on "/network-interfaces/eth0" with body "{\"guest_mac\":\"02:FC:00:00:00:01\",\"host_dev_name\":\"pmem-r4-b1\",\"iface_id\":\"eth0\"}".
+2026-10-31T01:44:13.699901553 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:44:13.700352862 [anonymous-instance:fc_api] The API server received a Put request on "/actions" with body "{\"action_type\":\"InstanceStart\"}".
+2026-10-31T01:44:13.723973375 [anonymous-instance:main] Artificially kick devices.
+2026-10-31T01:44:13.724059675 [anonymous-instance:fc_vcpu 1] Received a VcpuEvent::Resume message with immediate_exit enabled. immediate_exit was disabled before proceeding
+2026-10-31T01:44:13.724578424 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x480fd060]
+[    0.000000] Linux version 6.1.0-50-arm64 (debian-kernel@lists.debian.org) (gcc-12 (Debian 12.2.0-14+deb12u1) 12.2.0, GNU ld (GNU Binutils for Debian) 2.40) #1 SMP Debian 6.1.176-1 (2026-07-02)
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] PCI: Unknown option `off'
+[    0.000000] earlycon: uart0 at MMIO 0x0000000040002000 (options '')
+[    0.000000] printk: bootconsole [uart0] enabled
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000080200000-0x00000000dfffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0xdfa71380-0xdfa73fff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000080200000-0x00000000dfffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000080200000-0x00000000dfffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000080200000-0x00000000dfffffff]
+[    0.000000] On node 0, zone DMA: 512 pages in unavailable ranges
+[    0.000000] cma: Reserved 64 MiB at 0x00000000da200000
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.1
+[    0.000000] smccc: KVM: hypervisor services detected (0x00000000 0x00000000 0x00000000 0x00000007)
+[    0.000000] percpu: Embedded 31 pages/cpu s87208 r8192 d31576 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: GIC system register CPU interface
+[    0.000000] CPU features: detected: Hardware dirty bit management
+[    0.000000] CPU features: detected: Spectre-v4
+[    0.000000] CPU features: detected: Spectre-BHB
+[    0.000000] alternatives: applying boot alternatives
+[    0.000000] Fallback order for Node 0: 0 
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 386568
+[    0.000000] Policy zone: DMA
+[    0.000000] Kernel command line: console=ttyS0 reboot=k panic=1 pci=off memorylab_ip=172.30.82.2 root=/dev/vda rw earlycon=uart,mmio,0x40002000
+[    0.000000] Unknown kernel command line parameters "memorylab_ip=172.30.82.2", will be passed to user space.
+[    0.000000] random: crng init done
+[    0.000000] Dentry cache hash table entries: 262144 (order: 9, 2097152 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 131072 (order: 8, 1048576 bytes, linear)
+[    0.000000] mem auto-init: stack:all(zero), heap alloc:on, heap free:off
+[    0.000000] Memory: 227348K/1570816K available (13248K kernel code, 2806K rwdata, 9504K rodata, 6464K init, 627K bss, 66480K reserved, 65536K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[    0.000000] ftrace: allocating 44174 entries in 173 pages
+[    0.000000] ftrace: allocated 173 pages with 5 groups
+[    0.000000] trace event string verifier disabled
+[    0.000000] rcu: Hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=256 to nr_cpu_ids=2.
+[    0.000000] 	Rude variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] GICv3: 96 SPIs implemented
+[    0.000000] GICv3: 0 Extended SPIs implemented
+[    0.000000] Root IRQ handler: gic_handle_irq
+[    0.000000] GICv3: GICv3 features: 16 PPIs, DirectLPI
+[    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x000000003ffb0000
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] arch_timer: cp15 timer(s) running at 100.00MHz (virt).
+[    0.000000] clocksource: arch_sys_counter: mask: 0x1ffffffffffffff max_cycles: 0x171024e7e0, max_idle_ns: 440795205315 ns
+[    0.000000] sched_clock: 57 bits at 100MHz, resolution 10ns, wraps every 4398046511100ns
+[    0.001168] Console: colour dummy device 80x25
+[    0.001740] Calibrating delay loop (skipped), value calculated using timer frequency.. 200.00 BogoMIPS (lpj=400000)
+[    0.003187] pid_max: default: 32768 minimum: 301
+[    0.003795] LSM: Security Framework initializing
+[    0.004376] landlock: Up and running.
+[    0.004825] Yama: disabled by default; enable with sysctl kernel.yama.*
+[    0.005682] AppArmor: AppArmor initialized
+[    0.006186] TOMOYO Linux initialized
+[    0.006627] LSM support for eBPF active
+[    0.007165] Mount-cache hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[    0.008221] Mountpoint-cache hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[    0.009616] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[    0.010586] cblist_init_generic: Setting adjustable number of callback queues.
+[    0.011491] cblist_init_generic: Setting shift to 1 and lim to 1.
+[    0.012275] cblist_init_generic: Setting adjustable number of callback queues.
+[    0.013161] cblist_init_generic: Setting shift to 1 and lim to 1.
+[    0.013976] rcu: Hierarchical SRCU implementation.
+[    0.014564] rcu: 	Max phase no-delay instances is 1000.
+[    0.015667] EFI services will not be available.
+[    0.016329] smp: Bringing up secondary CPUs ...
+[    0.017356] Detected PIPT I-cache on CPU1
+[    0.017377] cacheinfo: Unable to detect cache hierarchy for CPU 1
+[    0.017389] GICv3: CPU1: found redistributor 1 region 0:0x000000003ffd0000
+[    0.017437] CPU1: Booted secondary processor 0x0000000001 [0x480fd060]
+[    0.018231] smp: Brought up 1 node, 2 CPUs
+[    0.021670] SMP: Total of 2 processors activated.
+[    0.022247] CPU features: detected: Branch Target Identification
+[    0.022983] CPU features: detected: ARMv8.4 Translation Table Level
+[    0.023760] CPU features: detected: Instruction cache invalidation not required for I/D coherence
+[    0.024909] CPU features: detected: Data cache clean to the PoU not required for I/D coherence
+[    0.025964] CPU features: detected: Common not Private translations
+[    0.026727] CPU features: detected: CRC32 instructions
+[    0.027356] CPU features: detected: Data cache clean to Point of Deep Persistence
+[    0.028264] CPU features: detected: Data cache clean to Point of Persistence
+[    0.029156] CPU features: detected: E0PD
+[    0.029636] CPU features: detected: Enhanced Counter Virtualization
+[    0.030405] CPU features: detected: Enhanced Privileged Access Never
+[    0.031175] CPU features: detected: RCpc load-acquire (LDAPR)
+[    0.031878] CPU features: detected: LSE atomic instructions
+[    0.032558] CPU features: detected: Privileged Access Never
+[    0.033253] CPU features: detected: RAS Extension Support
+[    0.033914] CPU features: detected: Random Number Generator
+[    0.034587] CPU features: detected: Speculation barrier (SB)
+[    0.035268] CPU features: detected: Stage-2 Force Write-Back
+[    0.035942] CPU features: detected: Trap EL0 IMPLEMENTATION DEFINED functionality
+[    0.036858] CPU features: detected: TLB range maintenance instructions
+[    0.037709] CPU features: detected: WFx with timeout
+[    0.038316] CPU features: detected: Speculative Store Bypassing Safe (SSBS)
+[    0.039480] CPU: All CPU(s) started at EL1
+[    0.039980] alternatives: applying system-wide alternatives
+[    0.057911] node 0 deferred pages initialised in 12ms
+[    0.060184] devtmpfs: initialized
+[    0.060707] Duplicate name in cpu@1, renamed to "next-level-cache#1"
+[    0.062312] Registered cp15_barrier emulation handler
+[    0.062978] setend instruction emulation is not supported on this system
+[    0.063902] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.065106] futex hash table entries: 512 (order: 3, 32768 bytes, linear)
+[    0.066229] pinctrl core: initialized pinctrl subsystem
+[    0.066998] DMI not present or invalid.
+[    0.067852] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.071330] DMA: preallocated 256 KiB GFP_KERNEL pool for atomic allocations
+[    0.072279] DMA: preallocated 256 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[    0.073290] DMA: preallocated 256 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[    0.074271] audit: initializing netlink subsys (disabled)
+[    0.076194] thermal_sys: Registered thermal governor 'fair_share'
+[    0.076197] thermal_sys: Registered thermal governor 'bang_bang'
+[    0.076238] audit: type=2000 audit(0.072:1): state=initialized audit_enabled=0 res=1
+[    0.076964] thermal_sys: Registered thermal governor 'step_wise'
+[    0.078660] thermal_sys: Registered thermal governor 'user_space'
+[    0.079434] thermal_sys: Registered thermal governor 'power_allocator'
+[    0.080637] cpuidle: using governor ladder
+[    0.081974] cpuidle: using governor menu
+[    0.082494] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[    0.083758] ASID allocator initialised with 65536 entries
+[    0.084580] Serial: AMBA PL011 UART driver
+[    0.085473] KASLR enabled
+[    0.090467] HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+[    0.091335] HugeTLB: 0 KiB vmemmap can be freed for a 1.00 GiB page
+[    0.092195] HugeTLB: registered 32.0 MiB page size, pre-allocated 0 pages
+[    0.093026] HugeTLB: 0 KiB vmemmap can be freed for a 32.0 MiB page
+[    0.093792] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[    0.094620] HugeTLB: 0 KiB vmemmap can be freed for a 2.00 MiB page
+[    0.095405] HugeTLB: registered 64.0 KiB page size, pre-allocated 0 pages
+[    0.096251] HugeTLB: 0 KiB vmemmap can be freed for a 64.0 KiB page
+[    0.098869] ACPI: Interpreter disabled.
+[    0.099762] iommu: Default domain type: Translated 
+[    0.100375] iommu: DMA domain TLB invalidation policy: strict mode 
+[    0.101170] pps_core: LinuxPPS API ver. 1 registered
+[    0.101775] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.102890] PTP clock support registered
+[    0.103388] EDAC MC: Ver: 3.0.0
+[    0.104421] NetLabel: Initializing
+[    0.104841] NetLabel:  domain hash size = 128
+[    0.105376] NetLabel:  protocols = UNLABELED CIPSOv4 CALIPSO
+[    0.106069] NetLabel:  unlabeled traffic allowed by default
+[    0.107117] vgaarb: loaded
+[    0.108215] clocksource: Switched to clocksource arch_sys_counter
+[    0.120704] VFS: Disk quotas dquot_6.6.0
+[    0.121228] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[    0.122258] AppArmor: AppArmor Filesystem Enabled
+[    0.122843] pnp: PnP ACPI: disabled
+[    0.127935] NET: Registered PF_INET protocol family
+[    0.128789] IP idents hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.130126] tcp_listen_portaddr_hash hash table entries: 1024 (order: 2, 16384 bytes, linear)
+[    0.131322] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.133040] TCP established hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[    0.134303] TCP bind hash table entries: 16384 (order: 7, 524288 bytes, linear)
+[    0.135470] TCP: Hash tables configured (established 16384 bind 16384)
+[    0.136423] MPTCP token hash table entries: 2048 (order: 4, 49152 bytes, linear)
+[    0.137345] UDP hash table entries: 1024 (order: 3, 32768 bytes, linear)
+[    0.138198] UDP-Lite hash table entries: 1024 (order: 3, 32768 bytes, linear)
+[    0.139105] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.139798] NET: Registered PF_XDP protocol family
+[    0.140392] PCI: CLS 0 bytes, default 64
+[    0.141233] Trying to unpack rootfs image as initramfs...
+[    0.148551] kvm [1]: HYP mode not available
+[    0.149389] Initialise system trusted keyrings
+[    0.149941] Key type blacklist registered
+[    0.150485] workingset: timestamp_bits=42 max_order=19 bucket_order=0
+[    0.152460] zbud: loaded
+[    0.153474] integrity: Platform Keyring initialized
+[    0.154090] integrity: Machine keyring initialized
+[    0.154668] Key type asymmetric registered
+[    0.155160] Asymmetric key parser 'x509' registered
+[    0.178675] Freeing initrd memory: 2572K
+[    0.182340] alg: self-tests for CTR-KDF (hmac(sha256)) passed
+[    0.183082] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 247)
+[    0.184080] io scheduler mq-deadline registered
+[    0.187469] shpchp: Standard Hot Plug PCI Controller Driver version: 0.4
+[    0.190509] Serial: 8250/16550 driver, 4 ports, IRQ sharing enabled
+[    0.193120] printk: console [ttyS0] disabled
+[    0.193671] 40002000.uart: ttyS0 at MMIO 0x40002000 (irq = 13, base_baud = 1500000) is a 16550A
+[    0.194780] printk: console [ttyS0] enabled
+[    0.194780] printk: console [ttyS0] enabled
+[    0.195827] printk: bootconsole [uart0] disabled
+[    0.195827] printk: bootconsole [uart0] disabled
+[    0.197394] Serial: AMBA driver
+[    0.197806] SuperH (H)SCI(F) driver initialized
+[    0.198416] msm_serial: driver initialized
+[    0.199321] cacheinfo: Unable to detect cache hierarchy for CPU 0
+[    0.200718] mousedev: PS/2 mouse device common for all mice
+[    0.201878] rtc-pl031 40003000.rtc: registered as rtc0
+[    0.202546] rtc-pl031 40003000.rtc: setting system clock to 2026-10-31T01:44:14 UTC (1793411054)
+[    0.204254] ledtrig-cpu: registered to indicate activity on CPUs
+[    0.217770] NET: Registered PF_INET6 protocol family
+[    0.219811] Segment Routing with IPv6
+[    0.220336] In-situ OAM (IOAM) with IPv6
+[    0.220857] mip6: Mobile IPv6
+[    0.221238] NET: Registered PF_PACKET protocol family
+[    0.222213] mpls_gso: MPLS GSO support
+[    0.223161] registered taskstats version 1
+[    0.223729] Loading compiled-in X.509 certificates
+[    0.237589] Loaded X.509 cert 'Build time autogenerated kernel key: e15d7c2f27e6115d3eddefe889ed9204ab4c8f27'
+[    0.239265] zswap: loaded using pool lzo/zbud
+[    0.240232] Key type .fscrypt registered
+[    0.240740] Key type fscrypt-provisioning registered
+[    0.242838] Key type encrypted registered
+[    0.243394] AppArmor: AppArmor sha1 policy hashing enabled
+[    0.244111] ima: No TPM chip found, activating TPM-bypass!
+[    0.244880] ima: Allocated hash algorithm: sha256
+[    0.245491] ima: No architecture policies found
+[    0.246070] evm: Initialising EVM extended attributes:
+[    0.246693] evm: security.selinux
+[    0.247101] evm: security.SMACK64 (disabled)
+[    0.247651] evm: security.SMACK64EXEC (disabled)
+[    0.248219] evm: security.SMACK64TRANSMUTE (disabled)
+[    0.248831] evm: security.SMACK64MMAP (disabled)
+[    0.249392] evm: security.apparmor
+[    0.249809] evm: security.ima
+[    0.250164] evm: security.capability
+[    0.250571] evm: HMAC attrs: 0x1
+[    0.321280] clk: Disabling unused clocks
+[    0.326144] Freeing unused kernel memory: 6464K
+[    0.328866] Checked W+X mappings: passed, no W+X pages found
+[    0.329298] Run /init as init process
+[    0.344015] virtio_blk virtio0: 1/0/0 default/read/poll queues
+[    0.344813] virtio_blk virtio0: [vda] 4194304 512-byte logical blocks (2.15 GB/2.00 GiB)
+[    0.391178] EXT4-fs (vda): mounted filesystem with ordered data mode. Quota mode: none.
+MEMORY_LAB_INIT_READY ip=172.30.82.2 envd=119
+{"level":"debug","logger":"envd","operation_id":"1","timestamp":"2026-10-31T01:44:15.26015012Z","message":"Setting 2 env vars"}
+{"level":"debug","logger":"envd","operation_id":"1","timestamp":"2026-10-31T01:44:15.26161902Z","message":"Setting env var for E2B_SANDBOX"}
+{"level":"debug","logger":"envd","operation_id":"1","timestamp":"2026-10-31T01:44:15.26276137Z","message":"Setting env var for MEMORY_LAB"}
+{"level":"debug","logger":"envd","operation_id":"1","timestamp":"2026-10-31T01:44:15.26378171Z","message":"Setting default user to: root"}
+{"level":"debug","logger":"envd","operation_id":"1","timestamp":"2026-10-31T01:44:15.2648119Z","message":"Setting default workdir to: /workspace"}
+{"level":"info","logger":"process","method":"POST /process.Process/List","operation_id":"2","request":{},"response":{},"timestamp":"2026-10-31T01:44:15.2700198Z","message":"Process list"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"3","request":{"process":{"cmd":"/bin/sh","args":["-c","printf MEMORY_LAB_PTY_OK"]},"pty":{"size":{"cols":80,"rows":24}}},"timestamp":"2026-10-31T01:44:15.27200594Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"3","event_type":"process_start","pid":125,"command":"/bin/sh -c printf MEMORY_LAB_PTY_OK","timestamp":"2026-10-31T01:44:15.27658022Z","message":"Process with pid 125 started"}
+error reading from pty: read /dev/ptmx: input/output error
+{"level":"info","logger":"process","operation_id":"3","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:15.27868776Z","message":"Process with pid 125 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"3","response":null,"timestamp":"2026-10-31T01:44:15.28193278Z","message":"Process start (server stream end)"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"4","request":{"process":{"cmd":"/bin/sleep","args":["120"]},"stdin":false},"timestamp":"2026-10-31T01:44:15.2846011Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"4","event_type":"process_start","pid":126,"command":"/bin/sleep 120","timestamp":"2026-10-31T01:44:15.28687605Z","message":"Process with pid 126 started"}
+{"level":"info","logger":"process","method":"POST /process.Process/SendSignal","operation_id":"5","request":{"process":{"Selector":{"Pid":126}},"signal":15},"response":{},"timestamp":"2026-10-31T01:44:15.29121342Z","message":"Process sendSignal"}
+{"level":"info","logger":"process","operation_id":"4","event_type":"process_end","process_result":{"exit_code":-1,"status":"signal: terminated","error":"signal: terminated"},"timestamp":"2026-10-31T01:44:15.29442623Z","message":"Process with pid 126 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"4","response":null,"timestamp":"2026-10-31T01:44:15.29463604Z","message":"Process start (server stream end)"}
+{"level":"debug","logger":"envd","operation_id":"6","event_type":"file_processing","path":"/workspace/probe.txt","timestamp":"2026-10-31T01:44:15.29995995Z","message":"File processing"}
+{"level":"info","logger":"envd","method":"POST /files","operation_id":"6","path":"/workspace/probe.txt","username":"root","timestamp":"2026-10-31T01:44:15.30337206Z","message":"File write"}
+{"level":"info","logger":"envd","method":"GET /files","operation_id":"7","path":"/workspace/probe.txt","username":"root","timestamp":"2026-10-31T01:44:15.30859372Z","message":"File read"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"8","request":{"process":{"cmd":"/bin/sh","args":["-c","test -x /usr/local/bin/memory-lab-mtool && python3 --version && /usr/local/bin/envd -version"]},"stdin":false},"timestamp":"2026-10-31T01:44:15.31097175Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"8","event_type":"process_start","pid":127,"command":"/bin/sh -c test -x /usr/local/bin/memory-lab-mtool && python3 --version && /usr/local/bin/envd -version","timestamp":"2026-10-31T01:44:15.31364336Z","message":"Process with pid 127 started"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+{"level":"info","logger":"process","operation_id":"8","event_type":"stdout","data":"Python 3.12.15\n0.5.3\n","timestamp":"2026-10-31T01:44:15.36074109Z","message":"Streaming process event (flush)"}
+{"level":"info","logger":"process","operation_id":"8","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:15.36103293Z","message":"Process with pid 127 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"8","response":null,"timestamp":"2026-10-31T01:44:15.36115019Z","message":"Process start (server stream end)"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+{"level":"debug","logger":"envd","operation_id":"9","event_type":"file_processing","path":"/workspace/trace.json","timestamp":"2026-10-31T01:44:15.36810946Z","message":"File processing"}
+{"level":"info","logger":"envd","method":"POST /files","operation_id":"9","path":"/workspace/trace.json","username":"root","timestamp":"2026-10-31T01:44:15.37152153Z","message":"File write"}
+{"level":"debug","logger":"envd","operation_id":"10","event_type":"file_processing","path":"/workspace/replay.py","timestamp":"2026-10-31T01:44:15.37345164Z","message":"File processing"}
+{"level":"info","logger":"envd","method":"POST /files","operation_id":"10","path":"/workspace/replay.py","username":"root","timestamp":"2026-10-31T01:44:15.3737719Z","message":"File write"}
+{"level":"debug","logger":"envd","operation_id":"11","event_type":"file_processing","path":"/workspace/replay-config.json","timestamp":"2026-10-31T01:44:15.37686504Z","message":"File processing"}
+{"level":"info","logger":"envd","method":"POST /files","operation_id":"11","path":"/workspace/replay-config.json","username":"root","timestamp":"2026-10-31T01:44:15.37719479Z","message":"File write"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"12","request":{"process":{"cmd":"/bin/sh","args":["-c","truncate -s 16M /workspace/corpus.bin; python3 /workspace/replay.py > /workspace/replay.log 2>&1 < /dev/null & echo $! > /workspace/replay.pid"]},"stdin":false},"timestamp":"2026-10-31T01:44:15.38073074Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"12","event_type":"process_start","pid":132,"command":"/bin/sh -c truncate -s 16M /workspace/corpus.bin; python3 /workspace/replay.py > /workspace/replay.log 2>&1 < /dev/null & echo $! > /workspace/replay.pid","timestamp":"2026-10-31T01:44:15.38375876Z","message":"Process with pid 132 started"}
+{"level":"info","logger":"process","operation_id":"12","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:15.38904153Z","message":"Process with pid 132 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"12","response":null,"timestamp":"2026-10-31T01:44:15.38926788Z","message":"Process start (server stream end)"}
+{"level":"error","logger":"envd","error":"path '/workspace/boundary.json' does not exist","method":"GET /files","operation_id":"13","path":"/workspace/boundary.json","username":"root","error_code":404,"timestamp":"2026-10-31T01:44:15.39426013Z","message":"File read"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"14","request":{"process":{"cmd":"/bin/sh","args":["-c","kill -0 $(cat /workspace/replay.pid)"]},"stdin":false},"timestamp":"2026-10-31T01:44:15.39855178Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"14","event_type":"process_start","pid":135,"command":"/bin/sh -c kill -0 $(cat /workspace/replay.pid)","timestamp":"2026-10-31T01:44:15.40140779Z","message":"Process with pid 135 started"}
+{"level":"info","logger":"process","operation_id":"14","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:15.40389335Z","message":"Process with pid 135 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"14","response":null,"timestamp":"2026-10-31T01:44:15.40423143Z","message":"Process start (server stream end)"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+{"level":"error","logger":"envd","error":"path '/workspace/boundary.json' does not exist","method":"GET /files","operation_id":"15","path":"/workspace/boundary.json","username":"root","error_code":404,"timestamp":"2026-10-31T01:44:15.70983305Z","message":"File read"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"16","request":{"process":{"cmd":"/bin/sh","args":["-c","kill -0 $(cat /workspace/replay.pid)"]},"stdin":false},"timestamp":"2026-10-31T01:44:15.71410403Z","message":"Process start (server stream start)"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+{"level":"info","logger":"process","operation_id":"16","event_type":"process_start","pid":137,"command":"/bin/sh -c kill -0 $(cat /workspace/replay.pid)","timestamp":"2026-10-31T01:44:15.71787184Z","message":"Process with pid 137 started"}
+{"level":"info","logger":"process","operation_id":"16","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:15.72208213Z","message":"Process with pid 137 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"16","response":null,"timestamp":"2026-10-31T01:44:15.72379465Z","message":"Process start (server stream end)"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+{"level":"error","logger":"envd","error":"path '/workspace/boundary.json' does not exist","method":"GET /files","operation_id":"17","path":"/workspace/boundary.json","username":"root","error_code":404,"timestamp":"2026-10-31T01:44:16.02860781Z","message":"File read"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"18","request":{"process":{"cmd":"/bin/sh","args":["-c","kill -0 $(cat /workspace/replay.pid)"]},"stdin":false},"timestamp":"2026-10-31T01:44:16.03257503Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"18","event_type":"process_start","pid":144,"command":"/bin/sh -c kill -0 $(cat /workspace/replay.pid)","timestamp":"2026-10-31T01:44:16.03515731Z","message":"Process with pid 144 started"}
+{"level":"info","logger":"process","operation_id":"18","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:16.03705039Z","message":"Process with pid 144 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"18","response":null,"timestamp":"2026-10-31T01:44:16.03893025Z","message":"Process start (server stream end)"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+{"level":"info","logger":"envd","method":"GET /files","operation_id":"19","path":"/workspace/boundary.json","username":"root","timestamp":"2026-10-31T01:44:16.34412273Z","message":"File read"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"20","request":{"process":{"cmd":"/bin/sh","args":["-c","kill -0 134"]},"stdin":false},"timestamp":"2026-10-31T01:44:16.34740325Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"20","event_type":"process_start","pid":147,"command":"/bin/sh -c kill -0 134","timestamp":"2026-10-31T01:44:16.34796466Z","message":"Process with pid 147 started"}
+{"level":"info","logger":"process","operation_id":"20","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:16.34846361Z","message":"Process with pid 147 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"20","response":null,"timestamp":"2026-10-31T01:44:16.34862876Z","message":"Process start (server stream end)"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"21","request":{"process":{"cmd":"/bin/sh","args":["-c","sync"]},"stdin":false},"timestamp":"2026-10-31T01:44:16.3566281Z","message":"Process start (server stream start)"}
+{"level":"info","logger":"process","operation_id":"21","event_type":"process_start","pid":148,"command":"/bin/sh -c sync","timestamp":"2026-10-31T01:44:16.35871379Z","message":"Process with pid 148 started"}
+{"level":"info","logger":"process","operation_id":"21","event_type":"process_end","process_result":{"exited":true,"status":"exit status 0"},"timestamp":"2026-10-31T01:44:16.36334464Z","message":"Process with pid 148 ended"}
+{"level":"debug","logger":"process","method":"POST /process.Process/Start","operation_id":"21","response":null,"timestamp":"2026-10-31T01:44:16.3634731Z","message":"Process start (server stream end)"}
+error getting mmds token: Put "http://169.254.169.254/latest/api/token": dial tcp 169.254.169.254:80: connect: network is unreachable
+2026-10-31T01:44:16.043669269 [anonymous-instance:fc_api] The API server received a Patch request on "/vm" with body "{\"state\":\"Paused\"}\n".
+2026-10-31T01:44:16.044330028 [anonymous-instance:main] 'pause vm' VMM action took 482 us.
+2026-10-31T01:44:16.044550347 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:44:16.044563347 [anonymous-instance:fc_api] 'pause vm' API request took 904 us.
+2026-10-31T01:44:16.045237496 [anonymous-instance:fc_api] The API server received a Put request on "/snapshot/create" with body "{\"snapshot_path\":\"/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/synthetic-legacy-02/run/snapshots/generation-1/state\",\"snapshot_type\":\"Full\"}\n".
+2026-10-31T01:44:16.045467556 [anonymous-instance:main] [DevPreview] Virtual machine snapshots is in development preview.
+2026-10-31T01:44:16.056537989 [anonymous-instance:main] 'create full snapshot' VMM action took 11055 us.
+2026-10-31T01:44:16.056779858 [anonymous-instance:fc_api] The request was executed successfully. Status code: 204 No Content.
+2026-10-31T01:44:16.056793448 [anonymous-instance:fc_api] 'create full snapshot' API request took 11563 us.
+2026-10-31T01:44:16.057377577 [anonymous-instance:fc_api] The API server received a Get request on "/memory/mappings".
+2026-10-31T01:44:16.057820116 [anonymous-instance:fc_api] The request was executed successfully. Status code: 200 OK.

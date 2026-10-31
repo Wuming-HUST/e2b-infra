@@ -59,6 +59,7 @@ func (c *apiClient) loadSnapshot(
 		Context: ctx,
 		Body: &models.SnapshotLoadParams{
 			ResumeVM:            false,
+			PmemOverride:        memoryBackend.Pmem,
 			EnableDiffSnapshots: memoryBackend.TrackDirty,
 			MemBackend:          backend,
 			SnapshotPath:        &snapfilePath,
@@ -175,10 +176,13 @@ func (c *apiClient) setBootSource(ctx context.Context, kernelArgs string, kernel
 	return err
 }
 
-func (c *apiClient) setRootfsDrive(ctx context.Context, rootfsPath string, ioEngine *string) error {
+func (c *apiClient) setRootfsDrive(ctx context.Context, rootfsPath string, ioEngine *string, rootDevice ...bool) error {
 	rootfs := "rootfs"
 
 	isRootDevice := true
+	if len(rootDevice) > 0 {
+		isRootDevice = rootDevice[0]
+	}
 	driversConfig := operations.PutGuestDriveByIDParams{
 		Context: ctx,
 		DriveID: rootfs,

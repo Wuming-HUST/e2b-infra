@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/bin/go",
+    "test",
+    "-p",
+    "2",
+    "./internal/sandbox/pmem",
+    "./internal/sandbox/fc",
+    "./internal/sandbox/template",
+    "./internal/template/metadata",
+    "./cmd/pmem-init",
+    "-run",
+    "Test(Pmem|BootLayout|Checkpoint|Materialize|BootSourceOptionalInitrd)",
+    "-count=1",
+    "-v"
+  ],
+  "exit": 0,
+  "seconds": 5.034060716629028
+}

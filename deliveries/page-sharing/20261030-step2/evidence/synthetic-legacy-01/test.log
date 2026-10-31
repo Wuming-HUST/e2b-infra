@@ -1,0 +1,23 @@
+2026/10/31 01:22:15 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 01:22:15 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:22:15 Using vrt network cidr 10.12.0.0/16
+2026/10/31 01:22:15 Using network slot size: 32766
+[LaunchDarkly] 2026/10/31 01:22:17 INFO: Starting LaunchDarkly client 7.13.0
+{"event":"template_imported","seconds":1.288437501,"time":"2026-10-31T01:22:17.178018542Z"}
+{"event":"boot_envd_ready","seconds":3.005674034,"time":"2026-10-31T01:22:18.895255465Z"}
+[LaunchDarkly] 2026/10/31 01:22:19 INFO: Closing LaunchDarkly client
+memory-lab: replay exited before boundary 10: envd command exited 1: exit status 1: sh: can't kill pid 136: No such process
+ Traceback (most recent call last):
+  File "/workspace/replay.py", line 77, in <module>
+    work = json.loads(result.stdout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 356, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+

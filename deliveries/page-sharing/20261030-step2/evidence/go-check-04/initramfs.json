@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python3",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/scripts/memory-lab/pmem-dax/make-initramfs.py",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-04/pmem-init",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-04/initrd.gz"
+  ],
+  "exit": 0,
+  "seconds": 0.45424461364746094
+}

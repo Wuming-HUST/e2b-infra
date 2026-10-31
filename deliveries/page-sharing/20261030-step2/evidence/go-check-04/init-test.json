@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/toolchains/go1.25.4/bin/go",
+    "test",
+    "-p",
+    "2",
+    "./cmd/pmem-init",
+    "-v"
+  ],
+  "exit": 0,
+  "seconds": 0.3614194393157959
+}

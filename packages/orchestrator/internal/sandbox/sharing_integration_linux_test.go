@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -33,6 +34,8 @@ import (
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/fc"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/nbd"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/network"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/pmem"
+	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/rootfs"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/sandbox/template"
 	"github.com/e2b-dev/infra/packages/orchestrator/internal/template/metadata"
 	"github.com/e2b-dev/infra/packages/shared/pkg/consts"
@@ -52,6 +55,17 @@ import (
 // high-numbered network slots. It uses real envd and the production Factory,
 // Pause, upload and cache restore paths; it does not deploy platform services.
 func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
+	runSharingFactoryIntegration(t, false)
+}
+func TestPmemFactoryIntegration(t *testing.T) { //nolint:paralleltest
+	dir := os.Getenv("E2B_PMEM_INTEGRATION_DIR")
+	if dir == "" {
+		t.Skip("set E2B_PMEM_INTEGRATION_DIR and explicit pmem fixture inputs")
+	}
+	t.Setenv("E2B_SHARING_INTEGRATION_DIR", dir)
+	runSharingFactoryIntegration(t, true)
+}
+func runSharingFactoryIntegration(t *testing.T, pmemMode bool) { //nolint:paralleltest
 	runDir := os.Getenv("E2B_SHARING_INTEGRATION_DIR")
 	if runDir == "" {
 		t.Skip("set E2B_SHARING_INTEGRATION_DIR and explicit fixture inputs on an isolated Linux KVM node")
@@ -144,6 +158,7 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 			OrchestratorBaseDir: base, DefaultCacheDir: filepath.Join(base, "build-cache"),
 			TemplatesDir: filepath.Join(base, "templates"), EnvdTimeout: 30 * time.Second,
 			FileMemoryBackendEnabled: true, FileMemoryBackendDir: filepath.Join(base, "file-memory"),
+			PmemRootfsEnabled: pmemMode, PmemRootfsCacheDir: filepath.Join(base, "pmem-lower"),
 			SharedNBDMemoryEnabled: mode == "B1", RAMExportMode: exportMode, NetworkConfig: netConfig,
 			StorageConfig: storage.Config{SandboxCacheDir: filepath.Join(base, "rootfs-cow"),
 				SnapshotCacheDir: filepath.Join(base, "snapshot-cache"), TemplateCacheDir: filepath.Join(base, "template-cache")},
@@ -198,7 +213,16 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 	defer ram.Close()
 	baseFiles, err := (storage.TemplateFiles{BuildID: baseID.String()}).CacheFiles(b0Config.StorageConfig)
 	require.NoError(t, err)
-	base := template.NewLocalTemplate(baseFiles, disk, ram)
+	var base template.Template = template.NewLocalTemplate(baseFiles, disk, ram)
+	if pmemMode {
+		layoutBytes, err := os.ReadFile(input("E2B_PMEM_LAYOUT"))
+		require.NoError(t, err)
+		var layout pmem.Layout
+		require.NoError(t, json.Unmarshal(layoutBytes, &layout))
+		require.NoError(t, layout.Validate())
+		base, err = template.NewPmemTemplate(base, metadata.Template{Rootfs: &layout}, pmem.OpenLocal(input("E2B_PMEM_LOWER")))
+		require.NoError(t, err)
+	}
 	serial, err := os.OpenFile(filepath.Join(runDir, "cold-serial.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	require.NoError(t, err)
 	defer serial.Close()
@@ -208,8 +232,17 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 	sharingRecordPID(t, runDir, "cold", cold)
 	t.Log("cold VM created; waiting for real envd")
 	require.NoError(t, cold.WaitForEnvd(ctx, time.Minute))
+	if pmemMode {
+		// Compare underlying mount options and real root before application work.
+		result, err := sharingExec(ctx, cold, "cat /proc/mounts; test -d /.e2b/lower; test -d /.e2b/writable/upper")
+		require.NoError(t, err)
+		sharingReceipt(t, filepath.Join(runDir, "pmem-mounts.json"), map[string]any{"output": result})
+	}
 	sharingRunTools(t, ctx, cold, fixture.Tools[:2], runDir)
 	sharingCheckFiles(t, ctx, cold, fixture.Checkpoints["after_writes"].ExpectedFiles)
+	if pmemMode {
+		sharingPmemWriteState(t, ctx, cold)
+	}
 	pauseUpload := func(name string, sbx *Sandbox) string {
 		t.Logf("%s: freeze, compare native RAM, production Pause and upload", name)
 		_, err := sharingExec(ctx, sbx, "sync")
@@ -307,6 +340,9 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 			sharingCheckFileRAMMapping(t, runDir, name, sbx, fileRAM)
 		}
 		require.NoError(t, sbx.WaitForEnvd(ctx, time.Minute))
+		if pmemMode {
+			sharingPmemCheckState(t, ctx, sbx)
+		}
 		return sbx
 	}
 	// Both modes start from the exact same A disk/RAM/state and use the same
@@ -327,6 +363,16 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 			require.True(t, ok)
 			require.Equal(t, lm.lease.Path(), rm.lease.Path())
 			require.True(t, strings.HasPrefix(lm.lease.Path(), "/dev/nbd"))
+			if pmemMode {
+				leftMap, leftPages := sharingPmemMapping(t, left)
+				rightMap, rightPages := sharingPmemMapping(t, right)
+				sharingCommonPmemPage(t, leftMap, rightMap, leftPages, rightPages)
+				require.Equal(t, leftMap["path"], rightMap["path"])
+				if leftMap["pfn"].(uint64) != 0 && rightMap["pfn"].(uint64) != 0 {
+					require.Equal(t, leftMap["pfn"], rightMap["pfn"])
+				}
+				sharingReceipt(t, filepath.Join(runDir, "pmem-sharing.json"), map[string]any{"left": leftMap, "right": rightMap, "pfn_visible": leftMap["pfn"].(uint64) != 0 && rightMap["pfn"].(uint64) != 0})
+			}
 			sharingReceipt(t, filepath.Join(runDir, "B1-shared-backing.json"), map[string]any{
 				"left": lm.lease.Path(), "right": rm.lease.Path(), "same_backing": true})
 		}
@@ -359,11 +405,11 @@ func TestSharingFactoryIntegration(t *testing.T) { //nolint:paralleltest
 		require.NoError(t, third.Close(ctx))
 		sharingReceipt(t, filepath.Join(runDir, mode+"-result.json"), map[string]any{
 			"result": "passed", "A": aID, "B": bID, "C": cID, "full_logical_native_oracle": true, "requested_ram_export_mode": exportMode,
-			"trace_derived_source_edit_fixture": true, "complete_original_trace": false})
+			"trace_derived_source_edit_fixture": true, "complete_original_trace": false, "pmem_dax_rootfs": pmemMode})
 	}
 	sharingReceipt(t, filepath.Join(runDir, "result.json"), map[string]any{
 		"result": "passed", "factory_create_resume_pause_upload_cache_restore": true,
-		"B0_B1_same_source_edit_payloads": true, "complete_original_trace": false})
+		"B0_B1_same_source_edit_payloads": true, "complete_original_trace": false, "pmem_dax_rootfs": pmemMode})
 }
 
 type sharingTraceFixture struct {
@@ -569,3 +615,92 @@ func (s *sharingNetworkStorage) Acquire(ctx context.Context) (*network.Slot, err
 	return network.NewSlot(strconv.Itoa(i), i, s.config)
 }
 func (*sharingNetworkStorage) Release(*network.Slot) error { return nil }
+
+func sharingPmemWriteState(t *testing.T, ctx context.Context, sbx *Sandbox) {
+	t.Helper()
+	script := `import os,stat
+assert os.path.isfile('/pmem-fixture/original')
+os.unlink('/pmem-fixture/original')
+os.unlink('/pmem-fixture/opaque/lower');os.rmdir('/pmem-fixture/opaque');os.mkdir('/pmem-fixture/opaque')
+with open('/pmem-fixture/opaque/private','w') as f:f.write('private-upper')
+with open('/workspace/pmem-mode','w') as f:f.write('metadata')
+os.chmod('/workspace/pmem-mode',0o640);os.chown('/workspace/pmem-mode',123,456)
+os.setxattr('/workspace/pmem-mode','user.e2b-pmem',b'persisted-xattr')
+os.rename('/workspace/pmem-mode','/workspace/pmem-renamed');os.symlink('pmem-renamed','/workspace/pmem-link')`
+	_, err := sharingExec(ctx, sbx, "python3 -c "+sharingQuote(script))
+	require.NoError(t, err)
+	sharingPmemCheckState(t, ctx, sbx)
+}
+func sharingPmemCheckState(t *testing.T, ctx context.Context, sbx *Sandbox) {
+	t.Helper()
+	script := `import os,stat
+assert not os.path.exists('/pmem-fixture/original')
+assert os.path.isfile('/.e2b/lower/pmem-fixture/original')
+assert not os.path.exists('/pmem-fixture/opaque/lower')
+assert os.path.isfile('/.e2b/lower/pmem-fixture/opaque/lower')
+assert open('/pmem-fixture/opaque/private').read()=='private-upper'
+s=os.stat('/workspace/pmem-renamed');assert stat.S_IMODE(s.st_mode)==0o640 and s.st_uid==123 and s.st_gid==456
+assert os.readlink('/workspace/pmem-link')=='pmem-renamed'
+assert os.getxattr('/workspace/pmem-renamed','user.e2b-pmem')==b'persisted-xattr'
+assert os.getxattr('/.e2b/writable/upper/pmem-fixture/opaque','trusted.overlay.opaque')==b'y'`
+	_, err := sharingExec(ctx, sbx, "python3 -c "+sharingQuote(script))
+	require.NoError(t, err)
+}
+func sharingPmemMapping(t *testing.T, sbx *Sandbox) (map[string]any, []byte) {
+	t.Helper()
+	provider, ok := sbx.rootfs.(*rootfs.PmemProvider)
+	require.True(t, ok)
+	binding := provider.PmemBinding()
+	pid, err := sbx.process.Pid()
+	require.NoError(t, err)
+	maps, err := os.ReadFile(fmt.Sprintf("/proc/%d/maps", pid))
+	require.NoError(t, err)
+	var address uint64
+	for _, line := range strings.Split(string(maps), "\n") {
+		f := strings.Fields(line)
+		if len(f) < 6 || f[1] != "r--s" || strings.Join(f[5:], " ") != binding.PathOnHost {
+			continue
+		}
+		start, end, _ := strings.Cut(f[0], "-")
+		limit, parseErr := strconv.ParseUint(end, 16, 64)
+		require.NoError(t, parseErr)
+		address, err = strconv.ParseUint(start, 16, 64)
+		require.Equal(t, "00000000", f[2], "expected complete backing window at offset zero")
+		require.Equal(t, binding.Size, limit-address)
+		require.NoError(t, err)
+		break
+	}
+	require.NotZero(t, address, "missing readonly shared pmem mapping")
+	pagemap, err := os.Open(fmt.Sprintf("/proc/%d/pagemap", pid))
+	require.NoError(t, err)
+	defer pagemap.Close()
+	// Restore need not touch namespace headers again. Inspect pages that guest
+	// activity actually faulted into both mappings, without host prefaulting.
+	pages := make([]byte, binding.Size/4096*8)
+	_, err = pagemap.ReadAt(pages, int64(address/4096*8))
+	require.NoError(t, err)
+	return map[string]any{"path": binding.PathOnHost, "mapping_address": address, "pid": pid, "readonly_shared": true, "data_offset": provider.PmemDataOffset()}, pages
+}
+
+func sharingCommonPmemPage(t *testing.T, left, right map[string]any, lp, rp []byte) {
+	t.Helper()
+	require.Equal(t, len(lp), len(rp))
+	require.Equal(t, left["data_offset"], right["data_offset"])
+	for i := left["data_offset"].(uint64) / 4096 * 8; i < uint64(len(lp)); i += 8 {
+		le, re := binary.LittleEndian.Uint64(lp[i:i+8]), binary.LittleEndian.Uint64(rp[i:i+8])
+		if le&(1<<63) == 0 || re&(1<<63) == 0 {
+			continue
+		}
+		for _, v := range []struct {
+			info  map[string]any
+			entry uint64
+		}{{left, le}, {right, re}} {
+			v.info["file_offset"] = i / 8 * 4096
+			v.info["host_address"] = v.info["mapping_address"].(uint64) + i/8*4096
+			v.info["entry"] = v.entry
+			v.info["pfn"] = v.entry & ((1 << 55) - 1)
+		}
+		return
+	}
+	t.Fatal("no common guest-faulted filesystem page in readonly pmem mappings")
+}

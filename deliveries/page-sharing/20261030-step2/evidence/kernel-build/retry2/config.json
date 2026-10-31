@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/kernel-build/linux-6.6.60/scripts/config",
+    "--file",
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/kernel-build/out/.config",
+    "--disable",
+    "SYSTEM_TRUSTED_KEYRING",
+    "--disable",
+    "SECONDARY_TRUSTED_KEYRING",
+    "--disable",
+    "SYSTEM_REVOCATION_LIST",
+    "--disable",
+    "INTEGRITY_PLATFORM_KEYRING",
+    "--disable",
+    "INTEGRITY_MACHINE_KEYRING",
+    "--disable",
+    "MODULE_SIG"
+  ],
+  "exit": 0,
+  "seconds": 0.07691192626953125
+}
