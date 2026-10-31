@@ -1,0 +1,37 @@
+{
+  "recorded_at_utc": "2026-10-31T03:19:14.131133+00:00",
+  "operation": "resume existing evidence download without restarting completed tests",
+  "first_hop": {
+    "host": "H-arch",
+    "ssh_command": "ssh -G agent03.coder",
+    "exit": 0,
+    "status": "reachable"
+  },
+  "second_hop": {
+    "host": "agent03.coder",
+    "proxycommand": "/usr/local/bin/coder --global-config /home/memory/.config/coderv2 ssh --stdio --hostname-suffix coder %h",
+    "ssh_result": "Connection timed out during banner exchange"
+  },
+  "coder_service": {
+    "configured_url": "http://192.168.90.48",
+    "url_source": "H-arch:/home/memory/.config/coderv2/url",
+    "workspace_query": {
+      "command": "/usr/bin/timeout 25 /usr/local/bin/coder --global-config /home/memory/.config/coderv2 list --search agent03 --output json",
+      "exit": 124,
+      "output": ""
+    },
+    "direct_buildinfo_probe": {
+      "command": "curl --noproxy 192.168.90.48 -sS --connect-timeout 5 --max-time 10 -o /dev/null -w \"http_code=%{http_code} remote_ip=%{remote_ip}\\n\" http://192.168.90.48/api/v2/buildinfo",
+      "exit": 28,
+      "stderr": "curl: (28) Connection timed out after 5001 milliseconds",
+      "stdout": "http_code=000 remote_ip="
+    },
+    "route": "192.168.90.48 dev cnem_vnic src 172.16.3.16 uid 1000; cache"
+  },
+  "local_input_hashes": "trace/replay/mtool.c match previous verified input hashes",
+  "archive_downloaded": false,
+  "offline_receipt_audit": "not_run; second-hop Coder backend unavailable",
+  "new_vm_or_replay_started": false,
+  "remote_tests_restarted_or_killed": false,
+  "credentials_or_network_configuration_changed": false
+}

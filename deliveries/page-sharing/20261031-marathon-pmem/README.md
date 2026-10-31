@@ -1,6 +1,6 @@
 # SWE-marathon trace：PMEM/DAX + NBD RAM 验证
 
-2026-10-31：agent03 上 `TestPmemMarathonIntegration` 的 `full_logical`、`tracked_delta` 两轮目标测试均通过；源码核对和 10 个 VM 的清理审计通过。原始证据包已在目标端生成，但第一跳 SSH 再次连续超时，下载未完成，本地完整离线复核尚未执行；不能将目标通过与离线复核混为一项。
+2026-10-31：agent03 上 `TestPmemMarathonIntegration` 的 `full_logical`、`tracked_delta` 两轮目标测试均通过；源码核对和 10 个 VM 的清理审计通过。原始证据包已在目标端生成，下载未完成，本地完整离线复核尚未执行。最新续跑已确认 H-arch 第一跳可达；第二跳依赖的 Coder 服务 `http://192.168.90.48:80` 从 H-arch 直接连接超时，workspace 查询也超时，见 `connectivity-resume.json`。不能将目标通过与离线复核混为一项。
 
 ## 本轮结果
 
@@ -58,3 +58,5 @@ python3 -B scripts/memory-lab/pmem-dax/verify-marathon.py \
 目标收集器的本轮执行源码保存在 `reproduce/collect-target.py`，可审阅退出码、源码 hash 和清理断言；该版本拒绝覆盖已存在的 archive，再次执行时需使用新的归档文件名。
 
 中途 H-arch IPv4/IPv6 SSH 与 Tailscale ping 曾超时，未重启或结束远端任务。早期连接失败保留在 `connectivity.json`，本轮观测状态保留在 `observations.json`。步骤二的原始全工具执行、完整文件/I/O/隔离攻击矩阵、真实 S3、生产 seccomp/jailer、压力/GC 等仍未验收，见 [总矩阵](../20261030-step2/step-2-status.md)。
+
+本次续跑未重启已完成测试，也未更改凭据或网络配置。本地 trace/replay/mtool.c hash 再次核对一致；恢复 H-arch 到上述 Coder 服务的连接后，继续取回原证据包、比对归档 SHA256，再运行完整离线核对器。
