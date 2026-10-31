@@ -1,0 +1,19 @@
+2026/10/31 02:54:28 Using host network cidr cidr 10.11.0.0/16
+2026/10/31 02:54:28 Using vrt network cidr 10.12.0.0/16
+2026/10/31 02:54:28 Using vrt network cidr 10.12.0.0/16
+2026/10/31 02:54:28 Using network slot size: 32766
+=== RUN   TestPmemMarathonIntegration
+    sharing_integration_linux_test.go:250: cold VM created; waiting for real envd
+    sharing_integration_linux_test.go:267: A: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:340: marathon-start: cache template and resume
+    sharing_integration_linux_test.go:370: marathon: turn=10 pid=155, save and restore
+    sharing_integration_linux_test.go:267: marathon-10: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:340: marathon-10-restored: cache template and resume
+    sharing_integration_linux_test.go:370: marathon: turn=200 pid=155, save and restore
+    sharing_integration_linux_test.go:267: marathon-200: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:340: marathon-200-restored: cache template and resume
+    sharing_integration_linux_test.go:370: marathon: turn=700 pid=155, save and restore
+    sharing_integration_linux_test.go:267: marathon-700: freeze, compare native RAM, production Pause and upload
+    sharing_integration_linux_test.go:340: marathon-700-restored: cache template and resume
+--- PASS: TestPmemMarathonIntegration (124.28s)
+PASS

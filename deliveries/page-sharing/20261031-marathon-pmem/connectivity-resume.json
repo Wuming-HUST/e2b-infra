@@ -33,5 +33,15 @@
   "offline_receipt_audit": "not_run; second-hop Coder backend unavailable",
   "new_vm_or_replay_started": false,
   "remote_tests_restarted_or_killed": false,
-  "credentials_or_network_configuration_changed": false
+  "credentials_or_network_configuration_changed": false,
+  "resolution": {
+    "recorded_at_utc": "2026-10-31T03:24:56.452640+00:00",
+    "status": "resolved",
+    "workspace_query": "interactive zsh coder list succeeded; workspace running and agent connected",
+    "archive_downloaded": true,
+    "archive_sha256_verified": true,
+    "offline_receipt_audit": "passed",
+    "retry": "same service address; inner SSH ConnectTimeout=90; no credentials or network changes",
+    "root_cause": "not established; earlier timeout probes retained above"
+  }
 }

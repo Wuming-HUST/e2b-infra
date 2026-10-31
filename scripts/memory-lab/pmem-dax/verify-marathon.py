@@ -93,6 +93,29 @@ def verify(root):
         assert done[0]['turns'] == result['turns'] == 1016
         assert all(e['pid'] == result['pid'] for e in events)
         checkpoints = []
+        # Uploaded metadata must survive the production cache restore unchanged.
+        # A is a full export even when subsequent snapshots use tracked deltas.
+        rootfs = None
+        for stage in ['A', 'marathon-10', 'marathon-200', 'marathon-700']:
+            c = load(path / f'{stage}-checkpoint.json')
+            build_id = c['build_id']
+            metadata = load(path / 'objects' / build_id / 'metadata.json')
+            cached = list((path / 'B1/template-cache' / build_id / 'cache').glob('*/metadata.json'))
+            assert len(cached) == 1 and load(cached[0]) == metadata
+            assert metadata['version'] == 3 and metadata['template']['build_id'] == build_id
+            checkpoint = metadata['checkpoint']
+            assert checkpoint['format_version'] == 3
+            assert checkpoint['logical_ram_size'] == c['ram_size'] == 1536 << 20
+            assert checkpoint['ram_export_mode'] == ('tracked_delta' if c['tracked_delta'] else 'full_logical')
+            if c['tracked_delta']:
+                assert checkpoint['ram_payload_size'] == c['payload_size']
+                assert checkpoint['ram_payload_sha256'] == c['payload_sha256']
+                assert checkpoint['ram_tracking_version'] == 1
+            else:
+                assert checkpoint['logical_ram_sha256'] == c['ram_sha256'] == c['payload_sha256']
+            if rootfs is None:
+                rootfs = metadata['rootfs']
+            assert metadata['rootfs'] == rootfs and rootfs['mode'] == 'pmem-dax-overlay'
         for turn in [10, 200, 700]:
             c = load(path / f'marathon-{turn}-checkpoint.json')
             assert c['native_same_frozen_state'] and c['ram_size'] == 1536 << 20

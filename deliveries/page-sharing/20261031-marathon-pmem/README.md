@@ -1,17 +1,25 @@
 # SWE-marathon trace：PMEM/DAX + NBD RAM 验证
 
-2026-10-31：agent03 上 `TestPmemMarathonIntegration` 的 `full_logical`、`tracked_delta` 两轮目标测试均通过；源码核对和 10 个 VM 的清理审计通过。原始证据包已在目标端生成，下载未完成，本地完整离线复核尚未执行。最新续跑已确认 H-arch 第一跳可达；第二跳依赖的 Coder 服务 `http://192.168.90.48:80` 从 H-arch 直接连接超时，workspace 查询也超时，见 `connectivity-resume.json`。不能将目标通过与离线复核混为一项。
+2026-10-31：agent03 上 `TestPmemMarathonIntegration` 的 `full_logical`、`tracked_delta` 两轮目标测试均通过；源码核对和 10 个 VM 的清理审计通过。原始证据包现已取回，归档 SHA256 一致，本地离线复核通过。结果见 [verification.json](verification.json)，五项损坏证据检查见 [verification-controls.json](verification-controls.json)。此前两跳连接超时已在重试后恢复，使用原服务地址；未重启已完成的测试。
 
 ## 本轮结果
 
 | 模式 | 目标结果 | turns / 合成工具事件 / 调用 ID | 快照恢复边界 |
 |---|---|---|---|
 | `full_logical` | PASS；Go test 124.26 秒，进程收据 124.30 秒 | 1016 / 571 / 576 | turn 10、200、700 均通过 |
-| `tracked_delta` | PASS；最终退出码已由目标收集器核对 | 1016 / 571 / 576 | turn 10、200、700 均通过 |
+| `tracked_delta` | PASS；进程收据 124.33 秒 | 1016 / 571 / 576 | turn 10、200、700 均通过 |
 
 两轮使用同一份未修改 trace/replay、同一静态 mtool、1536 MiB RAM、2 vCPU、64 MiB 持续匿名工作集、16 MiB I/O corpus，工具瞬时分配最高 600 MiB；单 VM 顺序回放。`time_scale=.001`，此处时间仅记录测试耗时，不用于性能或容量结论。
 
 最终工作状态 SHA256 均为 `aa44ebe9ce29d4563fabc1f42496ec16f6119b163b1a09d4b81df6f046dfcc62`，与已有 legacy 回放一致，且本地已按确定性工作负载规则独立计算得到相同值。
+
+| 保存边界 | 完整导出 | 增量 payload |
+|---|---|---|
+| turn 10 | 1536 MiB | 216584192 字节（206.55 MiB） |
+| turn 200 | 1536 MiB | 749637632 字节（714.91 MiB） |
+| turn 700 | 1536 MiB | 763371520 字节（728.01 MiB） |
+
+增量均通过生产 layered source 解析历史依赖，重建后的 1536 MiB 逻辑 RAM 与同冻结边界 native full RAM hash 一致。以上是导出 payload 尺寸，未测物理内存节省或性能收益。
 
 这是一份完整的 **trace 驱动合成内存/I/O 回放**，没有执行 LLM 或原始工具命令。571 次合成工具事件、576 个 Bash 调用 ID 与 1052 条原始工具调用不是同一口径；原始完整任务环境的执行兼容性仍待验证。
 
@@ -46,17 +54,19 @@
 
 新测试沿用 [PMEM 测试输入说明](../../../scripts/memory-lab/pmem-dax/README.md)，额外提供绝对路径 `E2B_MARATHON_TRACE`、`E2B_MARATHON_REPLAY`、`E2B_MARATHON_MTOOL`，以全新运行目录、未占用 slot 和每轮对应的 `E2B_SHARING_RAM_EXPORT_MODE` 执行 `sandbox.test -test.run '^TestPmemMarathonIntegration$' -test.v -test.timeout 17m`。目标命令、输入和 hash 由每轮 `inputs.json`、`input-sha256.json`、`test.json` 保存。
 
-完整证据取回后可离线运行：
+已保存 75 个原始证据文件和 3 个输入文件，全部列入 `evidence-sha256.json`。可离线复核：
 
 ```sh
 python3 -B scripts/memory-lab/pmem-dax/verify-marathon.py \
   deliveries/page-sharing/20261031-marathon-pmem
+python3 -B deliveries/page-sharing/20261031-marathon-pmem/reproduce/check-controls.py \
+  deliveries/page-sharing/20261031-marathon-pmem
 ```
 
-离线核对器检查原始逐条工具事件、各边界及最终状态的独立 hash、实际 NBD/DAX 收据、增量尺寸/候选数、源码一致性与清理。完整 RAM 的重建和 hash 比较由目标 Go 测试执行，大型 RAM 不在小型证据包内。
+离线核对器检查原始逐条工具事件、各边界及最终状态的独立 hash、实际 NBD/DAX 收据、增量尺寸/候选数、四代上传与恢复缓存的 metadata 一致性、源码一致性与清理。负向检查仅修改临时副本；除文件完整性控制外，故意更新外层 manifest，以确认语义断言能拒绝调用 ID、恢复状态 hash、候选页数和缓存 metadata 的错误。完整 RAM 的历史依赖重建和 hash 比较由目标 Go 测试执行，大型 RAM 及依赖 header 不在小型证据包内。
 
 目标收集器的本轮执行源码保存在 `reproduce/collect-target.py`，可审阅退出码、源码 hash 和清理断言；该版本拒绝覆盖已存在的 archive，再次执行时需使用新的归档文件名。
 
 中途 H-arch IPv4/IPv6 SSH 与 Tailscale ping 曾超时，未重启或结束远端任务。早期连接失败保留在 `connectivity.json`，本轮观测状态保留在 `observations.json`。步骤二的原始全工具执行、完整文件/I/O/隔离攻击矩阵、真实 S3、生产 seccomp/jailer、压力/GC 等仍未验收，见 [总矩阵](../20261030-step2/step-2-status.md)。
 
-本次续跑未重启已完成测试，也未更改凭据或网络配置。本地 trace/replay/mtool.c hash 再次核对一致；恢复 H-arch 到上述 Coder 服务的连接后，继续取回原证据包、比对归档 SHA256，再运行完整离线核对器。
+本次续跑未重启已完成测试，也未更改凭据或网络配置。Coder workspace 查询重试成功后，通过原两跳路径、较长的内层 SSH 握手超时取回证据；此前超时的根因未确定，原始诊断保留在 `connectivity-resume.json`，其 `resolution` 记录恢复结果。

@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "positive_control": "passed",
+  "negative_controls": {
+    "archive_file_integrity": "rejected",
+    "tool_call_order": "rejected",
+    "restored_state_hash": "rejected",
+    "delta_candidate_size": "rejected",
+    "restored_metadata": "rejected"
+  }
+}

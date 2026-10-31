@@ -58,7 +58,7 @@
 
 新增 `TestPmemMarathonIntegration` 原生编译通过，复用生产 Factory/Pause/upload/cache restore。在共享 NBD MAP_PRIVATE RAM + PMEM/DAX lower + 私有 NBD upper 下，1536 MiB/2 vCPU 的 full_logical、tracked_delta 两轮均完成 1016 turns、571 次合成工具事件和 576 个调用 ID，turn 10/200/700 三次恢复通过；最终工作状态 hash 与 legacy 一致。每代核对实际映射与 DAX GPA、同冻结边界 native full RAM oracle，增量轮重建历史依赖，A RAM/lower hash 保持不变。目标收集器确认两轮退出 0、26 个 Go/30 个 FC 文件 hash 匹配，以及 10 个 VM/专用网络清理完成。
 
-本轮测试提交 `35c20c28a`，详情见 [trace 报告](../20261031-marathon-pmem/README.md)。原始证据包已在 agent03 生成，传输连接反复超时，本地完整离线复核仍待完成。它是合成内存/I/O 负载，不等于原始工具/LLM 执行，不用于速度或容量结论。
+本轮测试提交 `35c20c28a`，详情见 [trace 报告](../20261031-marathon-pmem/README.md)。原始证据包已取回，归档 SHA256 一致；75 个原始证据文件和 3 个输入文件通过本地完整离线复核，五项损坏证据检查均被拒绝。它是合成内存/I/O 负载，不等于原始工具/LLM 执行，不用于速度或容量结论。
 
 ## 限制与后续
 

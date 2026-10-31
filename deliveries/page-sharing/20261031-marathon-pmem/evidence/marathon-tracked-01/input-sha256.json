@@ -1,0 +1,42 @@
+{
+  "E2B_SHARING_FC": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/cargo-target/debug/firecracker",
+    "sha256": "bc66b160a21f12c723b52964546f1566ae016bc40f7f1c72c8466d23295cf8cb"
+  },
+  "E2B_SHARING_KERNEL": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/kernel-build/out/arch/arm64/boot/Image",
+    "sha256": "93e21a97a8e9fdec98462cfaaf14ad13b5721443dedabc8d7508bc0c9157ae79"
+  },
+  "E2B_SHARING_ROOTFS": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture-02/upper.ext4",
+    "sha256": "8c9c4d8bba9741f0e40459f7572a8635070f41e28455260cdce6b4804cbb11b0"
+  },
+  "E2B_SHARING_INITRD": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/go-check-04/initrd.gz",
+    "sha256": "91d138f56757096f80b43253d01ba790bebe30db10af73bb7fa22a9dedbd17c7"
+  },
+  "E2B_SHARING_TRACE_FIXTURE": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/infra/scripts/memory-lab/page-sharing/biofabric-source-edit-slice.json",
+    "sha256": "aa732fd55fc81846601c90570979f0fa1de6eaa347a67e293260d9e4a91b46ca"
+  },
+  "E2B_PMEM_LAYOUT": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture-02/layout.json",
+    "sha256": "0d5dc8f275ec65aee0b8d493224275023fdff4835d0ec50ca5ff9cd472f90d04"
+  },
+  "E2B_PMEM_LOWER": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/fixture-02/lower.raw",
+    "sha256": "da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e"
+  },
+  "E2B_MARATHON_TRACE": {
+    "path": "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/swe-marathon-trace.json",
+    "sha256": "683d7fcc17c4edbd56ec6977293d3ec527a0ed4edc9cb1aa8c0f9935a200dcc5"
+  },
+  "E2B_MARATHON_REPLAY": {
+    "path": "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/replay.py",
+    "sha256": "3403029dffe5f00a226a6b74c7d0ff8ff423e7d3c48f5e5d77811e0421931add"
+  },
+  "E2B_MARATHON_MTOOL": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/mtool",
+    "sha256": "ad240e9ef888b431b48f14c1c4ac0e3bc16f7c5c519c03994b123d26bc32b8f5"
+  }
+}

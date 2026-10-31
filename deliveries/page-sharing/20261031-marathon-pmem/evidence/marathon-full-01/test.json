@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/marathon-build-01/sandbox.test",
+    "-test.run",
+    "^TestPmemMarathonIntegration$",
+    "-test.v",
+    "-test.timeout",
+    "17m"
+  ],
+  "exit": 0,
+  "seconds": 124.29662442207336,
+  "ram_export_mode": "full_logical"
+}

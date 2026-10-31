@@ -1,0 +1,41 @@
+{
+  "call_ids": 576,
+  "checkpoints": [
+    {
+      "build_id": "09db7da2-1017-42a1-a051-bd7515b4d305",
+      "guest_pid": 155,
+      "turn": 10
+    },
+    {
+      "build_id": "a7295209-bb64-48d8-943c-431493331292",
+      "guest_pid": 155,
+      "turn": 200
+    },
+    {
+      "build_id": "56655e55-8dd9-4b6c-9853-f975f6a99e77",
+      "guest_pid": 155,
+      "turn": 700
+    }
+  ],
+  "elapsed_s": 99.831453372,
+  "evidence": "trace-driven synthetic memory replay; no original tool/LLM execution",
+  "pmem_dax": true,
+  "private_nbd_upper": true,
+  "ram_export_mode": "tracked_delta",
+  "result": {
+    "tools": 571,
+    "turns": 1016,
+    "sha256": "aa44ebe9ce29d4563fabc1f42496ec16f6119b163b1a09d4b81df6f046dfcc62",
+    "pid": 155,
+    "verify": true
+  },
+  "same_frozen_native_ram_oracle": true,
+  "shared_nbd_map_private_ram": true,
+  "status": "passed",
+  "time_scale": 0.001,
+  "tools": 571,
+  "trace_name": "swe-marathon-biofabric-rust-rewrite-897c0fc8-381-fixed",
+  "trace_sha256": "683d7fcc17c4edbd56ec6977293d3ec527a0ed4edc9cb1aa8c0f9935a200dcc5",
+  "turns": 1016,
+  "verified_resumes": 3
+}

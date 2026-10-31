@@ -1,0 +1,17 @@
+{
+  "E2B_MARATHON_MTOOL": {
+    "path": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/r4-tool-v1/mtool",
+    "sha256": "ad240e9ef888b431b48f14c1c4ac0e3bc16f7c5c519c03994b123d26bc32b8f5",
+    "size": 88032
+  },
+  "E2B_MARATHON_REPLAY": {
+    "path": "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/replay.py",
+    "sha256": "3403029dffe5f00a226a6b74c7d0ff8ff423e7d3c48f5e5d77811e0421931add",
+    "size": 5166
+  },
+  "E2B_MARATHON_TRACE": {
+    "path": "/home/coder/projects/yangshengxin/e2b/src/e2b-infra-nashzhou/scripts/memory-lab/swe-marathon-trace.json",
+    "sha256": "683d7fcc17c4edbd56ec6977293d3ec527a0ed4edc9cb1aa8c0f9935a200dcc5",
+    "size": 251230
+  }
+}

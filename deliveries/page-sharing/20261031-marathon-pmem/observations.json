@@ -1,6 +1,6 @@
 {
   "recorded_at_utc": "2026-10-31T03:04:29.212740+00:00",
-  "source": "successful SSH target receipts and collection audit stdout; raw archive remains on agent03",
+  "source": "downloaded SHA256-verified target raw archive and independent local offline audit",
   "remote_root": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01",
   "build": {
     "directory": "marathon-build-01",
@@ -24,7 +24,8 @@
     "started": true,
     "driver_pid": 223177,
     "final_result": "passed",
-    "verified_resumes": 3
+    "verified_resumes": 3,
+    "seconds": 124.33250093460083
   },
   "connectivity": {
     "ipv4_ssh": "timeout",
@@ -32,7 +33,9 @@
     "tailscale_ping": "2 timeouts",
     "target": "H-arch",
     "remote_process_state": "both runs completed; 10 VMs and dedicated network cleaned up",
-    "restarted_or_killed": false
+    "restarted_or_killed": false,
+    "current_status": "resolved; existing archive retrieved through H-arch -> agent03.coder",
+    "historical_probe_results_preserved": true
   },
   "collection": {
     "archive_sha256": "3fbe41ed57369a05478c089fa87fe531a732e36f8eee99d5a9fd06631964ebc6",
@@ -41,7 +44,10 @@
     "vms": 10,
     "sources_match": true,
     "cleanup_passed": true,
-    "local_raw_archive_verified": false,
-    "local_offline_audit": "not_run; archive download blocked by first-hop SSH timeouts"
-  }
+    "local_raw_archive_verified": true,
+    "local_offline_audit": "passed",
+    "local_manifest_files": 78,
+    "local_negative_controls": "5 damaged-evidence controls rejected"
+  },
+  "locally_verified_at_utc": "2026-10-31T03:24:56.452640+00:00"
 }

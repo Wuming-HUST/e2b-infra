@@ -1,0 +1,89 @@
+{
+  "host": "Linux agent03 6.6.0-95.0.0.99.oe2403sp2.aarch64 #1 SMP Thu Jun  5 23:21:14 CST 2025 aarch64 aarch64 aarch64 GNU/Linux",
+  "host_page_size": "4096",
+  "memory_max": "34359738368",
+  "vms": [
+    {
+      "api_socket": "/tmp/fc-sharing-546fcadd-o2b72kwca2u2umm0ah9g.sock",
+      "namespace": "ns-26200",
+      "pid": 223025,
+      "sandbox_id": "sharing-546fcadd",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-52d0c3a7-3u8pwwnvkedwjms0dlsg.sock",
+      "namespace": "ns-26200",
+      "pid": 222957,
+      "sandbox_id": "sharing-52d0c3a7",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-96094aed-cwv0x5mh4ou6l10vjv4s.sock",
+      "namespace": "ns-26200",
+      "pid": 222945,
+      "sandbox_id": "sharing-96094aed",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-490e5a05-tygm7ylh3v6ewe7fhrv5.sock",
+      "namespace": "ns-26200",
+      "pid": 222934,
+      "sandbox_id": "sharing-490e5a05",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-64ee0176-i96kepn590axh5avn3lf.sock",
+      "namespace": "ns-26200",
+      "pid": 223039,
+      "sandbox_id": "sharing-64ee0176",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-532bfa49-jifuc4h8eel4nvvxjif2.sock",
+      "namespace": "ns-26220",
+      "pid": 223316,
+      "sandbox_id": "sharing-532bfa49",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-19367133-4shf9qbdfs9kb6tdiyej.sock",
+      "namespace": "ns-26220",
+      "pid": 223248,
+      "sandbox_id": "sharing-19367133",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-3a04113d-ml7x1cjcp7pfmxwwbaxn.sock",
+      "namespace": "ns-26220",
+      "pid": 223236,
+      "sandbox_id": "sharing-3a04113d",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-40179f29-pwd80ycmmxemlr5fadza.sock",
+      "namespace": "ns-26220",
+      "pid": 223225,
+      "sandbox_id": "sharing-40179f29",
+      "alive": false,
+      "current_cmdline": null
+    },
+    {
+      "api_socket": "/tmp/fc-sharing-3c8c017e-fx1vt3tav14ok57sr8s5.sock",
+      "namespace": "ns-26220",
+      "pid": 223438,
+      "sandbox_id": "sharing-3c8c017e",
+      "alive": false,
+      "current_cmdline": null
+    }
+  ],
+  "remaining_task_processes": [],
+  "remaining_namespaces": []
+}

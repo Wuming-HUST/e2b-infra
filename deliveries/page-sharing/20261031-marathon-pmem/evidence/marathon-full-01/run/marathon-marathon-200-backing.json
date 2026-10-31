@@ -1,0 +1,27 @@
+{
+  "actual_ram_mapping": "fffed0000000-ffff30000000 rw-p 00000000 00:d6 62                         /dev/nbd0",
+  "guest_dax": {
+    "gpa": 275292766208,
+    "statx": {
+      "/sbin/sharing-init": {
+        "attributes": 2097152,
+        "mask": 3160180
+      },
+      "/.e2b/lower/sbin/sharing-init": {
+        "attributes": 2097152,
+        "mask": 3160180
+      }
+    }
+  },
+  "host_pid": 223025,
+  "nbd_path": "/dev/nbd0",
+  "pmem": {
+    "pmem_id": "rootfs-lower",
+    "path_on_host": "/home/coder/projects/yangshengxin/e2b/page-sharing-20261030/pmem-dax-01/marathon-full-01/run/B1/pmem-lower/da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e.raw",
+    "content_id": "da51eb9d5616871823dbc03f924c2b77ca77fd89d73f99240ab20d61a9e87f1e",
+    "guest_address": 274877906944,
+    "size": 2281701376,
+    "file_offset": 0,
+    "read_only": true
+  }
+}
