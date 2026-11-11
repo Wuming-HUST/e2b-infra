@@ -96,15 +96,7 @@ func (o *fsObject) WriteTo(_ context.Context, dst io.Writer) (int64, error) {
 }
 
 func (o *fsObject) Put(_ context.Context, data []byte) error {
-	handle, err := o.getHandle(false)
-	if err != nil {
-		return err
-	}
-	defer handle.Close()
-
-	_, err = io.Copy(handle, bytes.NewReader(data))
-
-	return err
+	return o.writeAtomic(bytes.NewReader(data))
 }
 
 func (o *fsObject) StoreFile(_ context.Context, path string) error {
@@ -114,19 +106,58 @@ func (o *fsObject) StoreFile(_ context.Context, path string) error {
 	}
 	defer r.Close()
 
-	handle, err := o.getHandle(false)
-	if err != nil {
-		return err
-	}
-	defer handle.Close()
+	return o.writeAtomic(r)
+}
 
-	_, err = io.Copy(handle, r)
+// writeAtomic replaces the object content atomically: it writes the full
+// content to a temporary file in the same directory and renames it over the
+// target. Readers and concurrent writers never observe a partial object:
+// without this, two in-flight Puts of the same object (e.g. a layer snapshot
+// uploading original template metadata while the optimize phase uploads the
+// final metadata with the prefetch mapping) could interleave their writes and
+// leave a torn JSON file even with O_TRUNC.
+func (o *fsObject) writeAtomic(r io.Reader) error {
+	dir := filepath.Dir(o.path)
+
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(o.path)+".tmp-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temp file for atomic write: %w", err)
+	}
+	tmpName := tmp.Name()
+
+	abort := func(cause error) error {
+		tmp.Close()
+		_ = os.Remove(tmpName)
+		return cause
+	}
+
+	if _, err := io.Copy(tmp, r); err != nil {
+		return abort(fmt.Errorf("failed to write temp file %s: %w", tmpName, err))
+	}
+
+	if err := tmp.Sync(); err != nil {
+		return abort(fmt.Errorf("failed to sync temp file %s: %w", tmpName, err))
+	}
+
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("failed to close temp file %s: %w", tmpName, err)
+	}
+
+	// os.CreateTemp creates files with 0600; keep the object readable.
+	if err := os.Chmod(tmpName, 0o644); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("failed to chmod temp file %s: %w", tmpName, err)
+	}
+
+	if err := os.Rename(tmpName, o.path); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("failed to rename %s over %s: %w", tmpName, o.path, err)
 	}
 
 	return nil
 }
+
 
 func (o *fsObject) OpenRangeReader(_ context.Context, off, length int64) (io.ReadCloser, error) {
 	f, err := o.getHandle(true)
@@ -201,3 +232,4 @@ func (o *fsObject) getHandle(checkExistence bool) (*os.File, error) {
 
 	return handle, nil
 }
+

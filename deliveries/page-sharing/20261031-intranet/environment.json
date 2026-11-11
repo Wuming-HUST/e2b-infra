@@ -1,0 +1,59 @@
+{
+  "recorded": "2026-11-01",
+  "host": {
+    "hostname": "agent3",
+    "alias": "950-4",
+    "kernel": "6.6.0-4k-page",
+    "cpu_cores": 192,
+    "memory_gb_total": 60,
+    "note": "共享生产机（~40 用户）；FC 沙箱 pin CPU 96-111（node1，无独立内存）；本验收使用 node0 空闲资源，逐用例串行"
+  },
+  "deployed_binaries": {
+    "firecracker": {
+      "path": "/fc-versions/v1.13.1/firecracker.real",
+      "md5": "9b18db5581e98cfff5c8b78a14dfd2c4",
+      "source": "/home/y00960968/e2b-compile/src/firecracker-pmdax/build/cargo_target/release/firecracker",
+      "branch": "feat/virtio-pmem-dax-20261030",
+      "deployed_at": "2026-10-31",
+      "rollback": "/home/y00960968/e2b-compile/backup-pre-pmdax/ + rollback-pmdax.sh"
+    },
+    "template_manager": {
+      "path": "/usr/bin/template-manager",
+      "md5": "3b275dd4a13379169ebbc919124f189d",
+      "source_tree": "/home/y00960968/e2b-compile/src/e2b-infra-pmdax (branch feat/virtio-pmem-dax-20261030, HEAD eb976079c)",
+      "deployed_at": "2026-10-31 20:02",
+      "note": "含两个产品 bug 修复（O_TRUNC / typed-nil），见 acceptance.md 证据链"
+    }
+  },
+  "test_binaries": {
+    "sandbox.test": "e782d94ca8e61bb7bbb9574a2ad21ca9a167afebed2aabeb91aabee4f99549eb",
+    "guest": "2a8a53e65dd8ca4867d3a0c1a9da745ee7adef63ec2df285025a2a758b2daf07",
+    "vsock_guest": "90c5fd45f53e77fce7912048e2dc285c361bc2685d8904e1c920a7a7b40b3132",
+    "m10_guest": "f5514cd163e0a1998071f8a9e9b5964bd246e958735288b065aae4ce83274c72",
+    "m11_guest": "a11909844578efd22b826df036ed280d4cecf4b19b8ff6f9bb48abaa8c79fe13",
+    "mtool": "7e435f99913311d0f3637ef2ca184b553deddf6533d636eb0e1d0a21a4ecd4f1",
+    "pmem_guest_kernel": "a1875dcb0c3c3e0b64dfa882893b19ee35cb32ba539ef1576ece4647babd4e57 (vmlinux-6.6.60-e2b-pmem, DAX/virtio 全=y)"
+  },
+  "pmem_fixtures": {
+    "find_network_alignments": {
+      "image": "127.0.0.1:2900/e2b-orchestration/sweb-marathon-find-network-alignments:simple (docker export)",
+      "lower_raw_sha256": "5786eee594a99cdc8884cde71495fd7c44a48f99506d671409e1cb73a891a1c8",
+      "lower_size": 939524096,
+      "compat_lower_sha256": "7641b69966a77dd66fe2f499e59d7e7deadf58cc29d820d4a8fd2f286591d165",
+      "layout": {"guest_address": 274877906944, "data_offset": 2097152, "mode": "pmem-dax-overlay"}
+    },
+    "biofabric_rust_rewrite": {
+      "image": "127.0.0.1:2900/e2b-orchestration/sweb-marathon-biofabric-rust-rewrite:simple (docker export)",
+      "lower_raw_sha256": "46ca0c6f63008ad787e2a1203a8b971e78f15fe9ee713c379518611bbe5b3079",
+      "lower_size": 3758096384
+    },
+    "fixture_construction": "fprep-05/06 脚本：docker export -> 注入 /opt/e2b-infra/bin/envd 到 /usr/local/bin/envd（镜像不含 envd） -> truncate+mkfs.ext4(-d) -> debugfs 注入 /usr/sbin/sharing-init（/sbin 是 symlink） -> E2B_PMEM_ADD_FIXTURE=1 prepare-rootfs.sh -> lower.raw(0444 PFN v1.4)+layout.json+upper.ext4+initrd.gz；find 另做 prepare-compat.py"
+  },
+  "execution_entries": {
+    "faccept-01": "F10 race / F11 ENOSPC",
+    "faccept-02": "F01① kvm / F04① vsock / F05 multiregion / F08 swagger / F09 snapshot-version",
+    "faccept-03": "F01②③ / F02+F03 / F04② / F07 PMEM 集成链（本目录 acceptance.md 各行）",
+    "fprep-01..06": "验收前置产物编译/fixture 制备",
+    "logs": "/home/y00960968/pmem-accept/{runs,logs}/，收据 JSON per case"
+  }
+}

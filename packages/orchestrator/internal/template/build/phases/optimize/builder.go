@@ -122,6 +122,15 @@ func (pb *OptimizeBuilder) Build(
 	ctx, span := tracer.Start(ctx, "build prefetch")
 	defer span.End()
 
+	// Wait for every layer snapshot upload (including their original
+	// metadata writes) to complete before this phase uploads the final
+	// metadata with the prefetch mapping. The upload errgroup is otherwise
+	// only waited on after the whole build, so an in-flight layer metadata
+	// upload could land after ours and overwrite it with a stale version.
+	if err := pb.UploadErrGroup.Wait(); err != nil {
+		return phases.LayerResult{}, fmt.Errorf("error waiting for layer uploads before optimize: %w", err)
+	}
+
 	pb.logger.Info(ctx, "Collecting prefetch mapping from template resume")
 
 	// Get the template from the finalize phase

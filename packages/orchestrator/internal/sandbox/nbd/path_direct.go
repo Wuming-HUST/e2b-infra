@@ -413,7 +413,7 @@ func (d *DirectPathMount) close(ctx context.Context) error {
 	}
 
 	// Static allocation reserves the ID until ReleaseDevice.
-	if !d.devicePool.dynamic && !d.readOnly && idx != math.MaxUint32 {
+	if d.devicePool != nil && !d.devicePool.dynamic && !d.readOnly && idx != math.MaxUint32 {
 		err := disconnectNBDWithTimeout(ctx, idx, disconnectTimeout)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("error disconnecting NBD: %w", err))
@@ -430,7 +430,7 @@ func (d *DirectPathMount) close(ctx context.Context) error {
 	}
 
 	// Release the device back to the pool, retry if it is in use
-	if idx != math.MaxUint32 {
+	if d.devicePool != nil && idx != math.MaxUint32 {
 		telemetry.ReportEvent(ctx, "releasing device to the pool")
 		err := d.devicePool.ReleaseDevice(ctx, idx, WithInfiniteRetry())
 		if err != nil {

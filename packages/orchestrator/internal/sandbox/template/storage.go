@@ -162,5 +162,11 @@ func (d *Storage) Close() error {
 // AcquireMemoryView returns a source that owns its layered backing independently
 // of template eviction and DiffStore invalidation. No RAM bytes are prefetched.
 func (d *Storage) AcquireMemoryView(ctx context.Context) (block.ReadonlyDevice, error) {
-	return d.source.Pin(ctx)
+	pinned, err := d.source.Pin(ctx)
+	if err != nil {
+		// Return a literal nil interface: a typed-nil *PinnedFile would make
+		// callers' `view != nil` guards true and panic on Close (nil receiver).
+		return nil, err
+	}
+	return pinned, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
@@ -25,6 +26,13 @@ type NBDProvider struct {
 	featureFlags *featureflags.Client
 
 	ready *utils.SetOnce[string]
+
+	// startAttempted is set when Start is invoked. Close on a provider that
+	// was never started must not block in sync() on the never-set ready
+	// SetOnce: sandbox creation error paths (e.g. a PMEM template without
+	// PMEM_ROOTFS_ENABLED) close the provider before Start is ever launched,
+	// which previously deadlocked forever, swallowing the real error.
+	startAttempted atomic.Bool
 
 	blockSize int64
 
@@ -61,6 +69,8 @@ func NewNBDProvider(ctx context.Context, rootfs block.ReadonlyDevice, cachePath 
 }
 
 func (o *NBDProvider) Start(ctx context.Context) error {
+	o.startAttempted.Store(true)
+
 	deviceIndex, err := o.mnt.Open(ctx)
 	if err != nil {
 		return o.ready.SetError(fmt.Errorf("error opening overlay file: %w", err))
@@ -147,6 +157,13 @@ func (o *NBDProvider) Path() (string, error) {
 func (o *NBDProvider) sync(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "sync")
 	defer span.End()
+
+	// Never started: the NBD device never came up, so no guest I/O can have
+	// gone through it and there is nothing to flush. Waiting for the device
+	// path here would block forever (see startAttempted).
+	if !o.startAttempted.Load() {
+		return nil
+	}
 
 	nbdPath, err := o.Path()
 	if err != nil {
